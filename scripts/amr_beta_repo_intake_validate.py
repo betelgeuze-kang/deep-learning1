@@ -29,6 +29,20 @@ CONTACT_PLACEHOLDER_RE = re.compile(
     r"(^$|example|placeholder|replace|todo|synthetic|fixture|\.invalid\b)",
     re.IGNORECASE,
 )
+FORBIDDEN_METADATA_NAME_RE = re.compile(
+    r"(^|_)(example|fixture|placeholder|sample|synthetic|template_only)($|_)",
+    re.IGNORECASE,
+)
+FORBIDDEN_METADATA_VALUE_RE = re.compile(
+    r"\b(example|fixture|placeholder|replace|sample|synthetic|template[-_ ]?only|todo)\b",
+    re.IGNORECASE,
+)
+NEGATED_METADATA_MARKER_RE = re.compile(
+    r"\b(?:not|no|non)\s+(?:an?\s+)?(?:example|fixture|placeholder|sample|synthetic|template[-_ ]?only)\b"
+    r"|\bnon[-_ ](?:example|fixture|placeholder|sample|synthetic)\b"
+    r"|\b(?:is[-_ ]?)?(?:example|fixture|placeholder|sample|synthetic|template[-_ ]?only)\s*[:=]\s*(?:0|false|no)\b",
+    re.IGNORECASE,
+)
 
 REQUIRED_COLUMNS = [
     "case_id",
@@ -74,6 +88,14 @@ def good_operator_value(value: str) -> bool:
 
 def good_contact_value(value: str) -> bool:
     return not CONTACT_PLACEHOLDER_RE.search(str(value).strip())
+
+
+def marks_forbidden_metadata_value(value: str) -> bool:
+    text = str(value).strip()
+    if not text:
+        return False
+    cleaned = NEGATED_METADATA_MARKER_RE.sub("", text)
+    return bool(FORBIDDEN_METADATA_VALUE_RE.search(cleaned))
 
 
 def truthy(value: str) -> bool:
@@ -215,6 +237,20 @@ def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, 
     contact = normalized["owner_or_maintainer_contact"]
     if contact and (not good_operator_value(contact) or not good_contact_value(contact)):
         errors.append(f"row {index}: owner_or_maintainer_contact must be human-supplied")
+
+    for column, raw_value in row.items():
+        if column in REQUIRED_COLUMNS:
+            continue
+        value = str(raw_value).strip()
+        if not value:
+            continue
+        if FORBIDDEN_METADATA_NAME_RE.search(column) and truthy(value):
+            errors.append(f"row {index}: {column} must not be true for real repo intake")
+        if marks_forbidden_metadata_value(value):
+            errors.append(
+                f"row {index}: optional metadata {column} must not mark the row "
+                "as example/placeholder/synthetic/fixture"
+            )
 
     audit_mode = normalized["audit_mode"].lower()
     if audit_mode and audit_mode not in {"quick", "full"}:

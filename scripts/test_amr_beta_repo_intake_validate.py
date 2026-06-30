@@ -141,6 +141,71 @@ def main() -> int:
         assert proc.returncode == 1
         assert "owner_or_maintainer_contact must be human-supplied" in proc.stderr
 
+        placeholder_notes = tmp / "placeholder_notes.md"
+        write_intake(placeholder_notes, repos)
+        placeholder_notes.write_text(
+            placeholder_notes.read_text(encoding="utf-8").replace(
+                "human supplied", "synthetic fixture placeholder", 1
+            ),
+            encoding="utf-8",
+        )
+        proc = run_tool(placeholder_notes)
+        assert proc.returncode == 1
+        assert "notes must not mark the row as example/placeholder/synthetic/fixture" in proc.stderr
+
+        negated_notes = tmp / "negated_notes.md"
+        write_intake(negated_notes, repos)
+        negated_notes.write_text(
+            negated_notes.read_text(encoding="utf-8").replace(
+                "human supplied", "confirmed not synthetic and not a fixture", 1
+            ),
+            encoding="utf-8",
+        )
+        proc = run_tool(negated_notes)
+        assert proc.returncode == 0, proc.stderr
+
+        synthetic_flag_csv = tmp / "synthetic_flag.csv"
+        lines = [
+            "case_id,repo_path,expected_repo_git_head,clean_worktree,owner_or_maintainer_contact,audit_mode,namespace,real_benchmark_namespace_confirmed,synthetic,notes",
+        ]
+        for index, (repo, head) in enumerate(repos, start=1):
+            synthetic = "true" if index == 1 else "false"
+            lines.append(
+                f"case-{index:02d},{repo},{head},true,maintainer-{index:02d}-contact,quick,real_benchmark,true,{synthetic},human supplied"
+            )
+        synthetic_flag_csv.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        proc = run_tool(synthetic_flag_csv)
+        assert proc.returncode == 1
+        assert "synthetic must not be true for real repo intake" in proc.stderr
+
+        test_fixture_flag_csv = tmp / "test_fixture_flag.csv"
+        lines = [
+            "case_id,repo_path,expected_repo_git_head,clean_worktree,owner_or_maintainer_contact,audit_mode,namespace,real_benchmark_namespace_confirmed,test_fixture,notes",
+        ]
+        for index, (repo, head) in enumerate(repos, start=1):
+            test_fixture = "true" if index == 1 else "false"
+            lines.append(
+                f"case-{index:02d},{repo},{head},true,maintainer-{index:02d}-contact,quick,real_benchmark,true,{test_fixture},human supplied"
+            )
+        test_fixture_flag_csv.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        proc = run_tool(test_fixture_flag_csv)
+        assert proc.returncode == 1
+        assert "test_fixture must not be true for real repo intake" in proc.stderr
+
+        source_type_csv = tmp / "source_type.csv"
+        lines = [
+            "case_id,repo_path,expected_repo_git_head,clean_worktree,owner_or_maintainer_contact,audit_mode,namespace,real_benchmark_namespace_confirmed,source_type,notes",
+        ]
+        for index, (repo, head) in enumerate(repos, start=1):
+            source_type = "synthetic" if index == 1 else "real"
+            lines.append(
+                f"case-{index:02d},{repo},{head},true,maintainer-{index:02d}-contact,quick,real_benchmark,true,{source_type},human supplied"
+            )
+        source_type_csv.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        proc = run_tool(source_type_csv)
+        assert proc.returncode == 1
+        assert "optional metadata source_type must not mark the row as example/placeholder/synthetic/fixture" in proc.stderr
+
         small = tmp / "small.md"
         write_intake(small, repos[:9])
         proc = run_tool(small)
