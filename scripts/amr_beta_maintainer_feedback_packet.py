@@ -309,6 +309,9 @@ def main(argv: list[str]) -> int:
         feedback_summary = {
             "total_feedback_rows": 0,
             "valid_feedback_rows": 0,
+            "valid_feedback_text_input_rows": 0,
+            "valid_feedback_hash_only_rows": 0,
+            "valid_feedback_digest_rows": 0,
             "distinct_maintainer_id_count": 0,
             "feedback_countable_case_rows": 0,
             "distinct_countable_maintainer_id_count": 0,
