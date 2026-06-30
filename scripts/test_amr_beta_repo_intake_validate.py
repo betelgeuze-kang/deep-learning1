@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,11 @@ TOOL = ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def create_repo(root: Path, index: int) -> tuple[Path, str]:
@@ -94,6 +100,18 @@ def main() -> int:
         assert status["input_path_guard_passed"] == 1
         assert status["output_path_guard_passed"] == 1
         assert status["repo_snapshot_lock_sha256"].startswith("sha256:")
+        assert status["repo_snapshot_lock_row_count"] == 10
+        assert len(status["repo_snapshot_lock_rows"]) == 10
+        assert status["repo_snapshot_lock_sha256"] == sha256_json(status["repo_snapshot_lock_rows"])
+        first_lock = status["repo_snapshot_lock_rows"][0]
+        assert first_lock["case_id"] == "case-01"
+        assert first_lock["expected_repo_git_head"] == repos[0][1].lower()
+        assert first_lock["actual_repo_git_head"] == repos[0][1].lower()
+        assert first_lock["clean_worktree_declared"] == 1
+        assert first_lock["clean_worktree_actual"] == 1
+        assert first_lock["namespace"] == "real_benchmark"
+        assert first_lock["real_benchmark_namespace_confirmed"] == 1
+        assert first_lock["valid"] == 1
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["clean_worktree_actual"] == 1
         assert status["row_statuses"][0]["owner_or_maintainer_contact_present"] == 1
@@ -101,6 +119,8 @@ def main() -> int:
         status_md_text = status_md.read_text(encoding="utf-8")
         assert "AMR Beta Repo Intake Status" in status_md_text
         assert "input_intake_sha256: sha256:" in status_md_text
+        assert "repo_snapshot_lock_row_count: 10" in status_md_text
+        assert "repo_snapshot_lock_sha256: sha256:" in status_md_text
         assert "creates_benchmark_evidence: 0" in status_md_text
         assert "input_path_guard_passed: 1" in status_md_text
         assert "output_path_guard_passed: 1" in status_md_text
@@ -171,8 +191,11 @@ def main() -> int:
         dirty_status = json.loads(dirty_status_json.read_text(encoding="utf-8"))
         assert dirty_status["ready_for_real_benchmark_audit"] == 0
         assert dirty_status["repo_snapshot_lock_sha256"].startswith("sha256:")
+        assert dirty_status["repo_snapshot_lock_sha256"] == sha256_json(dirty_status["repo_snapshot_lock_rows"])
         assert dirty_status["row_statuses"][0]["valid"] == 0
+        assert dirty_status["repo_snapshot_lock_rows"][0]["valid"] == 0
         assert dirty_status["row_statuses"][0]["clean_worktree_actual"] == 0
+        assert dirty_status["repo_snapshot_lock_rows"][0]["clean_worktree_actual"] == 0
         assert any("repo_dirty" in error for error in dirty_status["row_statuses"][0]["errors"])
         (repos[0][0] / "UNTRACKED.txt").unlink()
 

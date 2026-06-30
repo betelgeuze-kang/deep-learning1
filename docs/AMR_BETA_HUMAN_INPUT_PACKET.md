@@ -65,9 +65,10 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   status summary to see which repos are dirty, mismatched, duplicated, or still
   below threshold:
   `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv> --out-json results/amr_beta_repo_intake_status.json --out-md results/amr_beta_repo_intake_status.md --json`.
-  The status output includes `input_intake_sha256`, `repo_snapshot_lock_sha256`,
-  a local fingerprint of the validated repo paths, pinned HEADs,
-  clean-worktree checks, namespace confirmation, and contact-presence flags.
+  The status output includes `input_intake_sha256`, `repo_snapshot_lock_rows`,
+  `repo_snapshot_lock_sha256`, a local fingerprint of the validated repo paths,
+  pinned HEADs, clean-worktree checks, namespace confirmation, and
+  contact-presence flags.
   Keep `--out-json` and `--out-md` outside every target repository listed in
   the intake sheet; the validator refuses status outputs inside those repos so
   the read-only check cannot dirty a repo after validating it.
@@ -75,10 +76,11 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:
   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
-  The plan carries the same `repo_snapshot_lock_sha256` so the operator can tie
-  audit commands back to the validated 10-repository snapshot. It also refuses
-  an `--artifact-root` inside any target repo, because audit outputs would dirty
-  that repo before evidence generation.
+  The plan carries the same `repo_snapshot_lock_rows` and
+  `repo_snapshot_lock_sha256` so the operator can tie audit commands back to the
+  validated 10-repository snapshot. It also refuses an `--artifact-root` inside
+  any target repo, because audit outputs would dirty that repo before evidence
+  generation.
 - [ ] Run each emitted audit verify command before its label-template command,
   and each emitted label-template verify command before reviewer-packet handoff.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row

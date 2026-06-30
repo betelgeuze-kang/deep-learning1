@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ BLOCKED_FLAGS = {
     "real_model_execution_ready": 0,
 }
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
@@ -98,6 +100,10 @@ def sha256_file(path: Path) -> str:
 def sha256_json(payload: object) -> str:
     data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def command_line(parts: list[object]) -> str:
+    return " ".join(shlex.quote(str(part)) for part in parts)
 
 
 def same_path(left: str, right: str) -> bool:
@@ -331,11 +337,93 @@ def require_matching_artifact_field(
         errors.append(f"{name}: {field} must match {expected_name}")
 
 
+def require_repo_snapshot_lock_rows(
+    *,
+    errors: list[str],
+    repo: dict,
+    valid_repo_rows: int,
+) -> dict[str, dict]:
+    rows = repo.get("repo_snapshot_lock_rows")
+    if not isinstance(rows, list):
+        errors.append("repo_audit_plan: repo_snapshot_lock_rows must be a list")
+        return {}
+
+    row_count = require_exact_int(
+        errors=errors,
+        name="repo_audit_plan",
+        payload=repo,
+        key="repo_snapshot_lock_row_count",
+    )
+    if row_count >= 0 and row_count != len(rows):
+        errors.append("repo_audit_plan: repo_snapshot_lock_row_count must match repo_snapshot_lock_rows length")
+    if valid_repo_rows > 0 and len(rows) != valid_repo_rows:
+        errors.append("repo_audit_plan: repo_snapshot_lock_rows length must match valid_repo_rows")
+    if str(repo.get("repo_snapshot_lock_sha256") or "") != sha256_json(rows):
+        errors.append("repo_audit_plan: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows")
+
+    lock_by_case: dict[str, dict] = {}
+    seen_paths: set[str] = set()
+    for index, row in enumerate(rows, start=1):
+        prefix = f"repo_audit_plan: repo_snapshot_lock_rows row {index}"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} must be an object")
+            return {}
+
+        case_id = str(row.get("case_id") or "").strip()
+        if not case_id:
+            errors.append(f"{prefix}: case_id must be present")
+            continue
+        if case_id in lock_by_case:
+            errors.append(f"{prefix}: duplicate case_id")
+            continue
+
+        repo_path = str(row.get("repo_path_resolved") or "").strip()
+        if not repo_path:
+            errors.append(f"{prefix}: repo_path_resolved must be present")
+        else:
+            canonical_repo_path = str(Path(repo_path).expanduser().resolve())
+            if canonical_repo_path in seen_paths:
+                errors.append(f"{prefix}: duplicate repo_path_resolved")
+            seen_paths.add(canonical_repo_path)
+
+        expected_head = str(row.get("expected_repo_git_head") or "").strip().lower()
+        actual_head = str(row.get("actual_repo_git_head") or "").strip().lower()
+        if not GIT_OBJECT_RE.fullmatch(expected_head):
+            errors.append(f"{prefix}: expected_repo_git_head must be a full git object id")
+        if not GIT_OBJECT_RE.fullmatch(actual_head):
+            errors.append(f"{prefix}: actual_repo_git_head must be a full git object id")
+        if expected_head and actual_head and expected_head != actual_head:
+            errors.append(f"{prefix}: expected_repo_git_head must match actual_repo_git_head")
+
+        for key in [
+            "clean_worktree_declared",
+            "clean_worktree_actual",
+            "owner_or_maintainer_contact_present",
+            "real_benchmark_namespace_confirmed",
+            "valid",
+        ]:
+            value = row.get(key)
+            if isinstance(value, bool) or not isinstance(value, int):
+                errors.append(f"{prefix}: {key} must be an integer")
+            elif value != 1:
+                errors.append(f"{prefix}: {key} must be 1")
+
+        audit_mode = str(row.get("audit_mode") or "").strip().lower()
+        if audit_mode not in {"quick", "full"}:
+            errors.append(f"{prefix}: audit_mode must be quick or full")
+        if str(row.get("namespace") or "").strip() != "real_benchmark":
+            errors.append(f"{prefix}: namespace must be real_benchmark")
+
+        lock_by_case[case_id] = row
+    return lock_by_case
+
+
 def require_repo_operator_commands(
     *,
     errors: list[str],
     repo: dict,
     valid_repo_rows: int,
+    snapshot_lock_rows: dict[str, dict],
 ) -> None:
     commands = repo.get("operator_commands")
     if not isinstance(commands, list) or not all(isinstance(command, str) and command for command in commands):
@@ -360,19 +448,143 @@ def require_repo_operator_commands(
     if valid_repo_rows > 0 and len(per_repo) != valid_repo_rows:
         errors.append("repo_audit_plan: per_repo length must match valid_repo_rows")
 
-    command_set = set(commands)
+    expected_commands: list[str] = []
+    label_template_outs: list[str] = []
+    seen_cases: set[str] = set()
     for row in per_repo:
         if not isinstance(row, dict):
             errors.append("repo_audit_plan: per_repo rows must be objects")
             return
-        for field in REPO_AUDIT_PLAN_COMMAND_FIELDS:
-            command = row.get(field)
-            if not isinstance(command, str) or not command:
+        case_id = str(row.get("case_id") or "").strip()
+        if not case_id:
+            errors.append("repo_audit_plan: per_repo rows must include case_id")
+            return
+        if case_id in seen_cases:
+            errors.append("repo_audit_plan: duplicate case_id in per_repo")
+            return
+        seen_cases.add(case_id)
+
+        lock_row = snapshot_lock_rows.get(case_id)
+        if snapshot_lock_rows and not lock_row:
+            errors.append("repo_audit_plan: per_repo case_id set must match repo_snapshot_lock_rows")
+            return
+        if lock_row:
+            if not same_path(str(row.get("repo_path") or ""), str(lock_row.get("repo_path_resolved") or "")):
+                errors.append("repo_audit_plan: per_repo repo_path must match repo_snapshot_lock_rows")
+                return
+            for field in ["expected_repo_git_head", "actual_repo_git_head"]:
+                if str(row.get(field) or "").strip().lower() != str(lock_row.get(field) or "").strip().lower():
+                    errors.append(f"repo_audit_plan: per_repo {field} must match repo_snapshot_lock_rows")
+                    return
+            for field in ["owner_or_maintainer_contact_present", "real_benchmark_namespace_confirmed"]:
+                if row.get(field) != lock_row.get(field):
+                    errors.append(f"repo_audit_plan: per_repo {field} must match repo_snapshot_lock_rows")
+                    return
+            if str(row.get("audit_mode") or "").strip().lower() != str(lock_row.get("audit_mode") or "").strip().lower():
+                errors.append("repo_audit_plan: per_repo audit_mode must match repo_snapshot_lock_rows")
+                return
+
+        repo_path = str(row.get("repo_path") or "").strip()
+        audit_mode = str(row.get("audit_mode") or "").strip().lower()
+        namespace = str(row.get("namespace") or "").strip()
+        audit_out = str(row.get("audit_out") or "").strip()
+        label_template_out = str(row.get("label_template_out") or "").strip()
+        reviewer_packet_out = str(row.get("reviewer_packet_out") or "").strip()
+        if namespace != "real_benchmark":
+            errors.append("repo_audit_plan: per_repo namespace must be real_benchmark")
+            return
+        if audit_mode not in {"quick", "full"}:
+            errors.append("repo_audit_plan: per_repo audit_mode must be quick or full")
+            return
+        for field, value in [
+            ("repo_path", repo_path),
+            ("audit_out", audit_out),
+            ("label_template_out", label_template_out),
+            ("reviewer_packet_out", reviewer_packet_out),
+        ]:
+            if not value:
                 errors.append(f"repo_audit_plan: per_repo rows must include {field}")
                 return
-            if command not in command_set:
-                errors.append(f"repo_audit_plan: {field} must be included in operator_commands")
+        expected_row_commands = {
+            "audit_command": command_line(
+                [
+                    "./scripts/audit_my_repo.sh",
+                    repo_path,
+                    "--mode",
+                    audit_mode,
+                    "--namespace",
+                    "real_benchmark",
+                    "--confirm-real-benchmark-namespace",
+                    "--out",
+                    audit_out,
+                ]
+            ),
+            "audit_verify_command": command_line(
+                [
+                    "./scripts/audit_my_repo.sh",
+                    "--verify-existing",
+                    audit_out,
+                ]
+            ),
+            "label_template_command": command_line(
+                [
+                    "python3",
+                    "scripts/audit_my_repo_label_template.py",
+                    "--audit-output",
+                    audit_out,
+                    "--out",
+                    label_template_out,
+                    "--case-id",
+                    case_id,
+                ]
+            ),
+            "label_template_verify_command": command_line(
+                [
+                    "python3",
+                    "scripts/audit_my_repo_label_template.py",
+                    "--verify-existing",
+                    label_template_out,
+                ]
+            ),
+            "reviewer_packet_command": command_line(
+                [
+                    "python3",
+                    "scripts/amr_beta_label_packet.py",
+                    "--template-dir",
+                    label_template_out,
+                    "--out",
+                    reviewer_packet_out,
+                ]
+            ),
+        }
+        for field in REPO_AUDIT_PLAN_COMMAND_FIELDS:
+            command = row.get(field)
+            if command != expected_row_commands[field]:
+                errors.append(f"repo_audit_plan: per_repo {field} must match locked repo command")
                 return
+            expected_commands.append(expected_row_commands[field])
+        label_template_outs.append(label_template_out)
+    if snapshot_lock_rows and seen_cases != set(snapshot_lock_rows):
+        errors.append("repo_audit_plan: per_repo case_id set must match repo_snapshot_lock_rows")
+
+    artifact_root = str(repo.get("artifact_root") or "").strip()
+    if not artifact_root:
+        errors.append("repo_audit_plan: artifact_root must be present")
+        return
+    aggregate_parts: list[object] = ["python3", "scripts/amr_beta_label_packet.py"]
+    for label_template_out in label_template_outs:
+        aggregate_parts.extend(["--template-dir", label_template_out])
+    aggregate_parts.extend(["--per-case-out-root", Path(artifact_root) / "reviewer_packets"])
+    expected_aggregate_command = command_line(aggregate_parts)
+    aggregate_command = repo.get("aggregate_reviewer_packet_command")
+    if not isinstance(aggregate_command, str) or not aggregate_command:
+        errors.append("repo_audit_plan: aggregate_reviewer_packet_command must be present")
+    elif aggregate_command != expected_aggregate_command:
+        errors.append("repo_audit_plan: aggregate_reviewer_packet_command must match locked repo commands")
+    else:
+        expected_commands.append(expected_aggregate_command)
+    if commands != expected_commands:
+        errors.append("repo_audit_plan: operator_commands must exactly match per_repo commands plus aggregate reviewer packet command")
 
 
 def require_label_operator_commands(
@@ -643,7 +855,17 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
         require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="repo_intake_sha256")
         require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="repo_snapshot_lock_sha256")
         require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="operator_commands_sha256")
-        require_repo_operator_commands(errors=errors, repo=repo, valid_repo_rows=valid_repo_rows)
+        snapshot_lock_rows = require_repo_snapshot_lock_rows(
+            errors=errors,
+            repo=repo,
+            valid_repo_rows=valid_repo_rows,
+        )
+        require_repo_operator_commands(
+            errors=errors,
+            repo=repo,
+            valid_repo_rows=valid_repo_rows,
+            snapshot_lock_rows=snapshot_lock_rows,
+        )
         for key in REPO_AUDIT_PLAN_READ_ONLY_FLAGS:
             require_flag(errors=errors, name="repo_audit_plan", payload=repo, key=key, expected=0)
         require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="input_path_guard_passed", expected=1)

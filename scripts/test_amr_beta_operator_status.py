@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -26,11 +27,45 @@ def sha256_json(payload: object) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
+def command_line(parts: list[object]) -> str:
+    return " ".join(shlex.quote(str(part)) for part in parts)
+
+
 def fake_sha(seed: int) -> str:
     return "sha256:" + f"{seed:064x}"[-64:]
 
 
+def fake_git_head(seed: int) -> str:
+    return f"{seed:040x}"[-40:]
+
+
+def repo_snapshot_lock_rows() -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for index in range(10):
+        case_id = f"case-{index:02d}"
+        head = fake_git_head(1000 + index)
+        rows.append(
+            {
+                "row_index": index + 1,
+                "case_id": case_id,
+                "repo_path_resolved": f"/tmp/{case_id}",
+                "expected_repo_git_head": head,
+                "actual_repo_git_head": head,
+                "clean_worktree_declared": 1,
+                "clean_worktree_actual": 1,
+                "owner_or_maintainer_contact_present": 1,
+                "audit_mode": "quick",
+                "namespace": "real_benchmark",
+                "real_benchmark_namespace_confirmed": 1,
+                "valid": 1,
+            }
+        )
+    return rows
+
+
 def binding_payload() -> dict:
+    snapshot_rows = repo_snapshot_lock_rows()
+    repo_snapshot_lock_sha256 = sha256_json(snapshot_rows)
     template_fingerprints = [
         {
             "label_template_json_sha256": fake_sha(100 + index),
@@ -46,7 +81,7 @@ def binding_payload() -> dict:
     label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
     input_bundle = {
         "repo_intake_sha256": fake_sha(1),
-        "repo_snapshot_lock_sha256": fake_sha(2),
+        "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": fake_sha(3),
         "feedback_sha256": fake_sha(4),
         "label_template_bundle_sha256": label_template_bundle_sha256,
@@ -67,7 +102,7 @@ def binding_payload() -> dict:
             row["label_intake_manifest_sha256"] for row in label_intake_fingerprints
         ],
         "repo_intake_sha256": fake_sha(1),
-        "repo_snapshot_lock_sha256": fake_sha(2),
+        "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": fake_sha(3),
         "feedback_sha256": fake_sha(4),
         "label_template_bundle_sha256": label_template_bundle_sha256,
@@ -105,19 +140,74 @@ def path_guard_payload() -> dict:
 
 def repo_audit_plan_payload() -> dict:
     binding = binding_payload()
+    snapshot_rows = repo_snapshot_lock_rows()
+    artifact_root = "/tmp/amr_beta_repo_audit_work"
     per_repo: list[dict[str, str]] = []
     commands: list[str] = []
     for index in range(10):
         case_id = f"case-{index:02d}"
+        lock_row = snapshot_rows[index]
+        repo_path = str(lock_row["repo_path_resolved"])
+        audit_mode = str(lock_row["audit_mode"])
+        audit_out = f"{artifact_root}/{case_id}_audit"
+        label_template_out = f"{artifact_root}/{case_id}_label_template"
+        reviewer_packet_out = f"{artifact_root}/{case_id}_reviewer_packet"
         row = {
             "case_id": case_id,
-            "audit_command": f"./scripts/audit_my_repo.sh /tmp/{case_id} --mode quick",
-            "audit_verify_command": f"./scripts/audit_my_repo.sh --verify-existing /tmp/{case_id}_audit",
-            "label_template_command": f"python3 scripts/audit_my_repo_label_template.py --case-id {case_id}",
-            "label_template_verify_command": (
-                f"python3 scripts/audit_my_repo_label_template.py --verify-existing /tmp/{case_id}_template"
+            "repo_path": repo_path,
+            "expected_repo_git_head": str(lock_row["expected_repo_git_head"]),
+            "actual_repo_git_head": str(lock_row["actual_repo_git_head"]),
+            "owner_or_maintainer_contact_present": 1,
+            "audit_mode": audit_mode,
+            "namespace": "real_benchmark",
+            "real_benchmark_namespace_confirmed": 1,
+            "audit_out": audit_out,
+            "label_template_out": label_template_out,
+            "reviewer_packet_out": reviewer_packet_out,
+            "audit_command": command_line(
+                [
+                    "./scripts/audit_my_repo.sh",
+                    repo_path,
+                    "--mode",
+                    audit_mode,
+                    "--namespace",
+                    "real_benchmark",
+                    "--confirm-real-benchmark-namespace",
+                    "--out",
+                    audit_out,
+                ]
             ),
-            "reviewer_packet_command": f"python3 scripts/amr_beta_label_packet.py --template-dir /tmp/{case_id}_template",
+            "audit_verify_command": command_line(["./scripts/audit_my_repo.sh", "--verify-existing", audit_out]),
+            "label_template_command": command_line(
+                [
+                    "python3",
+                    "scripts/audit_my_repo_label_template.py",
+                    "--audit-output",
+                    audit_out,
+                    "--out",
+                    label_template_out,
+                    "--case-id",
+                    case_id,
+                ]
+            ),
+            "label_template_verify_command": command_line(
+                [
+                    "python3",
+                    "scripts/audit_my_repo_label_template.py",
+                    "--verify-existing",
+                    label_template_out,
+                ]
+            ),
+            "reviewer_packet_command": command_line(
+                [
+                    "python3",
+                    "scripts/amr_beta_label_packet.py",
+                    "--template-dir",
+                    label_template_out,
+                    "--out",
+                    reviewer_packet_out,
+                ]
+            ),
         }
         per_repo.append(row)
         commands.extend(
@@ -129,11 +219,19 @@ def repo_audit_plan_payload() -> dict:
                 row["reviewer_packet_command"],
             ]
         )
-    commands.append("python3 scripts/amr_beta_label_packet.py --template-dir /tmp/all --per-case-out-root /tmp/reviewer")
+    aggregate_parts: list[object] = ["python3", "scripts/amr_beta_label_packet.py"]
+    for row in per_repo:
+        aggregate_parts.extend(["--template-dir", row["label_template_out"]])
+    aggregate_parts.extend(["--per-case-out-root", f"{artifact_root}/reviewer_packets"])
+    aggregate_command = command_line(aggregate_parts)
+    commands.append(aggregate_command)
     return {
         "schema": "amr_beta_repo_audit_plan.v1",
         "repo_intake_sha256": binding["repo_intake_sha256"],
         "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "repo_snapshot_lock_row_count": len(snapshot_rows),
+        "repo_snapshot_lock_rows": snapshot_rows,
+        "artifact_root": artifact_root,
         "ready_for_real_benchmark_audit_plan": 1,
         "valid_repo_rows": 10,
         "min_real_repos_required": 10,
@@ -146,6 +244,7 @@ def repo_audit_plan_payload() -> dict:
         "operator_command_count": len(commands),
         "operator_commands_sha256": sha256_json(commands),
         "per_repo": per_repo,
+        "aggregate_reviewer_packet_command": aggregate_command,
         "operator_commands": commands,
         **base_blocked(),
     }
@@ -809,6 +908,143 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "repo_audit_plan: operator_commands_sha256 must match operator_commands" in proc.stderr
+
+        extra_repo_command = tmp / "extra_repo_command.json"
+        extra_repo_command_payload = repo_audit_plan_payload()
+        extra_repo_command_payload["operator_commands"].append("python3 scripts/unexpected_repo_operator_command.py")
+        extra_repo_command_payload["operator_command_count"] = len(extra_repo_command_payload["operator_commands"])
+        extra_repo_command_payload["operator_commands_sha256"] = sha256_json(
+            extra_repo_command_payload["operator_commands"]
+        )
+        write_json(extra_repo_command, extra_repo_command_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(extra_repo_command),
+            "--out-json",
+            str(tmp / "extra_repo_command_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: operator_commands must exactly match per_repo" in proc.stderr
+
+        drifted_repo_audit_command = tmp / "drifted_repo_audit_command.json"
+        drifted_repo_audit_command_payload = repo_audit_plan_payload()
+        bad_audit_command = command_line(
+            [
+                "./scripts/audit_my_repo.sh",
+                "/tmp/other-case",
+                "--mode",
+                "quick",
+                "--namespace",
+                "real_benchmark",
+                "--confirm-real-benchmark-namespace",
+                "--out",
+                drifted_repo_audit_command_payload["per_repo"][0]["audit_out"],
+            ]
+        )
+        drifted_repo_audit_command_payload["per_repo"][0]["audit_command"] = bad_audit_command
+        drifted_repo_audit_command_payload["operator_commands"][0] = bad_audit_command
+        drifted_repo_audit_command_payload["operator_commands_sha256"] = sha256_json(
+            drifted_repo_audit_command_payload["operator_commands"]
+        )
+        write_json(drifted_repo_audit_command, drifted_repo_audit_command_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(drifted_repo_audit_command),
+            "--out-json",
+            str(tmp / "drifted_repo_audit_command_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: per_repo audit_command must match locked repo command" in proc.stderr
+
+        stale_repo_snapshot_hash = tmp / "stale_repo_snapshot_hash.json"
+        stale_repo_snapshot_hash_payload = repo_audit_plan_payload()
+        stale_repo_snapshot_hash_payload["repo_snapshot_lock_sha256"] = fake_sha(995)
+        write_json(stale_repo_snapshot_hash, stale_repo_snapshot_hash_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(stale_repo_snapshot_hash),
+            "--out-json",
+            str(tmp / "stale_repo_snapshot_hash_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows" in proc.stderr
+
+        duplicate_canonical_repo_path = tmp / "duplicate_canonical_repo_path.json"
+        duplicate_canonical_repo_path_payload = repo_audit_plan_payload()
+        duplicate_canonical_repo_path_payload["repo_snapshot_lock_rows"][1]["repo_path_resolved"] = "/tmp/../tmp/case-00"
+        duplicate_canonical_repo_path_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            duplicate_canonical_repo_path_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(duplicate_canonical_repo_path, duplicate_canonical_repo_path_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(duplicate_canonical_repo_path),
+            "--out-json",
+            str(tmp / "duplicate_canonical_repo_path_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 2: duplicate repo_path_resolved" in proc.stderr
+
+        dirty_repo_snapshot = tmp / "dirty_repo_snapshot.json"
+        dirty_repo_snapshot_payload = repo_audit_plan_payload()
+        dirty_repo_snapshot_payload["repo_snapshot_lock_rows"][0]["clean_worktree_actual"] = 0
+        dirty_repo_snapshot_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            dirty_repo_snapshot_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(dirty_repo_snapshot, dirty_repo_snapshot_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(dirty_repo_snapshot),
+            "--out-json",
+            str(tmp / "dirty_repo_snapshot_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 1: clean_worktree_actual must be 1" in proc.stderr
+
+        mismatched_repo_snapshot_head = tmp / "mismatched_repo_snapshot_head.json"
+        mismatched_repo_snapshot_head_payload = repo_audit_plan_payload()
+        mismatched_repo_snapshot_head_payload["repo_snapshot_lock_rows"][0]["actual_repo_git_head"] = fake_git_head(777)
+        mismatched_repo_snapshot_head_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            mismatched_repo_snapshot_head_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(mismatched_repo_snapshot_head, mismatched_repo_snapshot_head_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(mismatched_repo_snapshot_head),
+            "--out-json",
+            str(tmp / "mismatched_repo_snapshot_head_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 1: expected_repo_git_head must match actual_repo_git_head" in proc.stderr
+
+        mismatched_repo_audit_mode = tmp / "mismatched_repo_audit_mode.json"
+        mismatched_repo_audit_mode_payload = repo_audit_plan_payload()
+        mismatched_repo_audit_mode_payload["repo_snapshot_lock_rows"][0]["audit_mode"] = "full"
+        mismatched_repo_audit_mode_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            mismatched_repo_audit_mode_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(mismatched_repo_audit_mode, mismatched_repo_audit_mode_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(mismatched_repo_audit_mode),
+            "--out-json",
+            str(tmp / "mismatched_repo_audit_mode_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: per_repo audit_mode must match repo_snapshot_lock_rows" in proc.stderr
+
+        mismatched_repo_plan_head = tmp / "mismatched_repo_plan_head.json"
+        mismatched_repo_plan_head_payload = repo_audit_plan_payload()
+        mismatched_repo_plan_head_payload["per_repo"][0]["actual_repo_git_head"] = fake_git_head(778)
+        write_json(mismatched_repo_plan_head, mismatched_repo_plan_head_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(mismatched_repo_plan_head),
+            "--out-json",
+            str(tmp / "mismatched_repo_plan_head_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: per_repo actual_repo_git_head must match repo_snapshot_lock_rows" in proc.stderr
 
         stale_repo_to_label = tmp / "stale_repo_to_label.json"
         stale_repo_to_label_payload = label_intake_plan_payload()

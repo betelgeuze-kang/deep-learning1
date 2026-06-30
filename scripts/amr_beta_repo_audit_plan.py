@@ -169,6 +169,7 @@ def build_plan_rows(rows: list[dict[str, str]], artifact_root: Path) -> tuple[li
 
 def build_payload(*, intake_path: Path, rows: list[dict[str, str]], summary: dict, artifact_root: Path) -> dict:
     plan_rows, aggregate_command = build_plan_rows(rows, artifact_root)
+    snapshot_lock_rows = summary.get("repo_snapshot_lock_rows", [])
     commands = []
     for row in plan_rows:
         commands.extend(
@@ -190,6 +191,8 @@ def build_payload(*, intake_path: Path, rows: list[dict[str, str]], summary: dic
         "valid_repo_rows": int(summary.get("valid_repo_rows", 0)),
         "min_real_repos_required": int(summary.get("min_real_repos_required", 0)),
         "repo_snapshot_lock_sha256": summary.get("repo_snapshot_lock_sha256", ""),
+        "repo_snapshot_lock_row_count": len(snapshot_lock_rows),
+        "repo_snapshot_lock_rows": snapshot_lock_rows,
         "ready_for_real_benchmark_audit_plan": 1,
         "runs_audit": 0,
         "runs_label_template_generation": 0,
