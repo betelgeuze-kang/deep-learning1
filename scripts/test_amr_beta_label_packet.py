@@ -16,7 +16,14 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
 
 
-def make_template(path: Path, case_id: str, candidate_ids: list[str], *, blocked: bool = False) -> None:
+def make_template(
+    path: Path,
+    case_id: str,
+    candidate_ids: list[str],
+    *,
+    blocked: bool = False,
+    target_repo: Path | None = None,
+) -> None:
     path.mkdir()
     rows = []
     for index, candidate_id in enumerate(candidate_ids, start=1):
@@ -62,6 +69,17 @@ def make_template(path: Path, case_id: str, candidate_ids: list[str], *, blocked
         "rows": rows,
     }
     (path / "label_template.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if target_repo is not None:
+        audit_output = path / "_source_audit"
+        audit_output.mkdir()
+        (audit_output / "source_snapshot.json").write_text(
+            json.dumps({"target_repo": str(target_repo)}, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        (path / "label_template_manifest.json").write_text(
+            json.dumps({"input_audit_output": str(audit_output.resolve())}, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
 
 def run_tool(*args: str) -> subprocess.CompletedProcess:
@@ -117,6 +135,7 @@ def main() -> int:
         assert summary["valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1
         assert summary["design_partner_beta_candidate_ready"] == 0
+        assert summary["output_path_guard_passed"] == 1
         assert (out_dir / "reviewer_candidate_packet.jsonl").is_file()
         assert (out_dir / "reviewer_progress_summary.json").is_file()
 
@@ -179,6 +198,45 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "refusing to delete unrelated per-case packet entry" in proc.stderr
+
+        target_repo = tmp / "target_repo"
+        target_repo.mkdir()
+        target_template = tmp / "target_template"
+        make_template(target_template, "case-target", ["case-target-0001"], target_repo=target_repo)
+        proc = run_tool(
+            "--template-dir",
+            str(target_template),
+            "--out",
+            str(target_repo / "reviewer_packet"),
+            "--per-case-out-root",
+            str(target_repo / "per_case_packets"),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        blocked_summary = json.loads(proc.stdout)
+        assert blocked_summary["output_path_guard_passed"] == 0
+        assert "out must not be inside target repo" in proc.stderr
+        assert "per_case_out_root must not be inside target repo" in proc.stderr
+        assert not (target_repo / "reviewer_packet").exists()
+        assert not (target_repo / "per_case_packets").exists()
+
+        same_output_root = tmp / "same_packet_root"
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--out",
+            str(same_output_root),
+            "--per-case-out-root",
+            str(same_output_root),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        same_summary = json.loads(proc.stdout)
+        assert same_summary["output_path_guard_passed"] == 0
+        assert "per_case_out_root must not reuse out path" in proc.stderr
+        assert not same_output_root.exists()
 
         proc = run_tool(
             "--template-dir",
