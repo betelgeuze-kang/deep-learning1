@@ -195,6 +195,8 @@ def build_payload(*, intake_path: Path, rows: list[dict[str, str]], summary: dic
         "runs_label_template_generation": 0,
         "writes_reviewer_packets": 0,
         "creates_benchmark_evidence": 0,
+        "input_path_guard_passed": 1,
+        "output_path_guard_passed": 1,
         "operator_command_count": len(commands),
         "operator_commands_sha256": sha256_json(commands),
         "per_repo": plan_rows,
@@ -236,6 +238,8 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
+        f"- input_path_guard_passed: {payload['input_path_guard_passed']}",
+        f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- operator_commands_sha256: {payload['operator_commands_sha256']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
@@ -298,11 +302,19 @@ def main(argv: list[str]) -> int:
                 print(error, file=sys.stderr)
             return 1
         rows = normalized_valid_rows(raw_rows)
+        target_repo_paths = sorted({row["repo_path_resolved"] for row in rows if row.get("repo_path_resolved")})
+        output_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
+        output_path_errors = repo_intake.validate_output_paths(output_paths, target_repo_paths)
         artifact_root_errors = validate_artifact_root(artifact_root, rows)
-        if artifact_root_errors:
+        path_errors = [*input_path_errors, *output_path_errors]
+        plan_errors = [*artifact_root_errors, *path_errors]
+        if plan_errors:
             if args.json:
-                print(json.dumps({"schema": SCHEMA, "errors": artifact_root_errors}, indent=2, sort_keys=True))
-            for error in artifact_root_errors:
+                print(json.dumps({"schema": SCHEMA, "errors": plan_errors}, indent=2, sort_keys=True))
+            for error in plan_errors:
                 print(error, file=sys.stderr)
             return 1
         payload = build_payload(
@@ -311,9 +323,11 @@ def main(argv: list[str]) -> int:
             summary=summary,
             artifact_root=artifact_root,
         )
-        write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
+        payload["input_path_guard_passed"] = int(not input_path_errors)
+        payload["output_path_guard_passed"] = int(not output_path_errors)
+        write_json(output_paths["out_json"], payload, args.overwrite)
         if args.out_md:
-            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
+            write_markdown(output_paths["out_md"], payload, args.overwrite)
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))
         else:

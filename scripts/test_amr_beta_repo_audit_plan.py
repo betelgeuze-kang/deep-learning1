@@ -106,6 +106,8 @@ def main() -> int:
         assert payload["runs_label_template_generation"] == 0
         assert payload["writes_reviewer_packets"] == 0
         assert payload["creates_benchmark_evidence"] == 0
+        assert payload["input_path_guard_passed"] == 1
+        assert payload["output_path_guard_passed"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
         assert len(payload["per_repo"]) == 10
@@ -138,6 +140,8 @@ def main() -> int:
         markdown = out_md.read_text(encoding="utf-8")
         assert "runs_audit: 0" in markdown
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
+        assert "input_path_guard_passed: 1" in markdown
+        assert "output_path_guard_passed: 1" in markdown
         assert "Aggregate Reviewer Packet Command" in markdown
 
         dirty = tmp / "dirty.md"
@@ -167,6 +171,67 @@ def main() -> int:
         assert proc.returncode == 1
         assert "artifact_root must not be inside target repo" in proc.stderr
         assert not (tmp / "unsafe_artifact_plan.json").exists()
+
+        unsafe_out_json = repos[0][0] / "repo_audit_plan.json"
+        unsafe_out_md = repos[0][0] / "repo_audit_plan.md"
+        proc = run_tool(
+            "--repo-intake",
+            str(intake),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(unsafe_out_json),
+            "--out-md",
+            str(unsafe_out_md),
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_payload = json.loads(proc.stdout)
+        assert "out_json must not be inside target repo" in proc.stderr
+        assert "out_md must not be inside target repo" in proc.stderr
+        assert "out_json must not be inside target repo" in unsafe_payload["errors"][0]
+        assert not unsafe_out_json.exists()
+        assert not unsafe_out_md.exists()
+
+        ignored_intake_name = "ignored_repo_audit_intake.md"
+        (repos[0][0] / ".gitignore").write_text(f"{ignored_intake_name}\n", encoding="utf-8")
+        assert run(["git", "add", ".gitignore"], cwd=repos[0][0]).returncode == 0
+        commit = run(
+            [
+                "git",
+                "-c",
+                "user.name=AMR Test",
+                "-c",
+                "user.email=amr-test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "ignore unsafe audit intake sheet",
+            ],
+            cwd=repos[0][0],
+        )
+        assert commit.returncode == 0, commit.stderr
+        head = run(["git", "rev-parse", "HEAD"], cwd=repos[0][0])
+        assert head.returncode == 0
+        repos[0] = (repos[0][0], head.stdout.strip())
+
+        unsafe_input = repos[0][0] / ignored_intake_name
+        write_intake(unsafe_input, repos)
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][0])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        proc = run_tool(
+            "--repo-intake",
+            str(unsafe_input),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(tmp / "unsafe_input_plan.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "input_intake must not be inside target repo" in proc.stderr
+        assert not (tmp / "unsafe_input_plan.json").exists()
 
         example = tmp / "example.md"
         write_intake(example, repos, case_prefix="EXAMPLE")
