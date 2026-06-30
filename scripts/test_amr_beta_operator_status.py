@@ -106,6 +106,65 @@ def path_guard_payload() -> dict:
     }
 
 
+def repo_audit_plan_payload() -> dict:
+    binding = binding_payload()
+    per_repo: list[dict[str, str]] = []
+    commands: list[str] = []
+    for index in range(10):
+        case_id = f"case-{index:02d}"
+        row = {
+            "case_id": case_id,
+            "audit_command": f"./scripts/audit_my_repo.sh /tmp/{case_id} --mode quick",
+            "audit_verify_command": f"./scripts/audit_my_repo.sh --verify-existing /tmp/{case_id}_audit",
+            "label_template_command": f"python3 scripts/audit_my_repo_label_template.py --case-id {case_id}",
+            "label_template_verify_command": (
+                f"python3 scripts/audit_my_repo_label_template.py --verify-existing /tmp/{case_id}_template"
+            ),
+            "reviewer_packet_command": f"python3 scripts/amr_beta_label_packet.py --template-dir /tmp/{case_id}_template",
+        }
+        per_repo.append(row)
+        commands.extend(
+            [
+                row["audit_command"],
+                row["audit_verify_command"],
+                row["label_template_command"],
+                row["label_template_verify_command"],
+                row["reviewer_packet_command"],
+            ]
+        )
+    commands.append("python3 scripts/amr_beta_label_packet.py --template-dir /tmp/all --per-case-out-root /tmp/reviewer")
+    return {
+        "schema": "amr_beta_repo_audit_plan.v1",
+        "repo_intake_sha256": binding["repo_intake_sha256"],
+        "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "ready_for_real_benchmark_audit_plan": 1,
+        "valid_repo_rows": 10,
+        "min_real_repos_required": 10,
+        "runs_audit": 0,
+        "runs_label_template_generation": 0,
+        "writes_reviewer_packets": 0,
+        "creates_benchmark_evidence": 0,
+        "input_path_guard_passed": 1,
+        "output_path_guard_passed": 1,
+        "operator_command_count": len(commands),
+        "operator_commands_sha256": sha256_json(commands),
+        "per_repo": per_repo,
+        "operator_commands": commands,
+        **base_blocked(),
+    }
+
+
+def label_intake_plan_payload() -> dict:
+    binding = binding_payload()
+    return {
+        "schema": "amr_beta_label_intake_plan.v1",
+        "repo_intake_sha256": binding["repo_intake_sha256"],
+        "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "ready_for_label_intake_plan": 1,
+        **base_blocked(),
+    }
+
+
 def request_payload(preflight: Path) -> dict:
     return {
         "schema": "amr_beta_runtime_approval_request.v1",
@@ -167,19 +226,11 @@ def main() -> int:
 
         write_json(
             repo,
-            {
-                "schema": "amr_beta_repo_audit_plan.v1",
-                "ready_for_real_benchmark_audit_plan": 1,
-                **base_blocked(),
-            },
+            repo_audit_plan_payload(),
         )
         write_json(
             label,
-            {
-                "schema": "amr_beta_label_intake_plan.v1",
-                "ready_for_label_intake_plan": 1,
-                **base_blocked(),
-            },
+            label_intake_plan_payload(),
         )
         write_json(
             feedback,
@@ -625,17 +676,124 @@ def main() -> int:
         assert "benchmark_out/benchmark_readiness.json" in proc.stderr
 
         bad_repo = tmp / "bad_repo_plan.json"
-        bad_payload = {
-            "schema": "amr_beta_repo_audit_plan.v1",
-            "ready_for_real_benchmark_audit_plan": 1,
-            **base_blocked(),
-        }
+        bad_payload = repo_audit_plan_payload()
         bad_payload["release_ready"] = 1
         write_json(bad_repo, bad_payload)
         proc = run_tool("--repo-audit-plan", str(bad_repo), "--out-json", str(tmp / "bad_status.json"))
         assert proc.returncode == 1
         assert "must keep release_ready=0" in proc.stderr
         assert not (tmp / "bad_status.json").exists()
+
+        missing_repo_guard = tmp / "missing_repo_guard.json"
+        missing_repo_guard_payload = repo_audit_plan_payload()
+        del missing_repo_guard_payload["input_path_guard_passed"]
+        write_json(missing_repo_guard, missing_repo_guard_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(missing_repo_guard),
+            "--out-json",
+            str(tmp / "missing_repo_guard_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: input_path_guard_passed must be present" in proc.stderr
+
+        low_repo_count = tmp / "low_repo_count.json"
+        low_repo_count_payload = repo_audit_plan_payload()
+        low_repo_count_payload["valid_repo_rows"] = 9
+        write_json(low_repo_count, low_repo_count_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(low_repo_count),
+            "--out-json",
+            str(tmp / "low_repo_count_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: valid_repo_rows must be >= 10" in proc.stderr
+
+        float_repo_count = tmp / "float_repo_count.json"
+        float_repo_count_payload = repo_audit_plan_payload()
+        float_repo_count_payload["valid_repo_rows"] = 10.9
+        write_json(float_repo_count, float_repo_count_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(float_repo_count),
+            "--out-json",
+            str(tmp / "float_repo_count_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: valid_repo_rows must be an integer >= 10" in proc.stderr
+
+        missing_repo_commands = tmp / "missing_repo_commands.json"
+        missing_repo_commands_payload = repo_audit_plan_payload()
+        del missing_repo_commands_payload["operator_commands"]
+        write_json(missing_repo_commands, missing_repo_commands_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(missing_repo_commands),
+            "--out-json",
+            str(tmp / "missing_repo_commands_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: operator_commands must be a non-empty string list" in proc.stderr
+
+        stale_repo_commands_hash = tmp / "stale_repo_commands_hash.json"
+        stale_repo_commands_hash_payload = repo_audit_plan_payload()
+        stale_repo_commands_hash_payload["operator_commands_sha256"] = fake_sha(998)
+        write_json(stale_repo_commands_hash, stale_repo_commands_hash_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(stale_repo_commands_hash),
+            "--out-json",
+            str(tmp / "stale_repo_commands_hash_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: operator_commands_sha256 must match operator_commands" in proc.stderr
+
+        stale_repo_to_label = tmp / "stale_repo_to_label.json"
+        stale_repo_to_label_payload = label_intake_plan_payload()
+        stale_repo_to_label_payload["repo_snapshot_lock_sha256"] = fake_sha(997)
+        write_json(stale_repo_to_label, stale_repo_to_label_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(stale_repo_to_label),
+            "--out-json",
+            str(tmp / "stale_repo_to_label_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: repo_snapshot_lock_sha256 must match repo_audit_plan" in proc.stderr
+
+        stale_repo_to_preflight = tmp / "stale_repo_to_preflight.json"
+        stale_repo_to_preflight_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
+            **binding_payload(),
+            **base_blocked(),
+        }
+        stale_repo_to_preflight_payload["repo_intake_sha256"] = fake_sha(996)
+        stale_repo_to_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
+            {
+                "repo_intake_sha256": stale_repo_to_preflight_payload["repo_intake_sha256"],
+                "repo_snapshot_lock_sha256": stale_repo_to_preflight_payload["repo_snapshot_lock_sha256"],
+                "decisions_sha256": stale_repo_to_preflight_payload["decisions_sha256"],
+                "feedback_sha256": stale_repo_to_preflight_payload["feedback_sha256"],
+                "label_template_bundle_sha256": stale_repo_to_preflight_payload["label_template_bundle_sha256"],
+                "label_intake_bundle_sha256": stale_repo_to_preflight_payload["label_intake_bundle_sha256"],
+            }
+        )
+        write_json(stale_repo_to_preflight, stale_repo_to_preflight_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--runtime-preflight",
+            str(stale_repo_to_preflight),
+            "--out-json",
+            str(tmp / "stale_repo_to_preflight_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: repo_intake_sha256 must match repo_audit_plan" in proc.stderr
 
         bad_readiness = tmp / "bad_readiness.json"
         write_json(
