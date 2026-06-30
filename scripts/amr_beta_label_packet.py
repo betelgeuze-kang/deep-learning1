@@ -50,6 +50,79 @@ def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def read_json(path: Path, input_name: str) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{input_name} must contain an object")
+    return payload
+
+
+def load_template_target_repo(path: Path) -> tuple[str, list[str]]:
+    manifest_path = path / "label_template_manifest.json"
+    if not manifest_path.is_file():
+        return "", []
+    errors: list[str] = []
+    try:
+        manifest = read_json(manifest_path, "label template manifest")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return "", [f"{path}: label template manifest parse error: {exc}"]
+
+    raw_audit_output = str(manifest.get("input_audit_output") or "").strip()
+    if not raw_audit_output:
+        return "", [f"{path}: label template manifest missing input_audit_output"]
+    audit_output = Path(raw_audit_output).expanduser()
+    if not audit_output.is_absolute():
+        return "", [f"{path}: label template manifest input_audit_output must be absolute"]
+
+    source_snapshot = audit_output / "source_snapshot.json"
+    audit_manifest = audit_output / "audit_manifest.json"
+    for candidate, input_name in [
+        (source_snapshot, "source snapshot"),
+        (audit_manifest, "audit manifest"),
+    ]:
+        if not candidate.is_file():
+            continue
+        try:
+            payload = read_json(candidate, input_name)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            errors.append(f"{path}: {input_name} parse error: {exc}")
+            continue
+        raw_target = str(payload.get("target_repo") or "").strip()
+        if raw_target:
+            target_repo = Path(raw_target).expanduser().resolve()
+            if is_forbidden_env_path(target_repo):
+                errors.append(f"{path}: target_repo must not be .env-like")
+            return str(target_repo), errors
+    errors.append(f"{path}: label template source snapshot missing target_repo")
+    return "", errors
+
+
+def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    resolved_by_name = {name: path.expanduser().resolve() for name, path in paths.items()}
+    seen_paths: dict[Path, str] = {}
+    for name, resolved in resolved_by_name.items():
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen_paths:
+            errors.append(f"{name} must not reuse {seen_paths[resolved]} path: {resolved}")
+        else:
+            seen_paths[resolved] = name
+        for raw_repo in target_repo_paths:
+            repo_path = Path(raw_repo).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def validate_optional_safe_id(
     *,
     errors: list[str],
@@ -422,6 +495,7 @@ def main(argv: list[str]) -> int:
         synthetic_candidate_rows = 0
         verify_passed_dirs = 0
         verify_failed_dirs = 0
+        target_repo_paths: list[str] = []
         for raw_template_dir in args.template_dir:
             template_dir = Path(raw_template_dir).expanduser().resolve()
             if not args.skip_verify_existing:
@@ -435,6 +509,10 @@ def main(argv: list[str]) -> int:
             packet_rows.extend(rows)
             errors.extend(template_errors)
             synthetic_candidate_rows += counts["synthetic_candidate_rows"]
+            target_repo_path, target_repo_errors = load_template_target_repo(template_dir)
+            if target_repo_path:
+                target_repo_paths.append(target_repo_path)
+            errors.extend(target_repo_errors)
 
         candidate_ids = [row["candidate_label_id"] for row in packet_rows]
         duplicate_candidate_ids = sorted({value for value in candidate_ids if candidate_ids.count(value) > 1})
@@ -458,6 +536,13 @@ def main(argv: list[str]) -> int:
 
         case_ids = sorted({row["case_id"] for row in packet_rows})
         output_requested = bool(args.out or args.per_case_out_root)
+        output_paths: dict[str, Path] = {}
+        if args.out:
+            output_paths["out"] = Path(args.out)
+        if args.per_case_out_root:
+            output_paths["per_case_out_root"] = Path(args.per_case_out_root)
+        output_path_errors = validate_output_paths(output_paths, sorted(set(target_repo_paths)))
+        errors.extend(output_path_errors)
         output_files = sorted(MANAGED_OUTPUTS) if args.out else []
         if args.per_case_out_root:
             output_files = [
@@ -483,6 +568,7 @@ def main(argv: list[str]) -> int:
             "min_human_label_rows_required": args.min_labels,
             "human_label_requirement_met": int(valid_human_label_rows >= args.min_labels),
             "candidate_guard_passed": int(not errors),
+            "output_path_guard_passed": int(not output_path_errors),
             "ready_for_label_intake": int(not errors and valid_human_label_rows > 0 and not missing_ids),
             "output_files": output_files,
             "release_ready": 0,

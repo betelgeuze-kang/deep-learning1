@@ -99,10 +99,13 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   generated templates:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --out <reviewer-packet-dir>`.
   The packet guard runs `audit_my_repo_label_template.py --verify-existing`
-  before reviewer packet output is accepted.
+  before reviewer packet output is accepted, and refuses reviewer packet output
+  roots inside any target repository.
   For a batch of repo templates, write one packet directory per `case_id` plus
   an aggregate index:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo1-template-dir> --template-dir <repo2-template-dir> --per-case-out-root results/reviewer_packets`.
+  Keep `--out` and `--per-case-out-root` outside all target repositories so
+  human-review packet generation cannot dirty repos that must remain clean.
 - [ ] Send only candidate ids from the generated templates to human reviewers.
 - [ ] Collect at least 300 human decision rows with `human_labeled=true` and
   `expected=present|absent`.
