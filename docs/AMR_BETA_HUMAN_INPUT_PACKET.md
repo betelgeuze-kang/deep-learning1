@@ -51,6 +51,9 @@ requires the approval status to bind the human approval record and requires
 operator status also checks that runtime approval request/status artifacts carry
 the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 `label_intake_bundle_sha256`, and manifest-sha lists recorded by the preflight.
+Its `stage_progress` block reports the read-only PM counters for repo intake,
+human labels, maintainer feedback, runtime approval, and benchmark/backlog
+status while keeping all release/public/model readiness flags blocked.
 
 ### 9.1 Repository intake checklist
 
@@ -402,6 +405,10 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    The status board refuses a runtime approval status without its exact approval
    request, refuses stale preflight/request sha bindings, and refuses readiness
    files from any benchmark output other than the human-approved `benchmark_out`.
+   Its Markdown and JSON outputs include `stage_progress` counters for the
+   10-repo, 300-label, and 3-maintainer thresholds, plus runtime and benchmark
+   readiness presence checks; these counters do not create evidence or promote
+   claims.
 11. Package either the beta candidate packet or blocked packet from verified
    readiness/backlog artifacts and the verified operator status:
    `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --operator-status results/amr_beta_operator_status.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
