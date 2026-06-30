@@ -129,13 +129,17 @@ status while keeping all release/public/model readiness flags blocked.
   compiler refuse decisions inputs inside target repos so human labeling
   artifacts cannot dirty or become part of the source repository under review.
 - [ ] As decisions arrive, rerun the reviewer progress summary:
-  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
+  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out results/reviewer_packet --overwrite --require-all-candidates`.
   The JSON summary includes `case_progress_rows`,
   `cases_ready_for_label_intake`, `cases_blocked_for_label_intake`, and
-  `non_synthetic_valid_human_label_rows`, and
+  `non_synthetic_valid_human_label_rows`,
+  `label_template_bundle_sha256`, and `decisions_bundle_sha256`, and
   `human_labels_remaining_to_minimum` so operators can triage per-repo coverage
   before label-intake planning. Synthetic/template-only candidates never reduce
   the beta threshold remainder.
+  For batch handoff, pass every relevant `--template-dir` and save the aggregate
+  summary that matches the same decisions file; use per-case summaries only with
+  matching per-case template and decision inputs.
 - [ ] When using the combined human-input status guard, pass every available
   `--template-dir`; with template context supplied it reports
   `non_synthetic_valid_human_label_rows` and only those decisions reduce the
@@ -145,10 +149,13 @@ status while keeping all release/public/model readiness flags blocked.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
   label-intake command plan; this validates coverage and citation readiness but
   does not compile labels:
-  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --label-packet-summary results/reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
   The plan carries `repo_snapshot_lock_sha256`, `decisions_sha256`, and
-  `label_template_bundle_sha256` so per-repo label-intake commands remain tied
-  to the same validated repo snapshot and label-template bundle. It refuses
+  `label_template_bundle_sha256`, plus the reviewer summary's
+  `label_packet_summary_sha256`, `label_packet_decisions_bundle_sha256`, and
+  `label_packet_template_bundle_sha256`, so per-repo label-intake commands remain tied
+  to the same validated repo snapshot, reviewed decision file, and
+  label-template bundle. It refuses
   `--out-root`, `--out-json`, or `--out-md` inside any target repository.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`. Keep each `--out` directory outside the
@@ -343,17 +350,18 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    packet, label-intake plan, and label-intake compiler all refuse decisions
    inputs inside target repos.
    Check partial coverage or require complete candidate coverage with
-   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
+   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_reviewer_packet --overwrite --require-all-candidates`.
    The progress summary reports per-case reviewed/missing candidate counts and
    the remaining non-synthetic count to the 300-label beta threshold.
 5. Generate the read-only label-intake command plan:
-   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --label-packet-summary results/<repo>_reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
    The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
    keeps beta/release/model/public comparison readiness blocked. It requires
    each template directory to pass
    `audit_my_repo_label_template.py --verify-existing`, and rejects missing
-   candidate decisions and synthetic template rows before compilation. It also
-   refuses plan or label-intake output roots inside any target repository.
+   candidate decisions, stale reviewer progress summaries, and synthetic
+   template rows before compilation. It also refuses plan or label-intake output
+   roots inside any target repository.
 6. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
    Keep `--out` outside the target repository; the compiler rejects output

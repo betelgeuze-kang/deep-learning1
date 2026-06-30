@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_label_intake_plan.py"
+PACKET_TOOL = ROOT / "scripts" / "amr_beta_label_packet.py"
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -127,6 +128,16 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
     )
 
 
+def run_packet_tool(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(PACKET_TOOL), *args],
+        cwd=str(ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
@@ -151,6 +162,19 @@ def main() -> int:
                 for case_id, _repo, _head in repos
             ],
         )
+        packet_args = [
+            "--decisions",
+            str(decisions),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            packet_args.extend(["--template-dir", str(template_dir)])
+        packet_proc = run_packet_tool(*packet_args)
+        assert packet_proc.returncode == 0, packet_proc.stderr
+        label_packet_summary = tmp / "label_packet_summary.json"
+        label_packet_summary.write_text(packet_proc.stdout, encoding="utf-8")
+        label_packet_payload = json.loads(packet_proc.stdout)
         out_root = tmp / "label intake outputs"
         out_json = tmp / "label_intake_plan.json"
         out_md = tmp / "label_intake_plan.md"
@@ -179,6 +203,8 @@ def main() -> int:
             str(intake),
             "--decisions",
             str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
             "--out-root",
             str(out_root),
             "--min-labels",
@@ -199,6 +225,12 @@ def main() -> int:
         assert payload["repo_intake_sha256"] == sha256_file(intake)
         assert payload["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert payload["decisions_sha256"] == sha256_file(decisions)
+        assert payload["label_packet_summary"] == str(label_packet_summary.resolve())
+        assert payload["label_packet_summary_sha256"] == sha256_file(label_packet_summary)
+        assert payload["label_packet_summary_bound"] == 1
+        assert payload["label_packet_decisions_fingerprints"] == label_packet_payload["decisions_fingerprints"]
+        assert payload["label_packet_decisions_bundle_sha256"] == label_packet_payload["decisions_bundle_sha256"]
+        assert payload["label_packet_template_bundle_sha256"] == label_packet_payload["label_template_bundle_sha256"]
         assert payload["label_template_json_sha256s"] == [
             sha256_file(template_dir / "label_template.json") for template_dir in template_dirs
         ]
@@ -247,6 +279,32 @@ def main() -> int:
         assert "compiles_labels: 0" in markdown
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
         assert "label_template_bundle_sha256: sha256:" in markdown
+        assert "label_packet_summary_bound: 1" in markdown
+        assert "label_packet_decisions_bundle_sha256: sha256:" in markdown
+
+        stale_label_packet_summary = tmp / "stale_label_packet_summary.json"
+        stale_label_packet_payload = dict(label_packet_payload)
+        stale_label_packet_payload["decisions_bundle_sha256"] = "sha256:" + ("9" * 64)
+        write_json(stale_label_packet_summary, stale_label_packet_payload)
+        stale_packet_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(stale_label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "stale_packet_plan.json"),
+            "--skip-verify-existing",
+        ]
+        for template_dir in template_dirs:
+            stale_packet_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*stale_packet_args)
+        assert proc.returncode == 1
+        assert "label_packet_summary: decisions_bundle_sha256 must match label_intake_plan" in proc.stderr
+        assert not (tmp / "stale_packet_plan.json").exists()
 
         unsafe_output_args = [
             "--repo-intake",

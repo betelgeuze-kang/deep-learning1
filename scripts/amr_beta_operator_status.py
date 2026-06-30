@@ -699,6 +699,52 @@ def require_label_template_fingerprints(*, errors: list[str], label: dict, case_
         errors.append("label_intake_plan: label_template_verify_existing_failed_dirs must be 0")
 
 
+def require_label_packet_summary_binding(*, errors: list[str], label: dict) -> None:
+    require_flag(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="label_packet_summary_bound",
+        expected=1,
+    )
+    for field in [
+        "label_packet_summary_sha256",
+        "label_packet_decisions_bundle_sha256",
+        "label_packet_template_bundle_sha256",
+    ]:
+        require_sha_field(errors=errors, name="label_intake_plan", payload=label, field=field)
+    if not str(label.get("label_packet_summary") or ""):
+        errors.append("label_intake_plan: label_packet_summary must be supplied")
+
+    decision_fingerprints = label.get("label_packet_decisions_fingerprints")
+    if not isinstance(decision_fingerprints, list):
+        errors.append("label_intake_plan: label_packet_decisions_fingerprints must be a list")
+        return
+    for row in decision_fingerprints:
+        if not isinstance(row, dict):
+            errors.append("label_intake_plan: label_packet_decisions_fingerprints rows must be objects")
+            return
+        if not str(row.get("decisions") or ""):
+            errors.append("label_intake_plan: label_packet_decisions_fingerprints rows must bind decisions")
+            return
+        if not SHA256_RE.fullmatch(str(row.get("decisions_sha256") or "")):
+            errors.append("label_intake_plan: label_packet_decisions_fingerprints rows must bind decisions_sha256")
+            return
+
+    expected_fingerprints = [
+        {
+            "decisions": str(label.get("decisions") or ""),
+            "decisions_sha256": str(label.get("decisions_sha256") or ""),
+        }
+    ]
+    if decision_fingerprints != expected_fingerprints:
+        errors.append("label_intake_plan: label_packet_decisions_fingerprints must match decisions input")
+    if str(label.get("label_packet_decisions_bundle_sha256") or "") != sha256_json(decision_fingerprints):
+        errors.append("label_intake_plan: label_packet_decisions_bundle_sha256 must match decisions fingerprints")
+    if label.get("label_packet_template_bundle_sha256") != label.get("label_template_bundle_sha256"):
+        errors.append("label_intake_plan: label_packet_template_bundle_sha256 must match label_template_bundle_sha256")
+
+
 def case_id_set(*, errors: list[str], name: str, payload: dict, row_field: str) -> set[str]:
     rows = payload.get(row_field)
     if not isinstance(rows, list):
@@ -1010,6 +1056,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
         require_flag(errors=errors, name="label_intake_plan", payload=label, key="decision_input_guard_passed", expected=1)
         require_flag(errors=errors, name="label_intake_plan", payload=label, key="output_path_guard_passed", expected=1)
         require_label_template_fingerprints(errors=errors, label=label, case_count=case_count)
+        require_label_packet_summary_binding(errors=errors, label=label)
         require_label_operator_commands(errors=errors, label=label, case_count=case_count)
 
     if feedback:

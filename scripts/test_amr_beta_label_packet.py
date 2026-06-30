@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_label_packet.py"
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -133,6 +143,21 @@ def main() -> int:
         assert summary["label_template_verify_existing_required"] == 0
         assert summary["label_template_verify_existing_passed_dirs"] == 0
         assert summary["candidate_label_rows"] == 3
+        assert summary["non_synthetic_candidate_rows"] == 3
+        assert summary["label_template_json_sha256s"] == [
+            sha256_file(template_a / "label_template.json"),
+            sha256_file(template_b / "label_template.json"),
+        ]
+        assert summary["label_template_manifest_sha256s"] == []
+        assert summary["label_template_bundle_sha256"] == sha256_json(summary["label_template_fingerprints"])
+        assert summary["decisions_fingerprints"] == [
+            {
+                "decisions": str(decisions.resolve()),
+                "decisions_sha256": sha256_file(decisions),
+            }
+        ]
+        assert summary["decisions_sha256s"] == [sha256_file(decisions)]
+        assert summary["decisions_bundle_sha256"] == sha256_json(summary["decisions_fingerprints"])
         assert summary["valid_human_label_rows"] == 2
         assert summary["non_synthetic_valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1
@@ -146,6 +171,8 @@ def main() -> int:
                 "candidate_label_rows": 2,
                 "case_id": "case-a",
                 "missing_candidate_label_count": 1,
+                "non_synthetic_candidate_rows": 2,
+                "non_synthetic_valid_human_label_rows": 1,
                 "ready_for_label_intake": 0,
                 "synthetic_candidate_rows": 0,
                 "template_dirs": [str(template_a.resolve())],
@@ -156,6 +183,8 @@ def main() -> int:
                 "candidate_label_rows": 1,
                 "case_id": "case-b",
                 "missing_candidate_label_count": 0,
+                "non_synthetic_candidate_rows": 1,
+                "non_synthetic_valid_human_label_rows": 1,
                 "ready_for_label_intake": 1,
                 "synthetic_candidate_rows": 0,
                 "template_dirs": [str(template_b.resolve())],
@@ -201,9 +230,14 @@ def main() -> int:
         assert case_a_summary["valid_human_label_rows"] == 1
         assert case_a_summary["missing_candidate_label_count"] == 1
         assert case_a_summary["ready_for_label_intake"] == 0
+        assert case_a_summary["label_template_bundle_sha256"].startswith("sha256:")
+        assert case_a_summary["decisions_bundle_sha256"] == summary["decisions_bundle_sha256"]
+        assert case_a_summary["candidate_guard_passed"] == 1
         assert case_b_summary["candidate_label_rows"] == 1
         assert case_b_summary["valid_human_label_rows"] == 1
         assert case_b_summary["ready_for_label_intake"] == 1
+        assert case_b_summary["label_template_bundle_sha256"].startswith("sha256:")
+        assert case_b_summary["decisions_bundle_sha256"] == summary["decisions_bundle_sha256"]
         missing_a = (per_case_root / "case-a" / "reviewer_missing_candidates.jsonl").read_text(encoding="utf-8")
         assert "case-a-0002" in missing_a
 
