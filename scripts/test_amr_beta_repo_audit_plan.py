@@ -106,6 +106,12 @@ def main() -> int:
         assert payload["repo_snapshot_lock_sha256"] == intake_status["repo_snapshot_lock_sha256"]
         assert payload["repo_snapshot_lock_row_count"] == 10
         assert payload["repo_snapshot_lock_rows"] == intake_status["repo_snapshot_lock_rows"]
+        assert payload["repo_intake_local_fingerprint_sha256"] == intake_status[
+            "repo_intake_local_fingerprint_sha256"
+        ]
+        assert payload["repo_intake_local_fingerprint_rows"] == intake_status[
+            "repo_intake_local_fingerprint_rows"
+        ]
         assert payload["ready_for_real_benchmark_audit_plan"] == 1
         assert payload["runs_audit"] == 0
         assert payload["runs_label_template_generation"] == 0
@@ -149,6 +155,7 @@ def main() -> int:
         markdown = out_md.read_text(encoding="utf-8")
         assert "runs_audit: 0" in markdown
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
+        assert "repo_intake_local_fingerprint_sha256: sha256:" in markdown
         assert "input_path_guard_passed: 1" in markdown
         assert "output_path_guard_passed: 1" in markdown
         assert "writes_operator_command_script: 1" in markdown
@@ -156,6 +163,10 @@ def main() -> int:
         command_script = out_commands.read_text(encoding="utf-8")
         assert command_script.startswith("#!/usr/bin/env bash\nset -euo pipefail\n")
         assert f"# repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}" in command_script
+        assert (
+            f"# repo_intake_local_fingerprint_sha256: {payload['repo_intake_local_fingerprint_sha256']}"
+            in command_script
+        )
         assert f"# operator_commands_sha256: {payload['operator_commands_sha256']}" in command_script
         assert "# operator_command_count: 51" in command_script
         assert command_script.count("# command ") == 51
