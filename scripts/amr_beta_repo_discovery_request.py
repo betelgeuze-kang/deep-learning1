@@ -238,13 +238,13 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "",
         "## Candidate Rows",
         "",
-        "| suggested_case_id | recommended | contact | namespace_confirmed | clean | head | status | repo_path | blockers |",
-        "|---|---:|---|---|---:|---:|---:|---|---|",
+        "| suggested_case_id | recommended | include_for_real_benchmark_intake | contact | namespace_confirmed | clean | head | status | repo_path | blockers |",
+        "|---|---:|---|---|---|---:|---:|---:|---|---|",
     ]
     for row in payload["request_rows"]:
         blockers = ",".join(str(item) for item in row.get("blockers_before_counting", []))
         lines.append(
-            "| {case_id} | {recommended} |  |  | {clean} | {head} | {status} | {repo} | {blockers} |".format(
+            "| {case_id} | {recommended} |  |  |  | {clean} | {head} | {status} | {repo} | {blockers} |".format(
                 case_id=markdown_cell(row.get("suggested_case_id", "")),
                 recommended=row.get("recommended_for_contact_request", 0),
                 clean=markdown_cell(row.get("clean_worktree_actual")),
