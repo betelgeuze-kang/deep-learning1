@@ -151,6 +151,9 @@ human-input artifact that marks itself ready without meeting the 300-label and
   Keep `--out-json` and `--out-md` outside every target repository listed in
   the intake sheet; the validator refuses status outputs inside those repos so
   the read-only check cannot dirty a repo after validating it.
+  Before using a saved status summary for audit planning, recheck it against
+  the current intake sheet and local git state with
+  `python3 scripts/amr_beta_repo_intake_validate.py --verify-existing results/amr_beta_repo_intake_status.json`.
   It keeps `runs_audit=0` and `creates_benchmark_evidence=0`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:

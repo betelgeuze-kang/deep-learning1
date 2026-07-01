@@ -55,6 +55,19 @@ REQUIRED_COLUMNS = [
     "real_benchmark_namespace_confirmed",
 ]
 
+BLOCKED_KEYS = [
+    "design_partner_beta_candidate_ready",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready",
+]
+READ_ONLY_ZERO_KEYS = [
+    "runs_audit",
+    "runs_label_template_generation",
+    "writes_reviewer_packets",
+    "creates_benchmark_evidence",
+]
+
 ALIASES = {
     "repo_id": "case_id",
     "local_path": "repo_path",
@@ -146,6 +159,26 @@ def sha256_file(path: Path) -> str:
 def sha256_json(payload: object) -> str:
     data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def is_exact_int(value: object, expected: int | None = None) -> bool:
+    if type(value) is not int:
+        return False
+    return expected is None or value == expected
+
+
+def strict_json_equal(left: object, right: object) -> bool:
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        if left.keys() != right.keys():
+            return False
+        return all(strict_json_equal(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        if len(left) != len(right):
+            return False
+        return all(strict_json_equal(left_item, right_item) for left_item, right_item in zip(left, right))
+    return left == right
 
 
 def sha256_text(text: str) -> str:
@@ -529,9 +562,105 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def recompute_status_payload(status_path: Path, saved_status: dict) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    raw_input = str(saved_status.get("input_intake") or "").strip()
+    if not raw_input:
+        return {}, ["status: input_intake must be present"]
+    input_path = Path(raw_input).expanduser().resolve()
+    min_repos = saved_status.get("min_real_repos_required", MIN_REAL_REPOS_FOR_BETA)
+    if not is_exact_int(min_repos):
+        errors.append("status: min_real_repos_required must be an integer")
+        min_repos = MIN_REAL_REPOS_FOR_BETA
+    elif min_repos < MIN_REAL_REPOS_FOR_BETA:
+        errors.append(f"status: min_real_repos_required must be at least {MIN_REAL_REPOS_FOR_BETA}")
+        min_repos = MIN_REAL_REPOS_FOR_BETA
+    try:
+        rows = read_rows(input_path)
+        row_errors, summary = validate_rows(rows, min_repos=min_repos)
+        target_repo_paths = target_repo_paths_from_statuses(summary["row_statuses"])
+        input_path_errors = validate_input_path(input_path, target_repo_paths)
+        output_path_errors = validate_output_paths(
+            {"verify_existing_status": status_path.resolve()},
+            target_repo_paths,
+        )
+        path_errors = [*input_path_errors, *output_path_errors]
+        all_errors = [*row_errors, *path_errors]
+        if path_errors:
+            summary["ready_for_real_benchmark_audit"] = 0
+        payload = {
+            **summary,
+            "input_intake": str(input_path),
+            "input_intake_sha256": sha256_file(input_path),
+            "input_path_guard_passed": int(not input_path_errors),
+            "output_path_guard_passed": int(not output_path_errors),
+            "errors": all_errors,
+        }
+    except Exception as exc:
+        return {}, [*errors, f"status: recompute error: {exc}"]
+    return payload, errors
+
+
+def verify_existing_status(path: Path) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    if is_forbidden_env_path(path):
+        return {}, ["status: refusing .env-like status path"]
+    if not path.is_file():
+        return {}, [f"status: missing status JSON: {path}"]
+    try:
+        saved_status = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {}, [f"status: parse error: {exc}"]
+    if not isinstance(saved_status, dict):
+        return {}, ["status: status JSON must be an object"]
+    if saved_status.get("schema") != "amr_beta_repo_intake_validate.v1":
+        errors.append("status: schema must be amr_beta_repo_intake_validate.v1")
+    for key in BLOCKED_KEYS:
+        if not is_exact_int(saved_status.get(key), 0):
+            errors.append(f"status: must keep {key}=0")
+    for key in READ_ONLY_ZERO_KEYS:
+        if not is_exact_int(saved_status.get(key), 0):
+            errors.append(f"status: must keep {key}=0")
+    recomputed, recompute_errors = recompute_status_payload(path, saved_status)
+    errors.extend(recompute_errors)
+    if not recomputed:
+        return saved_status, errors
+    compare_keys = [
+        "schema",
+        "total_rows",
+        "valid_repo_rows",
+        "min_real_repos_required",
+        "ready_for_real_benchmark_audit",
+        "runs_audit",
+        "runs_label_template_generation",
+        "writes_reviewer_packets",
+        "creates_benchmark_evidence",
+        "repo_snapshot_lock_row_count",
+        "repo_snapshot_lock_rows",
+        "repo_snapshot_lock_sha256",
+        "repo_intake_local_fingerprint_rows",
+        "repo_intake_local_fingerprint_sha256",
+        "row_statuses",
+        "design_partner_beta_candidate_ready",
+        "release_ready",
+        "public_comparison_claim_ready",
+        "real_model_execution_ready",
+        "input_intake",
+        "input_intake_sha256",
+        "input_path_guard_passed",
+        "output_path_guard_passed",
+        "errors",
+    ]
+    for key in compare_keys:
+        if not strict_json_equal(saved_status.get(key), recomputed.get(key)):
+            errors.append(f"status: {key} must match current repo intake and git state")
+    return saved_status, errors
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("intake", help="Filled Markdown or CSV repository-intake sheet.")
+    parser.add_argument("intake", nargs="?", help="Filled Markdown or CSV repository-intake sheet.")
+    parser.add_argument("--verify-existing", default="", help="Verify an existing repo intake status JSON.")
     parser.add_argument("--min-repos", type=int, default=MIN_REAL_REPOS_FOR_BETA)
     parser.add_argument("--out-json", default="", help="Optional read-only status JSON output.")
     parser.add_argument("--out-md", default="", help="Optional read-only status Markdown output.")
@@ -542,8 +671,43 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    path = Path(args.intake).expanduser().resolve()
     try:
+        if args.verify_existing:
+            verify_path = Path(args.verify_existing).expanduser().resolve()
+            status, verify_errors = verify_existing_status(verify_path)
+            status_sha256 = ""
+            status_payload_sha256 = ""
+            if status and not is_forbidden_env_path(verify_path):
+                status_sha256 = sha256_file(verify_path)
+                status_payload_sha256 = sha256_json(status)
+            payload = {
+                "schema": "amr_beta_repo_intake_validate_verify_existing.v1",
+                "verify_existing": str(verify_path),
+                "verify_existing_passed": int(not verify_errors),
+                "status_sha256": status_sha256,
+                "status_payload_sha256": status_payload_sha256,
+                "runs_audit": 0,
+                "runs_label_template_generation": 0,
+                "writes_reviewer_packets": 0,
+                "creates_benchmark_evidence": 0,
+                "design_partner_beta_candidate_ready": 0,
+                "release_ready": 0,
+                "public_comparison_claim_ready": 0,
+                "real_model_execution_ready": 0,
+                "errors": verify_errors,
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            if verify_errors:
+                for error in verify_errors:
+                    print(error, file=sys.stderr)
+                return 1
+            if not args.json:
+                print("repo_intake_validate_verify: ok")
+            return 0
+        if not args.intake:
+            raise ValueError("intake is required unless --verify-existing is used")
+        path = Path(args.intake).expanduser().resolve()
         rows = read_rows(path)
         row_errors, summary = validate_rows(rows, min_repos=args.min_repos)
         target_repo_paths = target_repo_paths_from_statuses(summary["row_statuses"])
