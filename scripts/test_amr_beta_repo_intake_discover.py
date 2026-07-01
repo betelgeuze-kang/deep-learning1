@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_repo_intake_discover.py"
+DISCOVER_SPEC = importlib.util.spec_from_file_location("amr_beta_repo_intake_discover", TOOL)
+assert DISCOVER_SPEC and DISCOVER_SPEC.loader
+DISCOVER_MODULE = importlib.util.module_from_spec(DISCOVER_SPEC)
+DISCOVER_SPEC.loader.exec_module(DISCOVER_MODULE)
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -45,6 +50,8 @@ def create_repo(root: Path, name: str) -> tuple[Path, str]:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert "current_artifact_repo" in DISCOVER_MODULE.path_risk_flags(ROOT / "nested-artifact-repo")
+
         repo_a, head_a = create_repo(tmp, "repo-a")
         repo_b, head_b = create_repo(tmp, "repo-b")
         repo_dirty, _head_dirty = create_repo(tmp, "repo-dirty")
@@ -102,6 +109,55 @@ def main() -> int:
         assert "dirty_or_unknown_worktree" in by_repo[str(repo_status_bad.resolve())]["blockers_before_counting"]
         assert "human_owner_or_maintainer_contact_required" in by_repo[str(repo_a.resolve())]["blockers_before_counting"]
         assert "AMR Beta Repo Discovery Candidates" in out_md.read_text(encoding="utf-8")
+
+        runner_parent = tmp / "actions-runner" / "_work" / "demo"
+        runner_parent.mkdir(parents=True)
+        runner_repo, _head_runner = create_repo(runner_parent, "demo")
+        risk_out = tmp / "risk_discovery.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(tmp),
+                "--out-json",
+                str(risk_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        risk_payload = json.loads(proc.stdout)
+        risk_by_repo = {row["repo_path"]: row for row in risk_payload["candidates"]}
+        runner_row = risk_by_repo[str(runner_repo.resolve())]
+        assert "runner_worktree_path" in runner_row["path_risk_flags"]
+        assert runner_row["path_risk_flag_count"] == 1
+        assert runner_row["human_real_repo_source_confirmation_required"] == 1
+        assert "human_real_repo_source_confirmation_required" in runner_row["blockers_before_counting"]
+
+        hidden_parent = tmp / ".codex" / "plugins"
+        hidden_parent.mkdir(parents=True)
+        hidden_repo, _head_hidden = create_repo(hidden_parent, "plugin-repo")
+        hidden_out = tmp / "hidden_discovery.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(tmp),
+                "--include-hidden",
+                "--out-json",
+                str(hidden_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        hidden_payload = json.loads(proc.stdout)
+        hidden_by_repo = {row["repo_path"]: row for row in hidden_payload["candidates"]}
+        hidden_row = hidden_by_repo[str(hidden_repo.resolve())]
+        assert "hidden_path" in hidden_row["path_risk_flags"]
+        assert "codex_internal_path" in hidden_row["path_risk_flags"]
 
         nested = repo_a / "nested" / "deeper"
         nested.mkdir(parents=True)

@@ -46,6 +46,7 @@ SKIP_DIR_NAMES = {
     "venv",
 }
 SAFE_ID_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
@@ -113,7 +114,26 @@ def candidate_blockers(row: dict[str, object]) -> list[str]:
         blockers.append("dirty_or_unknown_worktree")
     blockers.append("human_owner_or_maintainer_contact_required")
     blockers.append("filled_intake_namespace_confirmation_required")
+    if row.get("path_risk_flags"):
+        blockers.append("human_real_repo_source_confirmation_required")
     return blockers
+
+
+def path_risk_flags(repo_root: Path) -> list[str]:
+    flags: list[str] = []
+    parts = repo_root.parts
+    lowered = [part.lower() for part in parts]
+    if any(part.startswith(".") for part in parts):
+        flags.append("hidden_path")
+    if ".codex" in lowered:
+        flags.append("codex_internal_path")
+    if ".config" in lowered:
+        flags.append("config_internal_path")
+    if "_work" in lowered or any("runner" in part for part in lowered):
+        flags.append("runner_worktree_path")
+    if repo_root == PROJECT_ROOT or PROJECT_ROOT in repo_root.parents:
+        flags.append("current_artifact_repo")
+    return flags
 
 
 def inspect_repo(repo_root: Path, index: int) -> dict[str, object]:
@@ -133,9 +153,14 @@ def inspect_repo(repo_root: Path, index: int) -> dict[str, object]:
         "suggested_audit_mode": "quick",
         "suggested_namespace": "real_benchmark",
         "real_benchmark_namespace_confirmation_required": 1,
+        "path_risk_flags": path_risk_flags(root),
+        "path_risk_flag_count": 0,
+        "human_real_repo_source_confirmation_required": 0,
         "ready_for_intake_after_human_contact": 0,
         "counts_for_repo_intake": 0,
     }
+    row["path_risk_flag_count"] = len(row["path_risk_flags"])
+    row["human_real_repo_source_confirmation_required"] = int(bool(row["path_risk_flags"]))
     git_root = git_root_for(root)
     if git_root == root:
         row["repo_git_worktree_confirmed"] = 1
@@ -304,19 +329,20 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "",
         "## Candidates",
         "",
-        "| idx | suggested_case_id | clean | head_readable | status_readable | counts | repo_path | blockers |",
-        "|---:|---|---:|---:|---:|---:|---|---|",
+        "| idx | suggested_case_id | clean | head_readable | status_readable | counts | risk_flags | repo_path | blockers |",
+        "|---:|---|---:|---:|---:|---:|---|---|---|",
     ]
     for row in payload["candidates"]:
         blockers = ",".join(str(item) for item in row["blockers_before_counting"])
         lines.append(
-            "| {idx} | {case_id} | {clean} | {head} | {status} | {counts} | {repo} | {blockers} |".format(
+            "| {idx} | {case_id} | {clean} | {head} | {status} | {counts} | {risk_flags} | {repo} | {blockers} |".format(
                 idx=row["candidate_index"],
                 case_id=markdown_cell(row["suggested_case_id"]),
                 clean=markdown_cell(row["clean_worktree_actual"]),
                 head=row["repo_head_readable"],
                 status=row["repo_status_readable"],
                 counts=row["counts_for_repo_intake"],
+                risk_flags=markdown_cell(",".join(str(flag) for flag in row.get("path_risk_flags", []))),
                 repo=markdown_cell(row["repo_path"]),
                 blockers=markdown_cell(blockers),
             )

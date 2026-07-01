@@ -54,6 +54,10 @@ RESPONSE_ALIASES = {
     "namespace_confirmed": "real_benchmark_namespace_confirmed",
     "real_benchmark_confirmed": "real_benchmark_namespace_confirmed",
     "confirm_real_benchmark_namespace": "real_benchmark_namespace_confirmed",
+    "source_confirmed": "human_real_repo_source_confirmed",
+    "real_repo_source_confirmed": "human_real_repo_source_confirmed",
+    "human_source_confirmed": "human_real_repo_source_confirmed",
+    "confirm_real_repo_source": "human_real_repo_source_confirmed",
 }
 TRUTHY = {"1", "true", "yes", "y"}
 FALSEY = {"", "0", "false", "no", "n"}
@@ -193,6 +197,11 @@ def request_repo_paths(payload: dict) -> list[str]:
     return [str(row.get("repo_path") or "") for row in rows if isinstance(row, dict)]
 
 
+def requires_source_confirmation(request_row: dict) -> bool:
+    risk_flags = request_row.get("path_risk_flags", [])
+    return int_flag(request_row, "human_real_repo_source_confirmation_required") == 1 or bool(risk_flags)
+
+
 def read_csv_rows(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -274,6 +283,9 @@ def validate_response_rows(
             errors.append(f"response row {index}: owner_or_maintainer_contact must be human-supplied")
         if not truthy(row.get("real_benchmark_namespace_confirmed", "")):
             errors.append(f"response row {index}: real_benchmark_namespace_confirmed must be true")
+        source_confirmed = truthy(row.get("human_real_repo_source_confirmed", ""))
+        if requires_source_confirmation(request_row) and not source_confirmed:
+            errors.append(f"response row {index}: human_real_repo_source_confirmed must be true")
 
         if int_flag(request_row, "recommended_for_contact_request") != 1:
             errors.append(f"response row {index}: selected candidate is not clean/head-ready in request packet")
@@ -305,6 +317,7 @@ def validate_response_rows(
                 "audit_mode": audit_mode,
                 "owner_or_maintainer_contact_sha256": sha256_text(contact),
                 "real_benchmark_namespace_confirmed": 1,
+                "human_real_repo_source_confirmed": int(source_confirmed),
                 "counts_for_repo_intake": 0,
             }
         )
@@ -336,6 +349,7 @@ def summarize_response_completion(
     selected_not_recommended = 0
     selected_missing_contact = 0
     selected_missing_namespace = 0
+    selected_missing_source_confirmation = 0
     selected_repo_path_mismatch = 0
 
     for row in response_rows:
@@ -368,6 +382,10 @@ def summarize_response_completion(
             selected_missing_contact += 1
         if not truthy(row.get("real_benchmark_namespace_confirmed", "")):
             selected_missing_namespace += 1
+        if request_row and requires_source_confirmation(request_row) and not truthy(
+            row.get("human_real_repo_source_confirmed", "")
+        ):
+            selected_missing_source_confirmation += 1
 
         response_repo = str(row.get("repo_path") or "").strip()
         if request_row and response_repo:
@@ -388,10 +406,15 @@ def summarize_response_completion(
         "selected_not_recommended_rows": selected_not_recommended,
         "selected_missing_or_invalid_contact_rows": selected_missing_contact,
         "selected_missing_namespace_confirmation_rows": selected_missing_namespace,
+        "selected_missing_source_confirmation_rows": selected_missing_source_confirmation,
         "selected_repo_path_mismatch_rows": selected_repo_path_mismatch,
         "selected_response_rows_remaining_to_minimum": max(0, min_repos - selected_truthy),
         "human_required_cells_remaining": (
-            blank_include + selected_missing_contact + selected_missing_namespace + invalid_include
+            blank_include
+            + selected_missing_contact
+            + selected_missing_namespace
+            + selected_missing_source_confirmation
+            + invalid_include
         ),
     }
 
@@ -531,6 +554,7 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "invalid_include_response_rows",
         "selected_missing_or_invalid_contact_rows",
         "selected_missing_namespace_confirmation_rows",
+        "selected_missing_source_confirmation_rows",
         "selected_response_rows_remaining_to_minimum",
         "human_required_cells_remaining",
     ]:
