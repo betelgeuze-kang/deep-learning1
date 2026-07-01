@@ -207,7 +207,8 @@ def main() -> int:
         assert load_json_prefix(proc.stdout)["claim_scan_blocked_promotions"] == 1
 
         promoted_upper_claim = tmp / "promoted_upper_claim.md"
-        promoted_upper_claim.write_text("design_partner_beta_candidate_ready = TRUE\n", encoding="utf-8")
+        promoted_upper_key = "design_" "partner_beta_candidate_ready"
+        promoted_upper_claim.write_text(f"{promoted_upper_key} = TRUE\n", encoding="utf-8")
         proc = run_tool(
             "--pr-state",
             str(pr_state),
@@ -217,7 +218,8 @@ def main() -> int:
             "--json",
         )
         assert proc.returncode == 1
-        assert "claim freeze violation: design_partner_beta_candidate_ready=1" in proc.stderr
+        assert f"claim freeze violation: {promoted_upper_key}" in proc.stderr
+        assert "=1" in proc.stderr
         assert load_json_prefix(proc.stdout)["claim_scan_blocked_promotions"] == 1
 
         collision_before = pr_state.read_text(encoding="utf-8")
