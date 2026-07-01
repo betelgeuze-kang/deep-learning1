@@ -213,15 +213,18 @@ blocked.
   when synthetic or unverified template candidates are present.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
   label-intake command plan; this validates coverage and citation readiness but
-  does not compile labels:
-  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --label-packet-summary results/reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+  does not compile labels or create benchmark evidence:
+  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --label-packet-summary results/reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md --out-commands-sh results/amr_beta_label_intake_commands.sh`.
+  The optional command script is a handoff artifact only; creating it does not
+  compile labels, write label-intake outputs, or create benchmark evidence.
   The plan carries `repo_snapshot_lock_sha256`, `decisions_sha256`, and
   `label_template_bundle_sha256`, plus the reviewer summary's
   `label_packet_summary_sha256`, `label_packet_decisions_bundle_sha256`, and
   `label_packet_template_bundle_sha256`, so per-repo label-intake commands remain tied
   to the same validated repo snapshot, reviewed decision file, and
   label-template bundle. It refuses
-  `--out-root`, `--out-json`, or `--out-md` inside any target repository.
+  `--out-root`, `--out-json`, `--out-md`, or `--out-commands-sh` inside any
+  target repository.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`. Keep each `--out` directory outside the
   target repository; the compiler refuses label-intake outputs inside the repo
@@ -422,7 +425,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    The progress summary reports per-case reviewed/missing candidate counts and
    the remaining non-synthetic count to the 300-label beta threshold.
 5. Generate the read-only label-intake command plan:
-   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --label-packet-summary results/<repo>_reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --label-packet-summary results/<repo>_reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md --out-commands-sh results/amr_beta_label_intake_commands.sh`.
    The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
    keeps beta/release/model/public comparison readiness blocked. It requires
    each template directory to pass
