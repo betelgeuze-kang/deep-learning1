@@ -307,6 +307,8 @@ def repo_discovery_status_payload(candidate_count: int = 9, clean_count: int = 6
 def repo_discovery_response_payload(response_count: int = 9, selected_count: int = 6) -> dict:
     selected_rows: list[dict[str, object]] = []
     selected_case_ids: list[str] = []
+    unselected_count = max(0, response_count - selected_count)
+    selected_remaining = max(0, 10 - selected_count)
     for index in range(selected_count):
         case_id = f"candidate-{index + 1:02d}-repo"
         selected_case_ids.append(case_id)
@@ -335,6 +337,24 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
         "human_response": "/tmp/amr_beta_repo_discovery_response.csv",
         "human_response_sha256": fake_sha(4001),
         "response_row_count": response_count,
+        "response_completion": {
+            "request_row_count": response_count,
+            "response_row_count": response_count,
+            "recommended_request_rows": selected_count,
+            "selected_truthy_response_rows": selected_count,
+            "unselected_response_rows": unselected_count,
+            "blank_include_response_rows": unselected_count,
+            "invalid_include_response_rows": 0,
+            "duplicate_case_id_response_rows": 0,
+            "selected_unknown_case_id_rows": 0,
+            "selected_not_recommended_rows": 0,
+            "selected_missing_or_invalid_contact_rows": 0,
+            "selected_missing_namespace_confirmation_rows": 0,
+            "selected_repo_path_mismatch_rows": 0,
+            "selected_response_rows_remaining_to_minimum": selected_remaining,
+            "human_required_cells_remaining": unselected_count,
+        },
+        "human_required_cells_remaining": unselected_count,
         "selected_response_rows": selected_count,
         "valid_selected_response_rows": selected_count,
         "min_real_repos_required": 10,
@@ -751,9 +771,19 @@ def main() -> int:
         assert payload["stage_progress"]["repo_intake"]["valid_selected_response_rows"] == 6
         assert payload["stage_progress"]["repo_intake"]["ready_for_repo_intake_collect_command"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_rows_counted"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_human_required_cells_remaining"] == 3
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_blank_include_rows"] == 3
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_contact_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_namespace_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_selected_rows_remaining_to_minimum"] == 4
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
         assert "repo_discovery_response: 6/10 (selected 6, ready_command 0, supplied 1, rows_counted 0)" in markdown
+        assert (
+            "repo_discovery_response_completion: human_required_cells 3 "
+            "(blank_include 3, missing_contact 0, missing_namespace 0, selected_remaining 4)"
+            in markdown
+        )
 
         proc = run_tool(
             "--pr-cleanup-status",
@@ -1062,6 +1092,20 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "must not expose raw owner_or_maintainer_contact" in proc.stderr
+
+        mismatched_response_completion = tmp / "mismatched_repo_discovery_response_completion.json"
+        mismatched_response_completion_payload = repo_discovery_response_payload()
+        mismatched_response_completion_payload["human_required_cells_remaining"] = 99
+        write_json(mismatched_response_completion, mismatched_response_completion_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(mismatched_response_completion),
+            "--out-json",
+            str(tmp / "mismatched_repo_discovery_response_completion_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "human_required_cells_remaining must match response_completion" in proc.stderr
 
         mismatched_repo_intake = tmp / "mismatched_repo_intake_status.json"
         mismatched_repo_intake_payload = repo_intake_status_payload()
