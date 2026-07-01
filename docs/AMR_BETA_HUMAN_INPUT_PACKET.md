@@ -49,6 +49,11 @@ agent-written maintainer feedback.
   repositories, for example:
   `gh pr view 46 --json number,state,title,url,closed,mergedAt,closedAt,headRefName,baseRefName > results/amr_beta_pr_cleanup_state.jsonl`
   and append the same fields for PRs `39`, `40`, `10`, and `5`.
+- [ ] Prefer the read-only export handoff script when `gh` auth is available:
+  `python3 scripts/amr_beta_pr_cleanup_export_plan.py --out-sh results/amr_beta_pr_cleanup_export.sh --overwrite`.
+  The generator does not call GitHub, close PRs, merge, push, or create
+  benchmark evidence; it only writes a shell script containing `gh pr view`
+  exports plus the local claim-freeze validator command.
 - [ ] Validate the exported state and claim freeze:
   `python3 scripts/amr_beta_pr_cleanup_status.py --pr-state results/amr_beta_pr_cleanup_state.jsonl --claim-file README.md --claim-file README.ko.md --claim-file docs/AMR_BETA_HUMAN_INPUT_PACKET.md --require-claim-scan --out-json results/amr_beta_pr_cleanup_status.json --out-md results/amr_beta_pr_cleanup_status.md --overwrite`.
   The output keeps `design_partner_beta_candidate_ready=0`,
