@@ -29,6 +29,7 @@ GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
     "pr_cleanup_status": "amr_beta_pr_cleanup_status.v1",
     "repo_discovery_status": "amr_beta_repo_intake_discover.v1",
+    "repo_discovery_response": "amr_beta_repo_discovery_response.v1",
     "repo_intake_status": "amr_beta_repo_intake_validate.v1",
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
@@ -86,6 +87,15 @@ REPO_DISCOVERY_STATUS_READ_ONLY_FLAGS = [
     "creates_benchmark_evidence",
     "repo_intake_rows_counted",
     "ready_for_repo_intake",
+]
+REPO_DISCOVERY_RESPONSE_READ_ONLY_FLAGS = [
+    "runs_audit",
+    "runs_label_template_generation",
+    "writes_reviewer_packets",
+    "creates_benchmark_evidence",
+    "repo_intake_rows_counted",
+    "ready_for_repo_intake",
+    "writes_repo_intake_sheet",
 ]
 REPO_AUDIT_PLAN_COMMAND_FIELDS = [
     "audit_command",
@@ -1023,6 +1033,130 @@ def require_repo_discovery_status(*, errors: list[str], payload: dict) -> None:
         errors.append("repo_discovery_status: candidate_repos_with_clean_head must match ready candidate rows")
 
 
+def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None:
+    for key in REPO_DISCOVERY_RESPONSE_READ_ONLY_FLAGS:
+        require_flag(errors=errors, name="repo_discovery_response", payload=payload, key=key, expected=0)
+    require_flag(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="selected_rows_cannot_count_until_collector_and_validator_pass",
+        expected=1,
+    )
+    ready = require_exact_int(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="ready_for_repo_intake_collect_command",
+    )
+    if ready not in {0, 1}:
+        errors.append("repo_discovery_response: ready_for_repo_intake_collect_command must be one of [0, 1]")
+    min_repos = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="min_real_repos_required",
+        minimum=10,
+    )
+    response_rows = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="response_row_count",
+        minimum=0,
+    )
+    selected_rows_count = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="selected_response_rows",
+        minimum=0,
+    )
+    valid_selected_rows = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        key="valid_selected_response_rows",
+        minimum=0,
+    )
+    if selected_rows_count > response_rows:
+        errors.append("repo_discovery_response: selected_response_rows must be <= response_row_count")
+    if valid_selected_rows > selected_rows_count:
+        errors.append("repo_discovery_response: valid_selected_response_rows must be <= selected_response_rows")
+    if ready == 1 and valid_selected_rows < max(10, min_repos):
+        errors.append("repo_discovery_response: ready command requires >= min_real_repos_required valid selected rows")
+    if ready == 0 and valid_selected_rows >= max(10, min_repos):
+        errors.append("repo_discovery_response: ready_for_repo_intake_collect_command must be 1 when threshold is met")
+
+    require_sha_field(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        field="repo_discovery_request_sha256",
+    )
+    require_sha_field(errors=errors, name="repo_discovery_response", payload=payload, field="human_response_sha256")
+    require_sha_field(
+        errors=errors,
+        name="repo_discovery_response",
+        payload=payload,
+        field="selected_response_fingerprint_sha256",
+    )
+
+    selected_rows = payload.get("selected_rows")
+    if not isinstance(selected_rows, list):
+        errors.append("repo_discovery_response: selected_rows must be a list")
+        selected_rows = []
+    if selected_rows_count >= 0 and len(selected_rows) != selected_rows_count:
+        errors.append("repo_discovery_response: selected_response_rows must match selected_rows length")
+
+    selected_case_ids = payload.get("selected_case_ids")
+    if not isinstance(selected_case_ids, list):
+        errors.append("repo_discovery_response: selected_case_ids must be a list")
+        selected_case_ids = []
+    if len(selected_case_ids) != len(selected_rows):
+        errors.append("repo_discovery_response: selected_case_ids length must match selected_rows")
+
+    seen_cases: set[str] = set()
+    for index, row in enumerate(selected_rows, start=1):
+        prefix = f"repo_discovery_response: selected_rows row {index}"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        case_id = str(row.get("suggested_case_id") or "").strip()
+        if not case_id:
+            errors.append(f"{prefix}: suggested_case_id must be present")
+        elif case_id in seen_cases:
+            errors.append(f"{prefix}: duplicate suggested_case_id")
+        seen_cases.add(case_id)
+        if case_id and selected_case_ids and selected_case_ids[index - 1] != case_id:
+            errors.append(f"{prefix}: selected_case_ids must match selected_rows order")
+        if not str(row.get("repo_path") or "").strip():
+            errors.append(f"{prefix}: repo_path must be present")
+        head = str(row.get("actual_repo_git_head") or "").strip().lower()
+        if not GIT_OBJECT_RE.fullmatch(head):
+            errors.append(f"{prefix}: actual_repo_git_head must be a full git object id")
+        if row.get("owner_or_maintainer_contact") is not None:
+            errors.append(f"{prefix}: must not expose raw owner_or_maintainer_contact")
+        contact_sha = str(row.get("owner_or_maintainer_contact_sha256") or "")
+        if not SHA256_RE.fullmatch(contact_sha):
+            errors.append(f"{prefix}: owner_or_maintainer_contact_sha256 must be a sha256 binding")
+        require_discovery_row_flag(errors=errors, prefix=prefix, row=row, key="real_benchmark_namespace_confirmed")
+        counts = require_discovery_row_flag(errors=errors, prefix=prefix, row=row, key="counts_for_repo_intake")
+        if counts != 0:
+            errors.append(f"{prefix}: counts_for_repo_intake must be 0")
+
+    command = str(payload.get("collector_command_redacted") or "")
+    command_argv = payload.get("collector_command_argv_redacted")
+    if selected_rows:
+        if "<contact-for-" not in command:
+            errors.append("repo_discovery_response: collector_command_redacted must contain contact placeholders")
+        if not isinstance(command_argv, list) or not command_argv:
+            errors.append("repo_discovery_response: collector_command_argv_redacted must be a non-empty list")
+    next_blockers = payload.get("next_blockers", [])
+    if not isinstance(next_blockers, list):
+        errors.append("repo_discovery_response: next_blockers must be a list")
+
+
 def require_label_operator_commands(
     *,
     errors: list[str],
@@ -1307,6 +1441,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     errors: list[str] = []
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
+    discovery_response = artifacts.get("repo_discovery_response")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
@@ -1321,6 +1456,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
 
     if discovery:
         require_repo_discovery_status(errors=errors, payload=discovery)
+
+    if discovery_response:
+        require_repo_discovery_response(errors=errors, payload=discovery_response)
 
     if intake:
         require_repo_intake_status(errors=errors, payload=intake)
@@ -2050,6 +2188,7 @@ def progress_summary(current: int, required: int) -> dict[str, int | float]:
 def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
+    discovery_response = artifacts.get("repo_discovery_response")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
@@ -2117,6 +2256,14 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
                 "candidate_rows_cannot_count_without_human_contact",
             ),
             "repo_discovery_rows_counted": count_int(discovery, "repo_intake_rows_counted"),
+            "repo_discovery_response_supplied": int(bool(discovery_response)),
+            "selected_response_rows": count_int(discovery_response, "selected_response_rows"),
+            "valid_selected_response_rows": count_int(discovery_response, "valid_selected_response_rows"),
+            "ready_for_repo_intake_collect_command": count_int(
+                discovery_response,
+                "ready_for_repo_intake_collect_command",
+            ),
+            "repo_discovery_response_rows_counted": count_int(discovery_response, "repo_intake_rows_counted"),
             "repo_intake_status_supplied": int(bool(intake)),
             "ready_for_real_benchmark_audit": count_int(intake, "ready_for_real_benchmark_audit"),
             "repo_snapshot_lock_row_count": count_int(intake, "repo_snapshot_lock_row_count"),
@@ -2191,6 +2338,11 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "rows_counted {repo_discovery_rows_counted})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
+        "- repo_discovery_response: {valid_selected_response_rows}/{required} "
+        "(selected {selected_response_rows}, ready_command {ready_for_repo_intake_collect_command}, "
+        "supplied {repo_discovery_response_supplied}, rows_counted {repo_discovery_response_rows_counted})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
         "- human_labels: {current}/{required} "
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
             **payload["stage_progress"]["human_labels"],
@@ -2230,6 +2382,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pr-cleanup-status", default="")
     parser.add_argument("--repo-discovery-status", default="")
+    parser.add_argument("--repo-discovery-response", default="")
     parser.add_argument("--repo-intake-status", default="")
     parser.add_argument("--repo-audit-plan", default="")
     parser.add_argument("--label-intake-plan", default="")
@@ -2251,6 +2404,7 @@ def main(argv: list[str]) -> int:
     artifact_args = {
         "pr_cleanup_status": args.pr_cleanup_status,
         "repo_discovery_status": args.repo_discovery_status,
+        "repo_discovery_response": args.repo_discovery_response,
         "repo_intake_status": args.repo_intake_status,
         "repo_audit_plan": args.repo_audit_plan,
         "label_intake_plan": args.label_intake_plan,
