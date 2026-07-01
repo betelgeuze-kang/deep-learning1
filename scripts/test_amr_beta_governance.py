@@ -12,7 +12,7 @@ PR 전에 닫는 가장 민감한 경계: 라벨/피드백/real_benchmark를 날
   D. real_benchmark 네임스페이스가 명시적 --confirm 없이 열리지 않음(종료 코드 2, 산출물 미기록).
   E. 기존 8개 엔트리포인트·기존 readiness 스키마·기존 issue 템플릿이 존재(재사용)하고,
      본 스펙 브랜치가 새 schema/product 엔트리포인트/대용량·체크포인트 산출물을 git 추적에
-     추가하지 않음(test_amr_beta_*.py와 .kiro/spec 문서만 추가).
+     추가하지 않음(test_amr_beta_*.py, .kiro/spec 문서, 명시 승인된 read-only operator helper만 추가).
 
 합성/픽스처만 사용하며 비승격이다.
 """
@@ -46,6 +46,9 @@ EXISTING_ENTRYPOINTS = [
 ]
 EXISTING_SCHEMA = "schemas/local_repo_audit_benchmark_readiness.schema.json"
 EXISTING_ISSUE_TEMPLATE = ".github/ISSUE_TEMPLATE/design-partner-finding-review.yml"
+APPROVED_READ_ONLY_OPERATOR_ENTRYPOINTS = {
+    "scripts/amr_beta_repo_intake_discover.py",
+}
 CHECKPOINT_SUFFIXES = (".pt", ".bin", ".safetensors", ".ckpt", ".pth", ".onnx", ".gguf")
 LARGE_FILE_BYTES = 10 * 1024 * 1024
 
@@ -145,6 +148,7 @@ def test_E_entrypoint_schema_reuse_and_no_new_contracts():
         allowed = (
             path.startswith(".kiro/specs/audit-my-repo-design-partner-beta/")
             or (path.startswith("scripts/test_amr_beta_") and path.endswith(".py"))
+            or path in APPROVED_READ_ONLY_OPERATOR_ENTRYPOINTS
         )
         assert allowed, f"unexpected new tracked file (possible new contract): {path}"
         assert not path.startswith("schemas/"), f"no new schema may be added: {path}"
