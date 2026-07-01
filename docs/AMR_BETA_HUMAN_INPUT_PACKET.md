@@ -276,7 +276,10 @@ blocked.
 - [ ] If the human owner approves the runtime budget, validate the supplied
   approval record before running the long benchmark; this still does not run
   the benchmark:
-  `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
+  `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md --out-runtime-commands-sh results/amr_beta_approved_runtime_commands.sh`.
+  The optional runtime command script is written only after the human approval
+  record verifies and still does not run the benchmark by itself; keep it
+  outside the approved `benchmark_out`.
 
 ### 9.3 Maintainer feedback checklist
 
@@ -469,7 +472,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    skipped, failed, stale, or inconsistent counters and fingerprints.
    If the human owner supplies a runtime approval record, validate that it binds
    to the exact preflight, request, runtime command hash, and benchmark output:
-   `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
+   `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md --out-runtime-commands-sh results/amr_beta_approved_runtime_commands.sh`.
    `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
