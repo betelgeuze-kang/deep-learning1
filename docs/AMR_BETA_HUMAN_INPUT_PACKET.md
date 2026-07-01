@@ -62,7 +62,7 @@ At any point, summarize the current local operator stage from existing AMR beta
 artifacts without creating evidence. Pass only artifact arguments whose files
 already exist; this full example is for the point after all listed artifacts have
 been created:
-`python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
+`python3 scripts/amr_beta_operator_status.py --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
 The status board validates the preflight -> approval request -> approval status
 chain by path and sha before advancing to runtime-approved stages. It also
 requires the approval status to bind the human approval record and requires
@@ -70,9 +70,10 @@ requires the approval status to bind the human approval record and requires
 operator status also checks that runtime approval request/status artifacts carry
 the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 `label_intake_bundle_sha256`, and manifest-sha lists recorded by the preflight.
-Its `stage_progress` block reports the read-only PM counters for repo intake,
-human labels, maintainer feedback, runtime approval, and benchmark/backlog
-status while keeping all release/public/model readiness flags blocked.
+Its `stage_progress` block reports the read-only PM counters for stage-0 claim
+freeze, repo intake, human labels, maintainer feedback, runtime approval, and
+benchmark/backlog status while keeping all release/public/model readiness flags
+blocked.
 
 ### 9.1 Repository intake checklist
 
@@ -438,14 +439,14 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 10. Refresh the read-only operator status summary after each artifact is
    created, passing only the artifact arguments that already exist at that
    point:
-   `python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
+   `python3 scripts/amr_beta_operator_status.py --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
    The status board refuses a runtime approval status without its exact approval
    request, refuses stale preflight/request sha bindings, and refuses readiness
    files from any benchmark output other than the human-approved `benchmark_out`.
    Its Markdown and JSON outputs include `stage_progress` counters for the
-   10-repo, 300-label, and 3-maintainer thresholds, plus runtime and benchmark
-   readiness presence checks; these counters do not create evidence or promote
-   claims.
+   stage-0 claim-freeze proof, 10-repo, 300-label, and 3-maintainer thresholds,
+   plus runtime and benchmark readiness presence checks; these counters do not
+   create evidence or promote claims.
 11. Package either the beta candidate packet or blocked packet from verified
    readiness/backlog artifacts and the verified operator status:
    `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --operator-status results/amr_beta_operator_status.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.

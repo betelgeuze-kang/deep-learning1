@@ -168,6 +168,64 @@ def path_guard_payload() -> dict:
     }
 
 
+def pr_cleanup_status_payload() -> dict:
+    claim_files = [
+        {"path": "/tmp/README.md", "sha256": fake_sha(410)},
+        {"path": "/tmp/README.ko.md", "sha256": fake_sha(411)},
+        {"path": "/tmp/docs/AMR_BETA_HUMAN_INPUT_PACKET.md", "sha256": fake_sha(412)},
+    ]
+    stale_rows = [
+        {
+            "number": number,
+            "state": "CLOSED",
+            "closed": 1,
+            "closed_without_merge": 1,
+            "closed_at": "2026-06-29T16:11:01Z",
+            "merged_at": "",
+            "head": head,
+            "base": "main",
+            "url": f"https://github.example.test/repo/pull/{number}",
+        }
+        for number, head in [
+            (39, "fix/ai-verify-pr-safe-smokes"),
+            (40, "chore/local-changeset-governance-sync"),
+            (10, "pr2-slice-v56-ruler-longbench-expanded"),
+            (5, "pr2-slice-v50-auditor-correctness"),
+        ]
+    ]
+    return {
+        "schema": "amr_beta_pr_cleanup_status.v1",
+        "input_pr_state": "/tmp/amr_beta_pr_cleanup_state.jsonl",
+        "input_pr_state_sha256": fake_sha(400),
+        "pr_state_rows": 5,
+        "checklist_pr_number": 46,
+        "checklist_pr_state": "MERGED",
+        "checklist_pr_head": "codex/amr-beta-human-input-checklist",
+        "checklist_pr_base": "main",
+        "checklist_pr_merged": 1,
+        "checklist_pr_url": "https://github.example.test/repo/pull/46",
+        "checklist_pr_merged_at": "2026-06-29T16:14:23Z",
+        "checklist_pr_closed_at": "2026-06-29T16:14:24Z",
+        "stale_pr_numbers": [39, 40, 10, 5],
+        "stale_pr_closed_count": 4,
+        "stale_prs_closed": 1,
+        "stale_pr_statuses": stale_rows,
+        "claim_scan_file_count": len(claim_files),
+        "claim_scan_files": claim_files,
+        "claim_scan_blocked_promotions": 0,
+        "claim_scan_hits": [],
+        "claim_freeze_scan_passed": 1,
+        "output_path_guard_passed": 1,
+        "stage_0_claim_freeze_verified": 1,
+        "reads_pr_state_export": 1,
+        "runs_github_query": 0,
+        "runs_github_mutation": 0,
+        "runs_git_push": 0,
+        "creates_benchmark_evidence": 0,
+        **base_blocked(),
+    }
+
+
 def repo_audit_plan_payload() -> dict:
     binding = binding_payload()
     snapshot_rows = repo_snapshot_lock_rows()
@@ -422,6 +480,7 @@ def approval_status_payload(preflight: Path, request: Path, record: Path, benchm
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        pr_cleanup = tmp / "pr_cleanup_status.json"
         repo = tmp / "repo_plan.json"
         label = tmp / "label_plan.json"
         feedback = tmp / "feedback_packet.json"
@@ -433,6 +492,10 @@ def main() -> int:
         benchmark_out.mkdir()
         readiness = benchmark_out / "benchmark_readiness.json"
 
+        write_json(
+            pr_cleanup,
+            pr_cleanup_status_payload(),
+        )
         write_json(
             repo,
             repo_audit_plan_payload(),
@@ -482,10 +545,30 @@ def main() -> int:
         proc = run_tool("--repo-audit-plan", str(repo), "--out-json", str(out_json), "--json")
         assert proc.returncode == 0, proc.stderr
         payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_status_supplied"] == 0
+        assert payload["stage_progress"]["claim_freeze"]["stage_0_claim_freeze_verified"] == 0
+        assert "Validate stage-0 PR cleanup" in payload["next_blockers"][0]
+
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-audit-plan",
+            str(repo),
+            "--out-json",
+            str(out_json),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
         assert payload["current_stage"] == "stage_1_repo_intake_plan_ready"
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
         assert payload["design_partner_beta_candidate_ready"] == 0
+        assert payload["stage_progress"]["claim_freeze"]["stage_0_claim_freeze_verified"] == 1
+        assert payload["stage_progress"]["claim_freeze"]["stale_prs_closed"] == 1
+        assert payload["stage_progress"]["claim_freeze"]["claim_scan_file_count"] == 3
         assert payload["stage_progress"]["repo_intake"]["current"] == 10
         assert payload["stage_progress"]["repo_intake"]["met"] == 1
         assert payload["stage_progress"]["human_labels"]["current"] == 0
@@ -495,6 +578,8 @@ def main() -> int:
         assert payload["stage_progress"]["benchmark"]["benchmark_readiness_supplied"] == 0
 
         proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
             "--repo-audit-plan",
             str(repo),
             "--label-intake-plan",
@@ -549,6 +634,7 @@ def main() -> int:
         assert payload["runtime_fingerprints"]["output_path_preflight_passed"] == 1
         markdown = out_md.read_text(encoding="utf-8")
         assert "current_stage: stage_4_runtime_approval_verified" in markdown
+        assert "claim_freeze_verified: 1" in markdown
         assert "repo_intake: 10/10" in markdown
         assert "human_labels: 300/300" in markdown
         assert "maintainer_feedback: 3/3" in markdown
@@ -557,6 +643,8 @@ def main() -> int:
         assert 'label_intake_manifest_sha256s: ["sha256:' in markdown
 
         proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
             "--repo-audit-plan",
             str(repo),
             "--label-intake-plan",
@@ -586,6 +674,22 @@ def main() -> int:
             payload["stage_progress"]["benchmark"]["design_partner_beta_candidate_ready"]
             == payload["design_partner_beta_candidate_ready"]
         )
+
+        bad_pr_cleanup = tmp / "bad_pr_cleanup_status.json"
+        bad_pr_cleanup_payload = pr_cleanup_status_payload()
+        bad_pr_cleanup_payload["claim_scan_blocked_promotions"] = 1
+        bad_pr_cleanup_payload["claim_freeze_scan_passed"] = 0
+        write_json(bad_pr_cleanup, bad_pr_cleanup_payload)
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(bad_pr_cleanup),
+            "--out-json",
+            str(tmp / "bad_pr_cleanup_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_status: must set claim_freeze_scan_passed=1" in proc.stderr
+        assert "pr_cleanup_status: claim_scan_blocked_promotions must be 0" in proc.stderr
 
         missing_request_status = tmp / "missing_request_status.json"
         proc = run_tool(
