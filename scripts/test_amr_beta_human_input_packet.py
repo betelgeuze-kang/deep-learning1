@@ -106,6 +106,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_runtime_approval_status.py",
     "python3 scripts/amr_beta_operator_status.py",
     "results/amr_beta_human_input_status.json",
+    "--human-input-status",
     "current local operator stage",
     "preflight -> approval request -> approval status",
     "operator status also checks",
