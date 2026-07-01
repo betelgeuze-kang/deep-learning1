@@ -91,6 +91,8 @@ def main() -> int:
         assert payload["candidate_repos_with_clean_head"] == 2
         assert payload["request_row_count"] == 3
         assert payload["response_template_csv"] == str(out_response_csv.resolve())
+        assert payload["response_template_recommended_only"] == 0
+        assert payload["response_template_row_count"] == 3
         assert payload["writes_response_template_csv"] == 1
         assert payload["recommended_contact_request_rows"] == 2
         assert payload["clean_candidate_shortfall_to_minimum"] == 8
@@ -121,6 +123,59 @@ def main() -> int:
         assert "include_for_real_benchmark_intake" in markdown
         assert "owner_or_maintainer_contact" in markdown
         assert "amr_beta_repo_intake_collect.py" in markdown
+
+        recommended_response_csv = tmp / "response_template_recommended.csv"
+        recommended_json = tmp / "request_recommended.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(recommended_json),
+                "--out-response-csv",
+                str(recommended_response_csv),
+                "--response-template-recommended-only",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        recommended_payload = json.loads(proc.stdout)
+        assert recommended_payload["request_row_count"] == 3
+        assert recommended_payload["recommended_contact_request_rows"] == 2
+        assert recommended_payload["response_template_recommended_only"] == 1
+        assert recommended_payload["response_template_row_count"] == 2
+        with recommended_response_csv.open(newline="", encoding="utf-8") as handle:
+            recommended_rows = list(csv.DictReader(handle))
+        assert len(recommended_rows) == 2
+        assert [row["suggested_case_id"] for row in recommended_rows] == [
+            "candidate-01-repo-a",
+            "candidate-02-repo-b",
+        ]
+        assert all(row["notes"] == "recommended_for_contact_request=1" for row in recommended_rows)
+        assert str(repo_dirty.resolve()) not in recommended_response_csv.read_text(encoding="utf-8")
+
+        missing_response_csv = tmp / "missing_response_csv.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(missing_response_csv),
+                "--response-template-recommended-only",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        missing_payload = json.loads(proc.stdout)
+        assert missing_payload["response_template_recommended_only"] == 1
+        assert missing_payload["response_template_row_count"] == 0
+        assert "--response-template-recommended-only requires --out-response-csv" in proc.stderr
 
         unsafe_out = repo_a / "request.json"
         proc = run(
