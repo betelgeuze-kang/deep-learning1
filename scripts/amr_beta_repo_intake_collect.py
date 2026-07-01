@@ -258,8 +258,7 @@ def main(argv: list[str]) -> int:
     }
     if rows:
         validator_errors, summary = repo_intake.validate_rows(rows, min_repos=args.min_repos)
-    target_repo_paths = [str(status.get("repo_path_resolved")) for status in summary.get("row_statuses", [])]
-    target_repo_paths = [path for path in target_repo_paths if path]
+    target_repo_paths = repo_intake.target_repo_paths_from_statuses(summary.get("row_statuses", []))
     path_errors = repo_intake.validate_output_paths({"out": out_path}, target_repo_paths)
     output_errors = output_exists_errors(out_path, args.overwrite)
     errors = [*build_errors, *validator_errors, *path_errors, *output_errors]

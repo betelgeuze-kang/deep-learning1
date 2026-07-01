@@ -68,6 +68,7 @@ status while keeping all release/public/model readiness flags blocked.
   The collector writes no audit, label, reviewer, or benchmark evidence.
 - [ ] Validate the filled intake sheet before running audits:
   `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`.
+  Each `repo_path` must resolve to the Git worktree root, not a subdirectory.
 - [ ] When intake is still partial or failing, write the read-only row-level
   status summary to see which repos are dirty, mismatched, duplicated, or still
   below threshold:

@@ -364,6 +364,7 @@ def require_repo_snapshot_lock_rows(
 
     lock_by_case: dict[str, dict] = {}
     seen_paths: set[str] = set()
+    seen_git_roots: set[str] = set()
     for index, row in enumerate(rows, start=1):
         prefix = f"repo_audit_plan: repo_snapshot_lock_rows row {index}"
         if not isinstance(row, dict):
@@ -379,6 +380,7 @@ def require_repo_snapshot_lock_rows(
             continue
 
         repo_path = str(row.get("repo_path_resolved") or "").strip()
+        canonical_repo_path = ""
         if not repo_path:
             errors.append(f"{prefix}: repo_path_resolved must be present")
         else:
@@ -386,6 +388,17 @@ def require_repo_snapshot_lock_rows(
             if canonical_repo_path in seen_paths:
                 errors.append(f"{prefix}: duplicate repo_path_resolved")
             seen_paths.add(canonical_repo_path)
+
+        repo_git_root = str(row.get("repo_git_root") or "").strip()
+        if not repo_git_root:
+            errors.append(f"{prefix}: repo_git_root must be present")
+        else:
+            canonical_git_root = str(Path(repo_git_root).expanduser().resolve())
+            if canonical_git_root in seen_git_roots:
+                errors.append(f"{prefix}: duplicate repo_git_root")
+            seen_git_roots.add(canonical_git_root)
+            if canonical_repo_path and canonical_git_root != canonical_repo_path:
+                errors.append(f"{prefix}: repo_git_root must match repo_path_resolved")
 
         expected_head = str(row.get("expected_repo_git_head") or "").strip().lower()
         actual_head = str(row.get("actual_repo_git_head") or "").strip().lower()

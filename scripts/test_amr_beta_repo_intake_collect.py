@@ -151,6 +151,34 @@ def main() -> int:
         assert "out must not be inside target repo" in proc.stderr
         assert not unsafe_out.exists()
 
+        nested = repos[0][0] / "nested"
+        nested.mkdir()
+        unsafe_subdir_out = repos[0][0] / "subdir_repo_intake.md"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo",
+                str(nested),
+                "--contact",
+                "maintainer-01-contact",
+                "--confirm-real-benchmark-namespace",
+                "--out",
+                str(unsafe_subdir_out),
+                "--json",
+                "--min-repos",
+                "1",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        unsafe_subdir_payload = json.loads(proc.stdout)
+        assert unsafe_subdir_payload["ready_for_repo_intake_sheet"] == 0
+        assert unsafe_subdir_payload["writes_repo_intake_sheet"] == 0
+        assert "repo_path must be git worktree root" in proc.stderr
+        assert "out must not be inside target repo" in proc.stderr
+        assert not unsafe_subdir_out.exists()
+
     print("AMR beta repo intake collect smoke OK")
     return 0
 

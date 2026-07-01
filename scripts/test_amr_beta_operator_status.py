@@ -49,6 +49,7 @@ def repo_snapshot_lock_rows() -> list[dict[str, object]]:
                 "row_index": index + 1,
                 "case_id": case_id,
                 "repo_path_resolved": f"/tmp/{case_id}",
+                "repo_git_root": f"/tmp/{case_id}",
                 "expected_repo_git_head": head,
                 "actual_repo_git_head": head,
                 "clean_worktree_declared": 1,
@@ -1095,6 +1096,54 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "repo_snapshot_lock_rows row 2: duplicate repo_path_resolved" in proc.stderr
+
+        missing_repo_git_root = tmp / "missing_repo_git_root.json"
+        missing_repo_git_root_payload = repo_audit_plan_payload()
+        del missing_repo_git_root_payload["repo_snapshot_lock_rows"][0]["repo_git_root"]
+        missing_repo_git_root_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            missing_repo_git_root_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(missing_repo_git_root, missing_repo_git_root_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(missing_repo_git_root),
+            "--out-json",
+            str(tmp / "missing_repo_git_root_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 1: repo_git_root must be present" in proc.stderr
+
+        mismatched_repo_git_root = tmp / "mismatched_repo_git_root.json"
+        mismatched_repo_git_root_payload = repo_audit_plan_payload()
+        mismatched_repo_git_root_payload["repo_snapshot_lock_rows"][0]["repo_git_root"] = "/tmp/case-00/nested"
+        mismatched_repo_git_root_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            mismatched_repo_git_root_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(mismatched_repo_git_root, mismatched_repo_git_root_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(mismatched_repo_git_root),
+            "--out-json",
+            str(tmp / "mismatched_repo_git_root_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 1: repo_git_root must match repo_path_resolved" in proc.stderr
+
+        duplicate_repo_git_root = tmp / "duplicate_repo_git_root.json"
+        duplicate_repo_git_root_payload = repo_audit_plan_payload()
+        duplicate_repo_git_root_payload["repo_snapshot_lock_rows"][1]["repo_git_root"] = "/tmp/../tmp/case-00"
+        duplicate_repo_git_root_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            duplicate_repo_git_root_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(duplicate_repo_git_root, duplicate_repo_git_root_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(duplicate_repo_git_root),
+            "--out-json",
+            str(tmp / "duplicate_repo_git_root_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_snapshot_lock_rows row 2: duplicate repo_git_root" in proc.stderr
 
         dirty_repo_snapshot = tmp / "dirty_repo_snapshot.json"
         dirty_repo_snapshot_payload = repo_audit_plan_payload()

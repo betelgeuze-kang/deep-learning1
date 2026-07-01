@@ -105,6 +105,7 @@ def main() -> int:
         assert status["repo_snapshot_lock_sha256"] == sha256_json(status["repo_snapshot_lock_rows"])
         first_lock = status["repo_snapshot_lock_rows"][0]
         assert first_lock["case_id"] == "case-01"
+        assert first_lock["repo_git_root"] == str(repos[0][0].resolve())
         assert first_lock["expected_repo_git_head"] == repos[0][1].lower()
         assert first_lock["actual_repo_git_head"] == repos[0][1].lower()
         assert first_lock["repo_git_worktree_confirmed"] == 1
@@ -118,6 +119,7 @@ def main() -> int:
         assert first_lock["valid"] == 1
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["repo_git_worktree_confirmed"] == 1
+        assert status["row_statuses"][0]["repo_git_root"] == str(repos[0][0].resolve())
         assert status["row_statuses"][0]["repo_head_readable"] == 1
         assert status["row_statuses"][0]["repo_status_readable"] == 1
         assert status["row_statuses"][0]["repo_head_pinned"] == 1
@@ -219,6 +221,24 @@ def main() -> int:
         proc = run_tool(mismatch)
         assert proc.returncode == 1
         assert "expected_repo_git_head mismatch" in proc.stderr
+
+        subdir_repo_path = tmp / "subdir_repo_path.md"
+        nested = repos[0][0] / "nested"
+        nested.mkdir()
+        subdir_rows = [(nested, repos[0][1]), *repos[1:]]
+        write_intake(subdir_repo_path, subdir_rows)
+        proc = run_tool(subdir_repo_path)
+        assert proc.returncode == 1
+        assert "repo_path must be git worktree root" in proc.stderr
+
+        unsafe_subdir_out = repos[0][0] / "subdir_status.json"
+        proc = run_tool(subdir_repo_path, "--out-json", str(unsafe_subdir_out), "--json")
+        assert proc.returncode == 1
+        unsafe_subdir_payload = json.loads(proc.stdout)
+        assert unsafe_subdir_payload["ready_for_real_benchmark_audit"] == 0
+        assert unsafe_subdir_payload["output_path_guard_passed"] == 0
+        assert "out_json must not be inside target repo" in proc.stderr
+        assert not unsafe_subdir_out.exists()
 
         empty_repo = tmp / "empty-repo"
         empty_repo.mkdir()

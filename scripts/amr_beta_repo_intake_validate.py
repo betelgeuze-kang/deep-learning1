@@ -217,6 +217,7 @@ def row_status(index: int, normalized: dict[str, str], row_errors: list[str]) ->
         "case_id": normalized.get("case_id", ""),
         "repo_path": normalized.get("repo_path", ""),
         "repo_path_resolved": normalized.get("repo_path_resolved", ""),
+        "repo_git_root": normalized.get("repo_git_root", ""),
         "expected_repo_git_head": normalized.get("expected_repo_git_head", "").lower(),
         "actual_repo_git_head": actual_head.lower(),
         "repo_git_worktree_confirmed": int(normalized.get("repo_git_worktree_confirmed", "0") == "1"),
@@ -244,6 +245,7 @@ def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, 
                 "row_index": status["row_index"],
                 "case_id": status["case_id"],
                 "repo_path_resolved": status["repo_path_resolved"],
+                "repo_git_root": status["repo_git_root"],
                 "expected_repo_git_head": status["expected_repo_git_head"],
                 "actual_repo_git_head": status["actual_repo_git_head"],
                 "repo_git_worktree_confirmed": status["repo_git_worktree_confirmed"],
@@ -264,6 +266,16 @@ def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, 
             }
         )
     return lock_rows
+
+
+def target_repo_paths_from_statuses(row_statuses: list[dict[str, object]]) -> list[str]:
+    paths: set[str] = set()
+    for status in row_statuses:
+        for key in ["repo_path_resolved", "repo_git_root"]:
+            value = str(status.get(key) or "").strip()
+            if value:
+                paths.add(value)
+    return sorted(paths)
 
 
 def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, str]]:
@@ -340,6 +352,14 @@ def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, 
             errors.append(f"row {index}: repo_path is not a git worktree")
         else:
             normalized["repo_git_worktree_confirmed"] = "1"
+            root_code, root, _ = git_text(repo, ["rev-parse", "--show-toplevel"])
+            if root_code != 0 or not root.strip():
+                errors.append(f"row {index}: unable to read git worktree root")
+            else:
+                repo_git_root = str(Path(root.strip()).expanduser().resolve())
+                normalized["repo_git_root"] = repo_git_root
+                if str(repo) != repo_git_root:
+                    errors.append(f"row {index}: repo_path must be git worktree root")
             head_code, head, _ = git_text(repo, ["rev-parse", "HEAD"])
             actual_head = head.strip().lower()
             if head_code != 0 or not actual_head:
@@ -367,12 +387,14 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
     errors: list[str] = []
     seen_cases: set[str] = set()
     seen_repos: set[str] = set()
+    seen_git_roots: set[str] = set()
     valid_rows = 0
     row_statuses: list[dict[str, object]] = []
     for index, row in enumerate(rows, start=1):
         row_errors, normalized = validate_row(row, index)
         case_id = normalized.get("case_id", "")
         repo_path = normalized.get("repo_path_resolved", "")
+        repo_git_root = normalized.get("repo_git_root", "")
         if case_id:
             if case_id in seen_cases:
                 row_errors.append(f"row {index}: duplicate case_id")
@@ -381,6 +403,10 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
             if repo_path in seen_repos:
                 row_errors.append(f"row {index}: duplicate repo_path")
             seen_repos.add(repo_path)
+        if repo_git_root:
+            if repo_git_root in seen_git_roots:
+                row_errors.append(f"row {index}: duplicate repo_git_root")
+            seen_git_roots.add(repo_git_root)
         if row_errors:
             errors.extend(row_errors)
         else:
@@ -484,13 +510,7 @@ def main(argv: list[str]) -> int:
     try:
         rows = read_rows(path)
         row_errors, summary = validate_rows(rows, min_repos=args.min_repos)
-        target_repo_paths = sorted(
-            {
-                str(status.get("repo_path_resolved") or "")
-                for status in summary["row_statuses"]
-                if status.get("repo_path_resolved")
-            }
-        )
+        target_repo_paths = target_repo_paths_from_statuses(summary["row_statuses"])
         output_paths = {}
         if args.out_json:
             output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
