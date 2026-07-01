@@ -254,6 +254,56 @@ def repo_intake_status_payload() -> dict:
     }
 
 
+def repo_discovery_status_payload(candidate_count: int = 9, clean_count: int = 6) -> dict:
+    candidates: list[dict[str, object]] = []
+    for index in range(candidate_count):
+        clean = int(index < clean_count)
+        row: dict[str, object] = {
+            "candidate_index": index + 1,
+            "suggested_case_id": f"candidate-{index + 1:02d}-repo",
+            "repo_path": f"/tmp/discovered-repo-{index + 1:02d}",
+            "repo_git_root": f"/tmp/discovered-repo-{index + 1:02d}",
+            "repo_git_worktree_confirmed": 1,
+            "repo_head_readable": 1,
+            "repo_status_readable": 1,
+            "actual_repo_git_head": fake_git_head(2000 + index),
+            "clean_worktree_actual": clean,
+            "owner_or_maintainer_contact_present": 0,
+            "owner_or_maintainer_contact_required": 1,
+            "suggested_audit_mode": "quick",
+            "suggested_namespace": "real_benchmark",
+            "real_benchmark_namespace_confirmation_required": 1,
+            "ready_for_intake_after_human_contact": clean,
+            "counts_for_repo_intake": 0,
+            "blockers_before_counting": [
+                "human_owner_or_maintainer_contact_required",
+                "filled_intake_namespace_confirmation_required",
+            ],
+        }
+        if not clean:
+            row["blockers_before_counting"].insert(0, "dirty_or_unknown_worktree")
+        candidates.append(row)
+    return {
+        "schema": "amr_beta_repo_intake_discover.v1",
+        "scan_roots": ["/tmp"],
+        "max_depth": 4,
+        "include_hidden": 0,
+        "candidate_repo_count": len(candidates),
+        "candidate_repos_with_clean_head": clean_count,
+        "min_real_repos_required": 10,
+        "repo_intake_rows_counted": 0,
+        "ready_for_repo_intake": 0,
+        "candidate_rows_cannot_count_without_human_contact": 1,
+        "runs_audit": 0,
+        "runs_label_template_generation": 0,
+        "writes_reviewer_packets": 0,
+        "creates_benchmark_evidence": 0,
+        "candidates": candidates,
+        "errors": [],
+        **base_blocked(),
+    }
+
+
 def repo_audit_plan_payload() -> dict:
     binding = binding_payload()
     snapshot_rows = repo_snapshot_lock_rows()
@@ -509,6 +559,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
         pr_cleanup = tmp / "pr_cleanup_status.json"
+        repo_discovery = tmp / "repo_discovery_status.json"
         repo_intake = tmp / "repo_intake_status.json"
         repo = tmp / "repo_plan.json"
         label = tmp / "label_plan.json"
@@ -524,6 +575,10 @@ def main() -> int:
         write_json(
             pr_cleanup,
             pr_cleanup_status_payload(),
+        )
+        write_json(
+            repo_discovery,
+            repo_discovery_status_payload(),
         )
         write_json(
             repo_intake,
@@ -582,6 +637,33 @@ def main() -> int:
         assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_status_supplied"] == 0
         assert payload["stage_progress"]["claim_freeze"]["stage_0_claim_freeze_verified"] == 0
         assert "Validate stage-0 PR cleanup" in payload["next_blockers"][0]
+
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-discovery-status",
+            str(repo_discovery),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert payload["stage_progress"]["repo_intake"]["current"] == 0
+        assert payload["stage_progress"]["repo_intake"]["remaining"] == 10
+        assert payload["stage_progress"]["repo_intake"]["met"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_status_supplied"] == 1
+        assert payload["stage_progress"]["repo_intake"]["candidate_repo_count"] == 9
+        assert payload["stage_progress"]["repo_intake"]["candidate_repos_with_clean_head"] == 6
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_rows_counted"] == 0
+        assert payload["stage_progress"]["repo_intake"]["candidate_rows_cannot_count_without_human_contact"] == 1
+        assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
+        markdown = out_md.read_text(encoding="utf-8")
+        assert "repo_discovery_candidates: 9 (clean_head 6, supplied 1, rows_counted 0)" in markdown
 
         proc = run_tool(
             "--pr-cleanup-status",
@@ -848,6 +930,20 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "repo_intake_status: repo_snapshot_lock_rows row 1: repo_head_pinned must be 1" in proc.stderr
+
+        counting_discovery = tmp / "counting_repo_discovery_status.json"
+        counting_discovery_payload = repo_discovery_status_payload()
+        counting_discovery_payload["candidates"][0]["counts_for_repo_intake"] = 1
+        write_json(counting_discovery, counting_discovery_payload)
+        proc = run_tool(
+            "--repo-discovery-status",
+            str(counting_discovery),
+            "--out-json",
+            str(tmp / "counting_repo_discovery_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_discovery_status: candidates row 1: counts_for_repo_intake must be 0" in proc.stderr
 
         mismatched_repo_intake = tmp / "mismatched_repo_intake_status.json"
         mismatched_repo_intake_payload = repo_intake_status_payload()
