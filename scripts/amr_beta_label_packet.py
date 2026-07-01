@@ -486,6 +486,482 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
 
 
+def read_jsonl_file(path: Path, input_name: str) -> list[dict]:
+    if not path.is_file():
+        raise ValueError(f"missing {input_name}: {path}")
+    rows: list[dict] = []
+    for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if not isinstance(row, dict):
+            raise ValueError(f"{input_name} line {index} must be an object")
+        rows.append(row)
+    return rows
+
+
+def blocked_claim_errors(payload: dict, *, name: str) -> list[str]:
+    errors: list[str] = []
+    for key in BLOCKED_KEYS:
+        if payload.get(key) != 0:
+            errors.append(f"{name}: must keep {key}=0")
+    return errors
+
+
+def required_guard_errors(summary: dict, *, name: str, scoped: bool) -> list[str]:
+    errors: list[str] = []
+    for key in ["candidate_guard_passed", "decision_input_guard_passed", "output_path_guard_passed"]:
+        if scoped and key not in summary:
+            continue
+        if summary.get(key) != 1:
+            errors.append(f"{name}: {key} must be 1")
+    if scoped:
+        return errors
+    if summary.get("label_template_verify_existing_required") != 1:
+        errors.append(f"{name}: label_template_verify_existing_required must be 1")
+    if summary.get("label_template_verify_existing_failed_dirs") != 0:
+        errors.append(f"{name}: label_template_verify_existing_failed_dirs must be 0")
+    passed_dirs = summary.get("label_template_verify_existing_passed_dirs")
+    template_dir_count = summary.get("template_dir_count")
+    if passed_dirs != template_dir_count:
+        errors.append(f"{name}: label_template_verify_existing_passed_dirs must match template_dir_count")
+    return errors
+
+
+def canonical_rows(rows: list[dict]) -> list[str]:
+    return sorted(json.dumps(row, sort_keys=True, separators=(",", ":")) for row in rows)
+
+
+def verify_template_bindings(
+    summary: dict,
+    packet_rows: list[dict],
+    *,
+    name: str,
+    scoped: bool,
+) -> list[str]:
+    errors: list[str] = []
+    raw_fingerprints = summary.get("label_template_fingerprints", [])
+    if not isinstance(raw_fingerprints, list):
+        return [f"{name}: label_template_fingerprints must be a list"]
+    if not scoped and summary.get("template_dir_count") != len(raw_fingerprints):
+        errors.append(f"{name}: template_dir_count must match label_template_fingerprints")
+
+    expected_fingerprints: list[dict[str, str]] = []
+    expected_packet_rows: list[dict] = []
+    seen_template_dirs: set[str] = set()
+    for index, raw in enumerate(raw_fingerprints, start=1):
+        if not isinstance(raw, dict):
+            errors.append(f"{name}: label_template_fingerprints row {index} must be an object")
+            continue
+        raw_template_dir = str(raw.get("template_dir") or "").strip()
+        if not raw_template_dir:
+            errors.append(f"{name}: label_template_fingerprints row {index}: template_dir must be present")
+            continue
+        template_dir = Path(raw_template_dir).expanduser().resolve()
+        if is_forbidden_env_path(template_dir):
+            errors.append(f"{name}: label_template_fingerprints row {index}: template_dir must not be .env-like")
+            continue
+        if str(template_dir) in seen_template_dirs:
+            errors.append(f"{name}: label_template_fingerprints row {index}: duplicate template_dir")
+            continue
+        seen_template_dirs.add(str(template_dir))
+
+        template_verify_errors = verify_label_template_existing(template_dir)
+        errors.extend(f"{name}: {error}" for error in template_verify_errors)
+        template_json = template_dir / "label_template.json"
+        template_manifest = template_dir / "label_template_manifest.json"
+        try:
+            expected_fingerprint = {
+                "template_dir": str(template_dir),
+                "label_template_json_sha256": sha256_file(template_json),
+                "label_template_manifest_sha256": sha256_file(template_manifest)
+                if template_manifest.is_file()
+                else "",
+            }
+            rows, template_errors, _counts = load_template_dir(template_dir)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            errors.append(f"{name}: template_dir parse error for {template_dir}: {exc}")
+            continue
+        expected_fingerprints.append(expected_fingerprint)
+        errors.extend(f"{name}: {error}" for error in template_errors)
+        expected_packet_rows.extend(rows)
+
+    if raw_fingerprints != expected_fingerprints:
+        errors.append(f"{name}: label_template_fingerprints must match current template files")
+    if summary.get("label_template_bundle_sha256") != sha256_json(expected_fingerprints):
+        errors.append(f"{name}: label_template_bundle_sha256 must match current label_template_fingerprints")
+    expected_template_json_sha256s = [
+        row["label_template_json_sha256"] for row in expected_fingerprints
+    ]
+    if summary.get("label_template_json_sha256s") != expected_template_json_sha256s:
+        errors.append(f"{name}: label_template_json_sha256s must match current label_template_fingerprints")
+    expected_template_manifest_sha256s = [
+        row["label_template_manifest_sha256"]
+        for row in expected_fingerprints
+        if row["label_template_manifest_sha256"]
+    ]
+    if summary.get("label_template_manifest_sha256s") != expected_template_manifest_sha256s:
+        errors.append(f"{name}: label_template_manifest_sha256s must match current label_template_fingerprints")
+
+    packet_candidate_ids = {str(row.get("candidate_label_id") or "") for row in packet_rows}
+    if scoped:
+        expected_packet_rows = [
+            row for row in expected_packet_rows if str(row.get("candidate_label_id") or "") in packet_candidate_ids
+        ]
+    if canonical_rows(packet_rows) != canonical_rows(expected_packet_rows):
+        errors.append(f"{name}: reviewer_candidate_packet must match recorded label templates")
+    return errors
+
+
+def verified_decision_context(
+    summary: dict,
+    packet_rows: list[dict],
+    *,
+    name: str,
+    scoped: bool,
+) -> tuple[set[str], list[dict], int, list[str]]:
+    errors: list[str] = []
+    raw_fingerprints = summary.get("decisions_fingerprints", [])
+    if not isinstance(raw_fingerprints, list):
+        return set(), [], 0, [f"{name}: decisions_fingerprints must be a list"]
+
+    recomputed_fingerprints: list[dict[str, str]] = []
+    decision_rows: list[dict] = []
+    for index, raw in enumerate(raw_fingerprints, start=1):
+        if not isinstance(raw, dict):
+            errors.append(f"{name}: decisions_fingerprints row {index} must be an object")
+            continue
+        raw_decisions = str(raw.get("decisions") or "").strip()
+        if not raw_decisions:
+            errors.append(f"{name}: decisions_fingerprints row {index}: decisions must be present")
+            continue
+        decision_path = Path(raw_decisions).expanduser().resolve()
+        if is_forbidden_env_path(decision_path):
+            errors.append(f"{name}: decisions_fingerprints row {index}: decisions must not be .env-like")
+            continue
+        if not decision_path.is_file():
+            errors.append(f"{name}: decisions_fingerprints row {index}: decisions file is missing")
+            continue
+        try:
+            decision_sha256 = sha256_file(decision_path)
+            decision_rows.extend(read_json_or_jsonl(decision_path, "decisions"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            errors.append(f"{name}: decisions_fingerprints row {index}: parse error: {exc}")
+            continue
+        recomputed_fingerprints.append(
+            {
+                "decisions": str(decision_path),
+                "decisions_sha256": decision_sha256,
+            }
+        )
+    if raw_fingerprints != recomputed_fingerprints:
+        errors.append(f"{name}: decisions_fingerprints must match current decision files")
+    if summary.get("decisions_bundle_sha256") != sha256_json(recomputed_fingerprints):
+        errors.append(f"{name}: decisions_bundle_sha256 must match current decisions_fingerprints")
+    expected_decision_sha256s = [
+        row["decisions_sha256"] for row in recomputed_fingerprints
+    ]
+    if summary.get("decisions_sha256s") != expected_decision_sha256s:
+        errors.append(f"{name}: decisions_sha256s must match current decisions_fingerprints")
+    if not scoped and summary.get("decision_rows") != len(decision_rows):
+        errors.append(f"{name}: decision_rows must match current decision files")
+
+    known_candidate_ids = {str(row.get("candidate_label_id") or "").strip() for row in packet_rows}
+    validation_rows = decision_rows
+    if scoped:
+        validation_rows = [
+            row
+            for row in decision_rows
+            if str(row.get("candidate_label_id") or "").strip() in known_candidate_ids
+        ]
+    decision_errors, valid_decision_ids, _valid_rows, valid_decision_rows = validate_decisions(
+        validation_rows,
+        known_candidate_ids,
+    )
+    errors.extend(f"{name}: {error}" for error in decision_errors)
+    return valid_decision_ids, valid_decision_rows, len(decision_rows), errors
+
+
+def expected_summary_counts(
+    packet_rows: list[dict],
+    valid_decision_ids: set[str],
+    *,
+    min_human_label_rows_required: int = MIN_HUMAN_LABELS_FOR_BETA,
+) -> dict[str, object]:
+    known_candidate_ids = {str(row.get("candidate_label_id") or "") for row in packet_rows}
+    valid_decision_ids = known_candidate_ids & set(valid_decision_ids)
+    missing_ids = sorted(known_candidate_ids - valid_decision_ids)
+    non_synthetic_candidate_ids = {
+        str(row.get("candidate_label_id") or "")
+        for row in packet_rows
+        if str(row.get("synthetic", "0")) != "1"
+    }
+    progress_rows = case_progress_rows(packet_rows, valid_decision_ids)
+    cases_ready = sum(1 for row in progress_rows if row["ready_for_label_intake"] == 1)
+    all_cases_ready = int(bool(progress_rows) and cases_ready == len(progress_rows))
+    non_synthetic_valid = len(valid_decision_ids & non_synthetic_candidate_ids)
+    return {
+        "case_count": len({str(row.get("case_id") or "") for row in packet_rows}),
+        "candidate_label_rows": len(packet_rows),
+        "synthetic_candidate_rows": sum(1 for row in packet_rows if str(row.get("synthetic", "0")) == "1"),
+        "non_synthetic_candidate_rows": len(non_synthetic_candidate_ids),
+        "missing_candidate_label_count": len(missing_ids),
+        "valid_human_label_rows": len(valid_decision_ids),
+        "non_synthetic_valid_human_label_rows": non_synthetic_valid,
+        "all_candidates_reviewed": int(not missing_ids and bool(packet_rows)),
+        "case_progress_rows": progress_rows,
+        "cases_ready_for_label_intake": cases_ready,
+        "cases_blocked_for_label_intake": len(progress_rows) - cases_ready,
+        "human_label_requirement_met": int(non_synthetic_valid >= min_human_label_rows_required),
+        "human_labels_remaining_to_minimum": max(0, min_human_label_rows_required - non_synthetic_valid),
+        "ready_for_label_intake": int(
+            non_synthetic_valid > 0
+            and not missing_ids
+            and all_cases_ready == 1
+        ),
+    }
+
+
+def verify_summary_bindings(
+    summary: dict,
+    packet_rows: list[dict],
+    missing_ids: list[str],
+    *,
+    name: str,
+    scoped: bool = False,
+    check_output_files: bool = True,
+) -> list[str]:
+    errors: list[str] = []
+    if summary.get("schema") != "amr_beta_label_packet.v1":
+        errors.append(f"{name}: schema must be amr_beta_label_packet.v1")
+    errors.extend(blocked_claim_errors(summary, name=name))
+    errors.extend(required_guard_errors(summary, name=name, scoped=scoped))
+    errors.extend(verify_template_bindings(summary, packet_rows, name=name, scoped=scoped))
+    valid_decision_ids, valid_decision_rows, _decision_rows, decision_errors = verified_decision_context(
+        summary,
+        packet_rows,
+        name=name,
+        scoped=scoped,
+    )
+    errors.extend(decision_errors)
+    candidate_ids = {str(row.get("candidate_label_id") or "").strip() for row in packet_rows}
+    expected_missing_ids = sorted(candidate_ids - valid_decision_ids)
+    if sorted(missing_ids) != expected_missing_ids:
+        errors.append(f"{name}: reviewer_missing_candidates must match current decision files")
+    min_human_label_rows_required = summary.get("min_human_label_rows_required", MIN_HUMAN_LABELS_FOR_BETA)
+    if not isinstance(min_human_label_rows_required, int):
+        errors.append(f"{name}: min_human_label_rows_required must be an integer")
+        min_human_label_rows_required = MIN_HUMAN_LABELS_FOR_BETA
+    expected = expected_summary_counts(
+        packet_rows,
+        valid_decision_ids,
+        min_human_label_rows_required=min_human_label_rows_required,
+    )
+    for key, value in expected.items():
+        if scoped and key not in summary:
+            continue
+        if summary.get(key) != value:
+            errors.append(f"{name}: {key} must match reviewer packet artifacts")
+    reviewer_rows = summary.get("reviewer_progress_rows", [])
+    if scoped and "reviewer_progress_rows" not in summary:
+        reviewer_rows = []
+        skip_reviewer_progress = True
+    else:
+        skip_reviewer_progress = False
+    if not isinstance(reviewer_rows, list):
+        errors.append(f"{name}: reviewer_progress_rows must be a list")
+        reviewer_rows = []
+    non_synthetic_candidate_ids = {
+        str(row.get("candidate_label_id") or "")
+        for row in packet_rows
+        if str(row.get("synthetic", "0")) != "1"
+    }
+    expected_reviewer_rows = reviewer_progress_rows(valid_decision_rows, non_synthetic_candidate_ids)
+    if not skip_reviewer_progress and reviewer_rows != expected_reviewer_rows:
+        errors.append(f"{name}: reviewer_progress_rows must match current decision files")
+    reviewer_row_sum = 0
+    reviewer_non_synthetic_sum = 0
+    reviewer_ids: set[str] = set()
+    for index, row in enumerate(reviewer_rows, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"{name}: reviewer_progress_rows row {index} must be an object")
+            continue
+        reviewer_id = str(row.get("reviewer_id") or "").strip()
+        if not reviewer_id:
+            errors.append(f"{name}: reviewer_progress_rows row {index}: reviewer_id must be present")
+        if reviewer_id in reviewer_ids:
+            errors.append(f"{name}: reviewer_progress_rows row {index}: duplicate reviewer_id")
+        reviewer_ids.add(reviewer_id)
+        reviewer_row_sum += int(row.get("valid_human_label_rows", 0) or 0)
+        reviewer_non_synthetic_sum += int(row.get("non_synthetic_valid_human_label_rows", 0) or 0)
+    if not skip_reviewer_progress and summary.get("distinct_reviewer_id_count") != len(reviewer_ids):
+        errors.append(f"{name}: distinct_reviewer_id_count must match reviewer_progress_rows")
+    if not skip_reviewer_progress and summary.get("valid_human_label_rows_with_reviewer_id") != reviewer_row_sum:
+        errors.append(f"{name}: valid_human_label_rows_with_reviewer_id must match reviewer_progress_rows")
+    if not skip_reviewer_progress and reviewer_non_synthetic_sum > int(summary.get("non_synthetic_valid_human_label_rows", 0) or 0):
+        errors.append(f"{name}: reviewer non-synthetic rows must not exceed valid non-synthetic labels")
+    if (
+        not skip_reviewer_progress
+        and "valid_human_label_rows_missing_reviewer_id" in summary
+        and (
+            int(summary.get("valid_human_label_rows", 0) or 0)
+            - int(summary.get("valid_human_label_rows_with_reviewer_id", 0) or 0)
+            != int(summary.get("valid_human_label_rows_missing_reviewer_id", 0) or 0)
+        )
+    ):
+        errors.append(f"{name}: missing reviewer count must match valid label rows")
+    if not check_output_files:
+        return errors
+    if scoped and "output_files" not in summary:
+        return errors
+    if "reviewer_candidate_packet.jsonl" not in summary.get("output_files", []):
+        errors.append(f"{name}: output_files must include reviewer_candidate_packet.jsonl")
+    if "reviewer_missing_candidates.jsonl" not in summary.get("output_files", []):
+        errors.append(f"{name}: output_files must include reviewer_missing_candidates.jsonl")
+    if "reviewer_progress_summary.json" not in summary.get("output_files", []):
+        errors.append(f"{name}: output_files must include reviewer_progress_summary.json")
+    return errors
+
+
+def verify_packet_dir(path: Path, *, name: str = "label_packet", scoped: bool = False) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    if is_forbidden_env_path(path):
+        return {}, [f"{name}: refusing .env-like packet path"]
+    if not path.is_dir():
+        return {}, [f"{name}: packet path must be a directory"]
+    children = {child.name for child in path.iterdir()}
+    if children != MANAGED_OUTPUTS:
+        errors.append(f"{name}: packet directory must contain exactly managed reviewer packet artifacts")
+    try:
+        packet_rows = read_jsonl_file(path / "reviewer_candidate_packet.jsonl", "reviewer candidate packet")
+        missing_rows = read_jsonl_file(path / "reviewer_missing_candidates.jsonl", "reviewer missing candidates")
+        summary = read_json(path / "reviewer_progress_summary.json", "reviewer progress summary")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return {}, [*errors, f"{name}: parse error: {exc}"]
+    missing_ids = [str(row.get("candidate_label_id") or "").strip() for row in missing_rows]
+    if any(not value for value in missing_ids):
+        errors.append(f"{name}: reviewer_missing_candidates rows must include candidate_label_id")
+    if len(missing_ids) != len(set(missing_ids)):
+        errors.append(f"{name}: reviewer_missing_candidates must not contain duplicates")
+    candidate_ids = [str(row.get("candidate_label_id") or "").strip() for row in packet_rows]
+    if any(not value for value in candidate_ids):
+        errors.append(f"{name}: reviewer_candidate_packet rows must include candidate_label_id")
+    if len(candidate_ids) != len(set(candidate_ids)):
+        errors.append(f"{name}: reviewer_candidate_packet must not contain duplicate candidate_label_id values")
+    unknown_missing = sorted(set(missing_ids) - set(candidate_ids))
+    if unknown_missing:
+        errors.append(f"{name}: reviewer_missing_candidates contains unknown candidate_label_id")
+    errors.extend(verify_summary_bindings(summary, packet_rows, missing_ids, name=name, scoped=scoped))
+    return summary, errors
+
+
+def verify_case_packet_root(path: Path) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    if is_forbidden_env_path(path):
+        return {}, ["label_packet_index: refusing .env-like packet root"]
+    if not path.is_dir():
+        return {}, ["label_packet_index: packet root must be a directory"]
+    index_path = path / MANAGED_CASE_INDEX
+    if not index_path.is_file():
+        return {}, [f"label_packet_index: missing {MANAGED_CASE_INDEX}"]
+    try:
+        index = read_json(index_path, "reviewer packet index")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return {}, [f"label_packet_index: parse error: {exc}"]
+    errors.extend(blocked_claim_errors(index, name="label_packet_index"))
+    case_packets = index.get("case_packets", [])
+    if not isinstance(case_packets, list):
+        return index, ["label_packet_index: case_packets must be a list"]
+    if index.get("case_packet_count") != len(case_packets):
+        errors.append("label_packet_index: case_packet_count must match case_packets")
+    expected_children = {MANAGED_CASE_INDEX}
+    summaries_by_case: dict[str, dict] = {}
+    all_packet_rows: list[dict] = []
+    all_missing_ids: list[str] = []
+    for row_index, row in enumerate(case_packets, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"label_packet_index: case_packets row {row_index} must be an object")
+            continue
+        case_id = str(row.get("case_id") or "").strip()
+        output_dir = str(row.get("output_dir") or "").strip()
+        if not case_id:
+            errors.append(f"label_packet_index: case_packets row {row_index}: case_id must be present")
+            continue
+        expected_children.add(case_id)
+        if not output_dir:
+            errors.append(f"label_packet_index: case_packets row {row_index}: output_dir must be present")
+            continue
+        case_dir = Path(output_dir).expanduser().resolve()
+        if case_dir != (path / case_id).resolve():
+            errors.append(f"label_packet_index: case_packets row {row_index}: output_dir must match case_id directory")
+            continue
+        case_summary, case_errors = verify_packet_dir(case_dir, name=f"label_packet[{case_id}]", scoped=True)
+        errors.extend(case_errors)
+        summaries_by_case[case_id] = case_summary
+        try:
+            all_packet_rows.extend(
+                read_jsonl_file(case_dir / "reviewer_candidate_packet.jsonl", f"label_packet[{case_id}] candidate packet")
+            )
+            missing_rows = read_jsonl_file(
+                case_dir / "reviewer_missing_candidates.jsonl",
+                f"label_packet[{case_id}] missing candidates",
+            )
+            all_missing_ids.extend(str(missing.get("candidate_label_id") or "").strip() for missing in missing_rows)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            errors.append(f"label_packet_index: case_packets row {row_index}: parse error: {exc}")
+        for key in [
+            "candidate_label_rows",
+            "synthetic_candidate_rows",
+            "non_synthetic_candidate_rows",
+            "valid_human_label_rows",
+            "non_synthetic_valid_human_label_rows",
+            "missing_candidate_label_count",
+            "all_candidates_reviewed",
+            "ready_for_label_intake",
+        ]:
+            if row.get(key) != case_summary.get(key):
+                errors.append(f"label_packet_index: case_packets row {row_index}: {key} must match case summary")
+    actual_children = {child.name for child in path.iterdir()}
+    if actual_children != expected_children:
+        errors.append("label_packet_index: packet root must contain only indexed case packet directories")
+    expected_case_progress = [
+        {
+            "case_id": case_id,
+            "template_dirs": summaries_by_case[case_id].get("template_dirs", []),
+            "candidate_label_rows": summaries_by_case[case_id].get("candidate_label_rows"),
+            "synthetic_candidate_rows": summaries_by_case[case_id].get("synthetic_candidate_rows"),
+            "non_synthetic_candidate_rows": summaries_by_case[case_id].get("non_synthetic_candidate_rows"),
+            "valid_human_label_rows": summaries_by_case[case_id].get("valid_human_label_rows"),
+            "non_synthetic_valid_human_label_rows": summaries_by_case[case_id].get(
+                "non_synthetic_valid_human_label_rows"
+            ),
+            "missing_candidate_label_count": summaries_by_case[case_id].get("missing_candidate_label_count"),
+            "all_candidates_reviewed": summaries_by_case[case_id].get("all_candidates_reviewed"),
+            "ready_for_label_intake": summaries_by_case[case_id].get("ready_for_label_intake"),
+        }
+        for case_id in sorted(summaries_by_case)
+    ]
+    if index.get("case_progress_rows") != expected_case_progress:
+        errors.append("label_packet_index: case_progress_rows must match case packet summaries")
+    errors.extend(
+        verify_summary_bindings(
+            index,
+            all_packet_rows,
+            all_missing_ids,
+            name="label_packet_index",
+            scoped=False,
+            check_output_files=False,
+        )
+    )
+    return index, errors
+
+
+def verify_existing_packet_path(path: Path) -> tuple[dict, list[str]]:
+    if (path / MANAGED_CASE_INDEX).is_file():
+        return verify_case_packet_root(path)
+    return verify_packet_dir(path)
+
+
 def write_outputs(out_dir: Path, packet_rows: list[dict], missing_ids: list[str], summary: dict, overwrite: bool) -> None:
     prepare_output_dir(out_dir, overwrite)
     write_jsonl(out_dir / "reviewer_candidate_packet.jsonl", packet_rows)
@@ -578,6 +1054,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--template-dir", action="append", default=[], help="Label template dir; repeatable.")
     parser.add_argument("--decisions", action="append", default=[], help="Human decision JSON/JSONL file; repeatable.")
     parser.add_argument("--out", default="", help="Optional output directory for reviewer packet artifacts.")
+    parser.add_argument("--verify-existing", default="", help="Verify an existing reviewer packet output directory.")
     parser.add_argument(
         "--per-case-out-root",
         default="",
@@ -599,6 +1076,32 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.verify_existing:
+            summary, verify_errors = verify_existing_packet_path(Path(args.verify_existing).expanduser().resolve())
+            payload = {
+                "schema": "amr_beta_label_packet_verify_existing.v1",
+                "verify_existing": str(Path(args.verify_existing).expanduser().resolve()),
+                "verify_existing_passed": int(not verify_errors),
+                "creates_benchmark_evidence": 0,
+                "runs_real_benchmark": 0,
+                "compiles_labels": 0,
+                "writes_reviewer_packets": 0,
+                "release_ready": 0,
+                "public_comparison_claim_ready": 0,
+                "real_model_execution_ready": 0,
+                "design_partner_beta_candidate_ready": 0,
+                "packet_summary_sha256": sha256_json(summary) if summary else "",
+                "errors": verify_errors,
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            if verify_errors:
+                for error in verify_errors:
+                    print(error, file=sys.stderr)
+                return 1
+            if not args.json:
+                print("label_packet_verify: ok")
+            return 0
         if not args.template_dir:
             raise ValueError("at least one --template-dir is required")
         packet_rows: list[dict] = []

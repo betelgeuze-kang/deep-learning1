@@ -92,6 +92,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "maintainer_progress_rows",
     "case_feedback_progress_rows",
     "python3 scripts/amr_beta_label_packet.py",
+    "amr_beta_label_packet.py --verify-existing",
     "audit_my_repo_label_template.py --verify-existing",
     "python3 scripts/amr_beta_label_intake_plan.py",
     "compiles_labels=0",
