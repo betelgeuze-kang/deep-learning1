@@ -285,6 +285,7 @@ def load_template_dir(path: Path) -> tuple[list[dict], list[str], dict[str, int]
 def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple[list[str], set[str], int]:
     errors: list[str] = []
     seen: set[str] = set()
+    seen_label_ids: set[str] = set()
     valid_ids: set[str] = set()
     valid_rows = 0
     for index, row in enumerate(rows, start=1):
@@ -301,13 +302,20 @@ def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple
         elif candidate_id not in known_candidate_ids:
             row_errors.append(f"decision row {index}: unknown candidate_label_id")
         seen.add(candidate_id)
+        label_id = str(row.get("label_id") or candidate_id).strip()
+        label_error_count = len(row_errors)
         validate_optional_safe_id(
             errors=row_errors,
             row_prefix=f"decision row {index}",
             field="label_id",
-            value=row.get("label_id"),
+            value=label_id,
             pattern=SAFE_ID_RE,
         )
+        if label_id and len(row_errors) == label_error_count:
+            if label_id in seen_label_ids:
+                row_errors.append(f"decision row {index}: duplicate label_id")
+            else:
+                seen_label_ids.add(label_id)
         validate_optional_safe_id(
             errors=row_errors,
             row_prefix=f"decision row {index}",

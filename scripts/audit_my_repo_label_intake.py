@@ -212,6 +212,7 @@ def normalize_label_priority(value: object, *, label: str) -> str:
 def normalize_decisions(raw_rows: list[dict]) -> list[dict]:
     decisions: list[dict] = []
     seen: set[str] = set()
+    seen_label_ids: set[str] = set()
     for idx, raw in enumerate(raw_rows, start=1):
         if not isinstance(raw, dict):
             raise ValueError(f"decision row {idx} must be an object")
@@ -242,6 +243,9 @@ def normalize_decisions(raw_rows: list[dict]) -> list[dict]:
             label=f"decision {candidate_label_id} label_id",
             pattern=SAFE_LABEL_ID,
         )
+        if label_id in seen_label_ids:
+            raise ValueError(f"duplicate decision label_id: {label_id}")
+        seen_label_ids.add(label_id)
         maintainer_id = normalize_optional_safe_non_placeholder_id(
             raw.get("maintainer_id"),
             label=f"decision {candidate_label_id} maintainer_id",

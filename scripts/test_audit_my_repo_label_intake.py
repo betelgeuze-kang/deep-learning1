@@ -77,6 +77,23 @@ def test_decision_normalization() -> None:
         [
             {
                 "candidate_label_id": "case-001-0001",
+                "label_id": "shared-label",
+                "human_labeled": True,
+                "expected": "present",
+            },
+            {
+                "candidate_label_id": "case-001-0002",
+                "label_id": "shared-label",
+                "human_labeled": True,
+                "expected": "absent",
+            },
+        ],
+        "duplicate decision label_id",
+    )
+    expect_value_error(
+        [
+            {
+                "candidate_label_id": "case-001-0001",
                 "reviewer_id": "reviewer alpha",
                 "human_labeled": True,
                 "expected": "present",

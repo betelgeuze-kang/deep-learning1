@@ -401,6 +401,39 @@ def main() -> int:
         assert "label_id must not be example/placeholder" in proc.stderr
         assert "reviewer_id must be a safe identifier" in proc.stderr
 
+        duplicate_label_id_decisions = tmp / "duplicate_label_id_decisions.jsonl"
+        write_jsonl(
+            duplicate_label_id_decisions,
+            [
+                {
+                    "candidate_label_id": "case-001-0001",
+                    "label_id": "shared-label",
+                    "human_labeled": True,
+                    "expected": "present",
+                },
+                {
+                    "candidate_label_id": "case-002-0001",
+                    "label_id": "shared-label",
+                    "human_labeled": True,
+                    "expected": "absent",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(duplicate_label_id_decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "1",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "duplicate label_id" in proc.stderr
+
         bad_feedback = tmp / "bad_feedback.jsonl"
         write_jsonl(
             bad_feedback,
