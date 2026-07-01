@@ -125,6 +125,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "reviewer_id",
     "safe, non-placeholder",
     "reviewer progress summary",
+    "distinct_reviewer_id_count",
+    "valid_human_label_rows_missing_reviewer_id",
     "does not make them\nhuman-supplied inputs",
     "counts_for_beta=0",
 ]

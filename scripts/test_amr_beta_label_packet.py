@@ -121,8 +121,20 @@ def main() -> int:
         write_jsonl(
             decisions,
             [
-                {"candidate_label_id": "case-a-0001", "human_labeled": True, "expected": "present", "priority": "P1"},
-                {"candidate_label_id": "case-b-0001", "human_labeled": True, "expected": "absent", "priority": "P2"},
+                {
+                    "candidate_label_id": "case-a-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                    "priority": "P1",
+                    "reviewer_id": "reviewer-a",
+                },
+                {
+                    "candidate_label_id": "case-b-0001",
+                    "human_labeled": True,
+                    "expected": "absent",
+                    "priority": "P2",
+                    "reviewer_id": "reviewer-b",
+                },
             ],
         )
         out_dir = tmp / "packet"
@@ -160,6 +172,21 @@ def main() -> int:
         assert summary["decisions_bundle_sha256"] == sha256_json(summary["decisions_fingerprints"])
         assert summary["valid_human_label_rows"] == 2
         assert summary["non_synthetic_valid_human_label_rows"] == 2
+        assert summary["valid_human_label_rows_with_reviewer_id"] == 2
+        assert summary["valid_human_label_rows_missing_reviewer_id"] == 0
+        assert summary["distinct_reviewer_id_count"] == 2
+        assert summary["reviewer_progress_rows"] == [
+            {
+                "non_synthetic_valid_human_label_rows": 1,
+                "reviewer_id": "reviewer-a",
+                "valid_human_label_rows": 1,
+            },
+            {
+                "non_synthetic_valid_human_label_rows": 1,
+                "reviewer_id": "reviewer-b",
+                "valid_human_label_rows": 1,
+            },
+        ]
         assert summary["missing_candidate_label_count"] == 1
         assert summary["human_labels_remaining_to_minimum"] == 298
         assert summary["cases_ready_for_label_intake"] == 1
@@ -220,6 +247,7 @@ def main() -> int:
         assert index["case_packet_count"] == 2
         assert index["design_partner_beta_candidate_ready"] == 0
         assert index["case_progress_rows"] == summary["case_progress_rows"]
+        assert index["reviewer_progress_rows"] == summary["reviewer_progress_rows"]
         case_a_summary = json.loads(
             (per_case_root / "case-a" / "reviewer_progress_summary.json").read_text(encoding="utf-8")
         )
@@ -267,6 +295,8 @@ def main() -> int:
         synthetic_summary = json.loads(proc.stdout)
         assert synthetic_summary["valid_human_label_rows"] == 1
         assert synthetic_summary["non_synthetic_valid_human_label_rows"] == 0
+        assert synthetic_summary["valid_human_label_rows_missing_reviewer_id"] == 1
+        assert synthetic_summary["distinct_reviewer_id_count"] == 0
         assert synthetic_summary["human_labels_remaining_to_minimum"] == 300
         assert synthetic_summary["cases_ready_for_label_intake"] == 0
         assert synthetic_summary["cases_blocked_for_label_intake"] == 1
