@@ -282,11 +282,12 @@ def load_template_dir(path: Path) -> tuple[list[dict], list[str], dict[str, int]
     return packet_rows, errors, {"synthetic_candidate_rows": synthetic_rows}
 
 
-def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple[list[str], set[str], int]:
+def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple[list[str], set[str], int, list[dict]]:
     errors: list[str] = []
     seen: set[str] = set()
     seen_label_ids: set[str] = set()
     valid_ids: set[str] = set()
+    valid_decision_rows: list[dict] = []
     valid_rows = 0
     for index, row in enumerate(rows, start=1):
         row_errors: list[str] = []
@@ -345,7 +346,36 @@ def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple
         else:
             valid_rows += 1
             valid_ids.add(candidate_id)
-    return errors, valid_ids, valid_rows
+            valid_decision_rows.append(
+                {
+                    "candidate_label_id": candidate_id,
+                    "reviewer_id": str(row.get("reviewer_id") or "").strip(),
+                }
+            )
+    return errors, valid_ids, valid_rows, valid_decision_rows
+
+
+def reviewer_progress_rows(valid_decision_rows: list[dict], non_synthetic_candidate_ids: set[str]) -> list[dict]:
+    grouped: dict[str, dict[str, object]] = {}
+    for row in valid_decision_rows:
+        reviewer_id = str(row.get("reviewer_id") or "").strip()
+        if not reviewer_id:
+            continue
+        candidate_id = str(row.get("candidate_label_id") or "").strip()
+        bucket = grouped.setdefault(
+            reviewer_id,
+            {
+                "reviewer_id": reviewer_id,
+                "valid_human_label_rows": 0,
+                "non_synthetic_valid_human_label_rows": 0,
+            },
+        )
+        bucket["valid_human_label_rows"] = int(bucket["valid_human_label_rows"]) + 1
+        if candidate_id in non_synthetic_candidate_ids:
+            bucket["non_synthetic_valid_human_label_rows"] = int(
+                bucket["non_synthetic_valid_human_label_rows"]
+            ) + 1
+    return [grouped[reviewer_id] for reviewer_id in sorted(grouped)]
 
 
 def prepare_output_dir(out_dir: Path, overwrite: bool) -> None:
@@ -633,7 +663,7 @@ def main(argv: list[str]) -> int:
                     }
                 )
                 decision_rows.extend(read_json_or_jsonl(decision_path, "decisions"))
-        decision_errors, valid_decision_ids, valid_human_label_rows = validate_decisions(
+        decision_errors, valid_decision_ids, valid_human_label_rows, valid_decision_rows = validate_decisions(
             decision_rows,
             known_candidate_ids,
         )
@@ -648,6 +678,10 @@ def main(argv: list[str]) -> int:
             if str(row.get("synthetic", "0")) != "1"
         }
         non_synthetic_valid_human_label_rows = len(valid_decision_ids & non_synthetic_candidate_ids)
+        reviewer_rows = reviewer_progress_rows(valid_decision_rows, non_synthetic_candidate_ids)
+        valid_human_label_rows_with_reviewer_id = sum(
+            1 for row in valid_decision_rows if str(row.get("reviewer_id") or "").strip()
+        )
         if args.enforce_min_labels and non_synthetic_valid_human_label_rows < args.min_labels:
             errors.append(
                 "non_synthetic_valid_human_label_rows "
@@ -705,6 +739,12 @@ def main(argv: list[str]) -> int:
             "decisions_bundle_sha256": sha256_json(decision_fingerprints),
             "decision_rows": len(decision_rows),
             "valid_human_label_rows": valid_human_label_rows,
+            "valid_human_label_rows_with_reviewer_id": valid_human_label_rows_with_reviewer_id,
+            "valid_human_label_rows_missing_reviewer_id": (
+                valid_human_label_rows - valid_human_label_rows_with_reviewer_id
+            ),
+            "distinct_reviewer_id_count": len(reviewer_rows),
+            "reviewer_progress_rows": reviewer_rows,
             "missing_candidate_label_count": len(missing_ids),
             "all_candidates_reviewed": int(not missing_ids and bool(packet_rows)),
             "min_human_label_rows_required": args.min_labels,

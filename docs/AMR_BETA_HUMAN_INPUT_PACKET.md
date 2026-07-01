@@ -205,7 +205,8 @@ human-input artifact that marks itself ready without meeting the 300-label and
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out results/reviewer_packet --overwrite --require-all-candidates`.
   The JSON summary includes `case_progress_rows`,
   `cases_ready_for_label_intake`, `cases_blocked_for_label_intake`, and
-  `non_synthetic_valid_human_label_rows`,
+  `non_synthetic_valid_human_label_rows`, `distinct_reviewer_id_count`,
+  `valid_human_label_rows_missing_reviewer_id`, `reviewer_progress_rows`,
   `label_template_bundle_sha256`, and `decisions_bundle_sha256`, and
   `human_labels_remaining_to_minimum` so operators can triage per-repo coverage
   before label-intake planning. Synthetic/template-only candidates never reduce

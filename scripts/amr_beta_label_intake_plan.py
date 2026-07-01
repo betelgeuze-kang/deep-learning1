@@ -505,10 +505,12 @@ def main(argv: list[str]) -> int:
             else []
         )
         known_candidate_ids = {row["candidate_label_id"] for row in template_rows}
-        decision_errors, valid_decision_ids, valid_human_label_rows = label_packet.validate_decisions(
-            decisions,
-            known_candidate_ids,
-        )
+        (
+            decision_errors,
+            valid_decision_ids,
+            valid_human_label_rows,
+            _valid_decision_rows,
+        ) = label_packet.validate_decisions(decisions, known_candidate_ids)
         non_synthetic_candidate_ids = {
             row["candidate_label_id"]
             for row in template_rows
