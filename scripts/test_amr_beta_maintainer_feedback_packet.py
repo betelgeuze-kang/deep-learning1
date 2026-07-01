@@ -134,6 +134,10 @@ def main() -> int:
         assert summary["request_case_rows"] == 3
         assert summary["label_intake_verify_existing_required"] == 0
         assert summary["missing_feedback_case_rows"] == 3
+        assert summary["valid_feedback_case_rows"] == 0
+        assert summary["countable_valid_feedback_case_rows"] == 0
+        assert summary["maintainer_progress_rows"] == []
+        assert summary["case_feedback_progress_rows"] == []
         assert summary["raw_feedback_text_emitted"] == 0
         assert summary["creates_benchmark_evidence"] == 0
         assert summary["input_path_guard_passed"] == 1
@@ -428,6 +432,66 @@ def main() -> int:
         assert payload["valid_feedback_text_input_rows"] == 3
         assert payload["valid_feedback_hash_only_rows"] == 0
         assert payload["valid_feedback_digest_rows"] == 3
+        assert payload["valid_feedback_case_rows"] == 3
+        assert payload["countable_valid_feedback_case_rows"] == 3
+        assert payload["maintainer_progress_rows"] == [
+            {
+                "countable_case_id_count": 1,
+                "distinct_case_id_count": 1,
+                "maintainer_id": "maintainer-1",
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+            {
+                "countable_case_id_count": 1,
+                "distinct_case_id_count": 1,
+                "maintainer_id": "maintainer-2",
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+            {
+                "countable_case_id_count": 1,
+                "distinct_case_id_count": 1,
+                "maintainer_id": "maintainer-3",
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+        ]
+        assert payload["case_feedback_progress_rows"] == [
+            {
+                "case_id": "case-01",
+                "countable_for_beta_precheck": 1,
+                "distinct_maintainer_id_count": 1,
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+            {
+                "case_id": "case-02",
+                "countable_for_beta_precheck": 1,
+                "distinct_maintainer_id_count": 1,
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+            {
+                "case_id": "case-03",
+                "countable_for_beta_precheck": 1,
+                "distinct_maintainer_id_count": 1,
+                "valid_feedback_digest_rows": 1,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_rows": 1,
+                "valid_feedback_text_input_rows": 1,
+            },
+        ]
         assert "Reviewed case-01" not in proc.stdout
 
         hash_only_feedback = tmp / "hash_only_feedback.jsonl"
@@ -474,6 +538,9 @@ def main() -> int:
         assert hash_only_payload["valid_feedback_text_input_rows"] == 2
         assert hash_only_payload["valid_feedback_hash_only_rows"] == 1
         assert hash_only_payload["valid_feedback_digest_rows"] == 3
+        assert hash_only_payload["maintainer_progress_rows"][0]["maintainer_id"] == "maintainer-hash-only"
+        assert hash_only_payload["maintainer_progress_rows"][0]["valid_feedback_hash_only_rows"] == 1
+        assert hash_only_payload["case_feedback_progress_rows"][0]["valid_feedback_hash_only_rows"] == 1
         assert hash_only_payload["feedback_sha256"] == benchmark_inputs.sha256_file(hash_only_feedback)
         assert hash_only_payload["feedback_bundle_sha256"] == benchmark_inputs.sha256_json(
             {

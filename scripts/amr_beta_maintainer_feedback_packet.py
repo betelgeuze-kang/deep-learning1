@@ -264,6 +264,114 @@ def build_request_rows(
     }
 
 
+def valid_feedback_progress_rows(
+    feedback_rows: list[dict],
+    *,
+    known_case_ids: set[str],
+    countable_case_ids: set[str],
+    require_countable_cases: bool,
+) -> tuple[list[dict], list[dict]]:
+    valid_rows: list[dict] = []
+    for row in feedback_rows:
+        row_errors, row_summary = human_status.validate_feedback(
+            [row],
+            known_case_ids=known_case_ids,
+            countable_case_ids=countable_case_ids,
+            require_countable_cases=require_countable_cases,
+            min_maintainers=0,
+        )
+        if row_errors or row_summary["valid_feedback_rows"] != 1:
+            continue
+        case_id = str(row.get("case_id") or "").strip()
+        maintainer_id = str(row.get("maintainer_id") or "").strip()
+        feedback_text = str(row.get("feedback_text") or "")
+        digest = feedback_digest_preview(row)
+        countable = int(case_id in countable_case_ids) if countable_case_ids else 0
+        valid_rows.append(
+            {
+                "case_id": case_id,
+                "maintainer_id": maintainer_id,
+                "countable_for_beta_precheck": countable,
+                "has_feedback_text_sha256": int(bool(digest)),
+                "feedback_text_input": int(bool(feedback_text)),
+                "feedback_hash_only": int(not feedback_text and bool(digest)),
+            }
+        )
+
+    maintainers: dict[str, dict[str, object]] = {}
+    cases: dict[str, dict[str, object]] = {}
+    for row in valid_rows:
+        maintainer_id = str(row["maintainer_id"])
+        case_id = str(row["case_id"])
+        maintainer = maintainers.setdefault(
+            maintainer_id,
+            {
+                "maintainer_id": maintainer_id,
+                "valid_feedback_rows": 0,
+                "valid_feedback_text_input_rows": 0,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_digest_rows": 0,
+                "distinct_case_id_count": 0,
+                "countable_case_id_count": 0,
+                "_case_ids": set(),
+                "_countable_case_ids": set(),
+            },
+        )
+        maintainer["valid_feedback_rows"] = int(maintainer["valid_feedback_rows"]) + 1
+        maintainer["valid_feedback_text_input_rows"] = int(maintainer["valid_feedback_text_input_rows"]) + int(
+            row["feedback_text_input"]
+        )
+        maintainer["valid_feedback_hash_only_rows"] = int(maintainer["valid_feedback_hash_only_rows"]) + int(
+            row["feedback_hash_only"]
+        )
+        maintainer["valid_feedback_digest_rows"] = int(maintainer["valid_feedback_digest_rows"]) + int(
+            row["has_feedback_text_sha256"]
+        )
+        maintainer["_case_ids"].add(case_id)
+        if int(row["countable_for_beta_precheck"]) == 1:
+            maintainer["_countable_case_ids"].add(case_id)
+
+        case = cases.setdefault(
+            case_id,
+            {
+                "case_id": case_id,
+                "countable_for_beta_precheck": int(row["countable_for_beta_precheck"]),
+                "valid_feedback_rows": 0,
+                "valid_feedback_text_input_rows": 0,
+                "valid_feedback_hash_only_rows": 0,
+                "valid_feedback_digest_rows": 0,
+                "distinct_maintainer_id_count": 0,
+                "_maintainer_ids": set(),
+            },
+        )
+        case["valid_feedback_rows"] = int(case["valid_feedback_rows"]) + 1
+        case["valid_feedback_text_input_rows"] = int(case["valid_feedback_text_input_rows"]) + int(
+            row["feedback_text_input"]
+        )
+        case["valid_feedback_hash_only_rows"] = int(case["valid_feedback_hash_only_rows"]) + int(
+            row["feedback_hash_only"]
+        )
+        case["valid_feedback_digest_rows"] = int(case["valid_feedback_digest_rows"]) + int(
+            row["has_feedback_text_sha256"]
+        )
+        case["_maintainer_ids"].add(maintainer_id)
+
+    maintainer_rows: list[dict] = []
+    for maintainer_id in sorted(maintainers):
+        row = dict(maintainers[maintainer_id])
+        row["distinct_case_id_count"] = len(row.pop("_case_ids"))
+        row["countable_case_id_count"] = len(row.pop("_countable_case_ids"))
+        maintainer_rows.append(row)
+
+    case_rows: list[dict] = []
+    for case_id in sorted(cases):
+        row = dict(cases[case_id])
+        row["distinct_maintainer_id_count"] = len(row.pop("_maintainer_ids"))
+        case_rows.append(row)
+
+    return maintainer_rows, case_rows
+
+
 def prepare_output_dir(out_dir: Path, overwrite: bool) -> None:
     if is_forbidden_env_path(out_dir):
         raise ValueError("refusing .env-like output directory")
@@ -483,6 +591,7 @@ def main(argv: list[str]) -> int:
             "distinct_countable_maintainer_id_count": 0,
         }
         feedback_fingerprint = empty_feedback_fingerprint_summary()
+        require_countable_feedback_cases = bool(args.label_intake_dir) or args.require_countable_cases
         if args.feedback and not input_path_errors:
             feedback_rows = read_json_or_jsonl(feedback_path, "feedback") if feedback_path else []
             feedback_fingerprint = (
@@ -494,7 +603,7 @@ def main(argv: list[str]) -> int:
                 feedback_rows,
                 known_case_ids=known_case_ids,
                 countable_case_ids=countable_case_ids,
-                require_countable_cases=bool(args.label_intake_dir) or args.require_countable_cases,
+                require_countable_cases=require_countable_feedback_cases,
                 min_maintainers=0,
             )
         elif args.enforce_min_maintainers:
@@ -505,6 +614,12 @@ def main(argv: list[str]) -> int:
             countable_case_ids=countable_case_ids,
             label_counts=label_counts,
             feedback_rows=feedback_rows,
+        )
+        maintainer_progress_rows, case_feedback_progress_rows = valid_feedback_progress_rows(
+            feedback_rows,
+            known_case_ids=known_case_ids,
+            countable_case_ids=countable_case_ids,
+            require_countable_cases=require_countable_feedback_cases,
         )
         effective_maintainer_count = (
             feedback_summary["distinct_countable_maintainer_id_count"]
@@ -540,6 +655,12 @@ def main(argv: list[str]) -> int:
             **label_summary,
             **feedback_fingerprint,
             **feedback_summary,
+            "valid_feedback_case_rows": len(case_feedback_progress_rows),
+            "countable_valid_feedback_case_rows": sum(
+                1 for row in case_feedback_progress_rows if int(row["countable_for_beta_precheck"]) == 1
+            ),
+            "maintainer_progress_rows": maintainer_progress_rows,
+            "case_feedback_progress_rows": case_feedback_progress_rows,
             "min_maintainer_feedback_required": args.min_maintainers,
             "maintainer_feedback_requirement_met": maintainer_requirement_met,
             "feedback_counts_for_beta_precheck": int(

@@ -299,6 +299,10 @@ human-input artifact that marks itself ready without meeting the 300-label and
   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet --out-commands-sh results/maintainer_feedback_packet_commands.sh`.
   When returned feedback rows include raw `feedback_text`, this packet reports
   only `feedback_text_sha256_status`, never the raw feedback text.
+  Its progress summary also includes `maintainer_progress_rows`,
+  `case_feedback_progress_rows`, `valid_feedback_case_rows`, and
+  `countable_valid_feedback_case_rows`; these rows contain maintainer/case
+  identifiers and count fields only, not raw feedback text.
   Keep the filled repo intake sheet, every `--label-intake-dir`, every returned
   `--feedback` JSON/JSONL, `--out`, and `--out-commands-sh` outside every
   target repository from the repo intake sheet; the packet refuses those inputs
