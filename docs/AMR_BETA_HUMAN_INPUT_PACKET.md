@@ -49,6 +49,13 @@ agent-written maintainer feedback.
   repositories, for example:
   `gh pr view 46 --json number,state,title,url,closed,mergedAt,closedAt,headRefName,baseRefName > results/amr_beta_pr_cleanup_state.jsonl`
   and append the same fields for PRs `39`, `40`, `10`, and `5`.
+- [ ] Prefer the read-only export handoff script when `gh` auth is available:
+  `python3 scripts/amr_beta_pr_cleanup_export_plan.py --out-sh results/amr_beta_pr_cleanup_export.sh --out-json results/amr_beta_pr_cleanup_export_plan.json --overwrite`.
+  The generator does not call GitHub, close PRs, merge, push, or create
+  benchmark evidence; it only writes a shell script containing `gh pr view`
+  exports plus the local claim-freeze validator command. If the export-plan
+  JSON exists, pass it to the read-only operator status board with
+  `--pr-cleanup-export-plan`.
 - [ ] Validate the exported state and claim freeze:
   `python3 scripts/amr_beta_pr_cleanup_status.py --pr-state results/amr_beta_pr_cleanup_state.jsonl --claim-file README.md --claim-file README.ko.md --claim-file docs/AMR_BETA_HUMAN_INPUT_PACKET.md --require-claim-scan --out-json results/amr_beta_pr_cleanup_status.json --out-md results/amr_beta_pr_cleanup_status.md --overwrite`.
   The output keeps `design_partner_beta_candidate_ready=0`,
@@ -62,7 +69,7 @@ At any point, summarize the current local operator stage from existing AMR beta
 artifacts without creating evidence. Pass only artifact arguments whose files
 already exist; this full example is for the point after all listed artifacts have
 been created:
-`python3 scripts/amr_beta_operator_status.py --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-discovery-status /tmp/amr_beta_repo_candidates.json --repo-discovery-response /tmp/amr_beta_repo_discovery_response.json --repo-intake-status results/amr_beta_repo_intake_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
+`python3 scripts/amr_beta_operator_status.py --pr-cleanup-export-plan results/amr_beta_pr_cleanup_export_plan.json --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-discovery-status /tmp/amr_beta_repo_candidates.json --repo-discovery-response /tmp/amr_beta_repo_discovery_response.json --repo-intake-status results/amr_beta_repo_intake_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
 The status board validates the preflight -> approval request -> approval status
 chain by path and sha before advancing to runtime-approved stages. It also
 requires the approval status to bind the human approval record and requires
@@ -138,12 +145,14 @@ blocked.
   It keeps `runs_audit=0` and `creates_benchmark_evidence=0`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:
-  `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
+  `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md --out-commands-sh results/amr_beta_repo_audit_commands.sh`.
   The plan carries the same `repo_snapshot_lock_rows` and
   `repo_snapshot_lock_sha256` so the operator can tie audit commands back to the
   validated 10-repository snapshot. It also refuses an `--artifact-root` inside
   any target repo, because audit outputs would dirty that repo before evidence
-  generation.
+  generation. The optional command script is a handoff artifact only; creating
+  it does not run audits, generate templates, write reviewer packets, or create
+  benchmark evidence.
 - [ ] Run each emitted audit verify command before its label-template command,
   and each emitted label-template verify command before reviewer-packet handoff.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
@@ -204,15 +213,18 @@ blocked.
   when synthetic or unverified template candidates are present.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
   label-intake command plan; this validates coverage and citation readiness but
-  does not compile labels:
-  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --label-packet-summary results/reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+  does not compile labels or create benchmark evidence:
+  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --label-packet-summary results/reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md --out-commands-sh results/amr_beta_label_intake_commands.sh`.
+  The optional command script is a handoff artifact only; creating it does not
+  compile labels, write label-intake outputs, or create benchmark evidence.
   The plan carries `repo_snapshot_lock_sha256`, `decisions_sha256`, and
   `label_template_bundle_sha256`, plus the reviewer summary's
   `label_packet_summary_sha256`, `label_packet_decisions_bundle_sha256`, and
   `label_packet_template_bundle_sha256`, so per-repo label-intake commands remain tied
   to the same validated repo snapshot, reviewed decision file, and
   label-template bundle. It refuses
-  `--out-root`, `--out-json`, or `--out-md` inside any target repository.
+  `--out-root`, `--out-json`, `--out-md`, or `--out-commands-sh` inside any
+  target repository.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`. Keep each `--out` directory outside the
   target repository; the compiler refuses label-intake outputs inside the repo
@@ -264,7 +276,10 @@ blocked.
 - [ ] If the human owner approves the runtime budget, validate the supplied
   approval record before running the long benchmark; this still does not run
   the benchmark:
-  `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
+  `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md --out-runtime-commands-sh results/amr_beta_approved_runtime_commands.sh`.
+  The optional runtime command script is written only after the human approval
+  record verifies and still does not run the benchmark by itself; keep it
+  outside the approved `benchmark_out`.
 
 ### 9.3 Maintainer feedback checklist
 
@@ -272,13 +287,13 @@ blocked.
 - [ ] Bind every feedback row to a known 9.1 `case_id`.
 - [ ] Generate a case/contact request packet from the filled repo intake sheet
   before outreach:
-  `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet`.
+  `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet --out-commands-sh results/maintainer_feedback_packet_commands.sh`.
   When returned feedback rows include raw `feedback_text`, this packet reports
   only `feedback_text_sha256_status`, never the raw feedback text.
   Keep the filled repo intake sheet, every `--label-intake-dir`, every returned
-  `--feedback` JSON/JSONL, and `--out` outside every target repository from the
-  repo intake sheet; the packet refuses those inputs or outputs inside listed
-  repos, including files hidden by `.gitignore`.
+  `--feedback` JSON/JSONL, `--out`, and `--out-commands-sh` outside every
+  target repository from the repo intake sheet; the packet refuses those inputs
+  or outputs inside listed repos, including files hidden by `.gitignore`.
 - [ ] Require `human_feedback=true` and either `feedback_text` or
   `feedback_text_sha256`.
 - [ ] Count feedback only when its case already has `human_labeled=true` and is
@@ -393,7 +408,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `audit_my_repo.sh <repo> --mode quick|full --namespace real_benchmark --confirm-real-benchmark-namespace --out results/<repo>_audit`.
    Before this step, run `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`
    and fix every blocker it reports. Then generate the operator handoff plan:
-   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
+   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md --out-commands-sh results/amr_beta_repo_audit_commands.sh`.
    The plan records `runs_audit=0`, `creates_benchmark_evidence=0`, and keeps
    beta/release/model/public comparison readiness blocked; it only lists the
    commands for the human/operator to run.
@@ -413,7 +428,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    The progress summary reports per-case reviewed/missing candidate counts and
    the remaining non-synthetic count to the 300-label beta threshold.
 5. Generate the read-only label-intake command plan:
-   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --label-packet-summary results/<repo>_reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --label-packet-summary results/<repo>_reviewer_packet/reviewer_progress_summary.json --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md --out-commands-sh results/amr_beta_label_intake_commands.sh`.
    The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
    keeps beta/release/model/public comparison readiness blocked. It requires
    each template directory to pass
@@ -428,10 +443,10 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    staging artifacts.
 7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
    Prepare the request packet and progress summary:
-   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.
-   Keep `--out` outside every target repository listed in the repo intake
-   sheet so outreach packet generation cannot dirty repos that must remain
-   clean.
+   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet --out-commands-sh results/maintainer_feedback_packet_commands.sh`.
+   Keep `--out` and `--out-commands-sh` outside every target repository listed
+   in the repo intake sheet so outreach packet generation cannot dirty repos
+   that must remain clean.
    Check decision/feedback progress with
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv> --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
    Keep status outputs outside every target repository listed in the repo
@@ -457,7 +472,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    skipped, failed, stale, or inconsistent counters and fingerprints.
    If the human owner supplies a runtime approval record, validate that it binds
    to the exact preflight, request, runtime command hash, and benchmark output:
-   `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
+   `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md --out-runtime-commands-sh results/amr_beta_approved_runtime_commands.sh`.
    `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
@@ -474,7 +489,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 10. Refresh the read-only operator status summary after each artifact is
    created, passing only the artifact arguments that already exist at that
    point:
-   `python3 scripts/amr_beta_operator_status.py --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-discovery-status /tmp/amr_beta_repo_candidates.json --repo-discovery-response /tmp/amr_beta_repo_discovery_response.json --repo-intake-status results/amr_beta_repo_intake_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
+   `python3 scripts/amr_beta_operator_status.py --pr-cleanup-export-plan results/amr_beta_pr_cleanup_export_plan.json --pr-cleanup-status results/amr_beta_pr_cleanup_status.json --repo-discovery-status /tmp/amr_beta_repo_candidates.json --repo-discovery-response /tmp/amr_beta_repo_discovery_response.json --repo-intake-status results/amr_beta_repo_intake_status.json --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
    The status board refuses a runtime approval status without its exact approval
    request, refuses stale preflight/request sha bindings, and refuses readiness
    files from any benchmark output other than the human-approved `benchmark_out`.

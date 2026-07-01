@@ -47,6 +47,7 @@ EXISTING_ENTRYPOINTS = [
 EXISTING_SCHEMA = "schemas/local_repo_audit_benchmark_readiness.schema.json"
 EXISTING_ISSUE_TEMPLATE = ".github/ISSUE_TEMPLATE/design-partner-finding-review.yml"
 APPROVED_READ_ONLY_OPERATOR_ENTRYPOINTS = {
+    "scripts/amr_beta_pr_cleanup_export_plan.py",
     "scripts/amr_beta_repo_discovery_request.py",
     "scripts/amr_beta_repo_discovery_response.py",
     "scripts/amr_beta_repo_intake_discover.py",

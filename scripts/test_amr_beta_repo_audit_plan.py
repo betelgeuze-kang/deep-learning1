@@ -81,6 +81,7 @@ def main() -> int:
         artifact_root = tmp / "audit artifacts"
         out_json = tmp / "repo_audit_plan.json"
         out_md = tmp / "repo_audit_plan.md"
+        out_commands = tmp / "repo_audit_plan_commands.sh"
         proc = run_tool(
             "--repo-intake",
             str(intake),
@@ -90,6 +91,8 @@ def main() -> int:
             str(out_json),
             "--out-md",
             str(out_md),
+            "--out-commands-sh",
+            str(out_commands),
             "--json",
         )
         assert proc.returncode == 0, proc.stderr
@@ -108,6 +111,10 @@ def main() -> int:
         assert payload["runs_label_template_generation"] == 0
         assert payload["writes_reviewer_packets"] == 0
         assert payload["creates_benchmark_evidence"] == 0
+        assert payload["writes_operator_command_script"] == 1
+        assert payload["operator_commands_script"] == str(out_commands.resolve())
+        assert payload["operator_commands_script_sha256"] == sha256_file(out_commands)
+        assert payload["operator_commands_script_command_count"] == 51
         assert payload["input_path_guard_passed"] == 1
         assert payload["output_path_guard_passed"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
@@ -144,7 +151,16 @@ def main() -> int:
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
         assert "input_path_guard_passed: 1" in markdown
         assert "output_path_guard_passed: 1" in markdown
+        assert "writes_operator_command_script: 1" in markdown
         assert "Aggregate Reviewer Packet Command" in markdown
+        command_script = out_commands.read_text(encoding="utf-8")
+        assert command_script.startswith("#!/usr/bin/env bash\nset -euo pipefail\n")
+        assert f"# repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}" in command_script
+        assert f"# operator_commands_sha256: {payload['operator_commands_sha256']}" in command_script
+        assert "# operator_command_count: 51" in command_script
+        assert command_script.count("# command ") == 51
+        for command in payload["operator_commands"]:
+            assert command in command_script
 
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)
@@ -173,6 +189,25 @@ def main() -> int:
         assert proc.returncode == 1
         assert "artifact_root must not be inside target repo" in proc.stderr
         assert not (tmp / "unsafe_artifact_plan.json").exists()
+
+        unsafe_commands_sh = repos[0][0] / "repo_audit_plan_commands.sh"
+        proc = run_tool(
+            "--repo-intake",
+            str(intake),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(tmp / "unsafe_commands_plan.json"),
+            "--out-commands-sh",
+            str(unsafe_commands_sh),
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_commands_payload = json.loads(proc.stdout)
+        assert "out_commands_sh must not be inside target repo" in proc.stderr
+        assert "out_commands_sh must not be inside target repo" in unsafe_commands_payload["errors"][0]
+        assert not unsafe_commands_sh.exists()
+        assert not (tmp / "unsafe_commands_plan.json").exists()
 
         unsafe_out_json = repos[0][0] / "repo_audit_plan.json"
         unsafe_out_md = repos[0][0] / "repo_audit_plan.md"

@@ -27,6 +27,7 @@ BLOCKED_FLAGS = {
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
+    "pr_cleanup_export_plan": "amr_beta_pr_cleanup_export_plan.v1",
     "pr_cleanup_status": "amr_beta_pr_cleanup_status.v1",
     "repo_discovery_status": "amr_beta_repo_intake_discover.v1",
     "repo_discovery_response": "amr_beta_repo_discovery_response.v1",
@@ -74,6 +75,22 @@ REPO_AUDIT_PLAN_READ_ONLY_FLAGS = [
     "writes_reviewer_packets",
     "creates_benchmark_evidence",
 ]
+PR_CLEANUP_EXPORT_PLAN_READ_ONLY_FLAGS = [
+    "runs_github_query",
+    "runs_github_mutation",
+    "runs_git_push",
+    "closes_pull_requests",
+    "merges_pull_requests",
+    "creates_benchmark_evidence",
+]
+PR_CLEANUP_EXPORT_PLAN_FORBIDDEN_SCRIPT_SNIPPETS = [
+    "gh pr close",
+    "gh pr merge",
+    "gh pr create",
+    "git push",
+    "git merge",
+    "git reset",
+]
 REPO_INTAKE_STATUS_READ_ONLY_FLAGS = [
     "runs_audit",
     "runs_label_template_generation",
@@ -104,6 +121,12 @@ REPO_AUDIT_PLAN_COMMAND_FIELDS = [
     "label_template_verify_command",
     "reviewer_packet_command",
 ]
+REPO_AUDIT_PLAN_COMMAND_SCRIPT_FIELDS = [
+    "writes_operator_command_script",
+    "operator_commands_script",
+    "operator_commands_script_sha256",
+    "operator_commands_script_command_count",
+]
 LABEL_INTAKE_PLAN_READ_ONLY_FLAGS = [
     "compiles_labels",
     "writes_label_intake_outputs",
@@ -113,6 +136,39 @@ LABEL_INTAKE_PLAN_READ_ONLY_FLAGS = [
 LABEL_INTAKE_PLAN_COMMAND_FIELDS = [
     "compile_command",
     "verify_command",
+]
+LABEL_INTAKE_PLAN_COMMAND_SCRIPT_FIELDS = [
+    "writes_operator_command_script",
+    "operator_commands_script",
+    "operator_commands_script_sha256",
+    "operator_commands_script_command_count",
+]
+MAINTAINER_FEEDBACK_PACKET_COMMAND_SCRIPT_FIELDS = [
+    "writes_operator_command_script",
+    "operator_commands_script",
+    "operator_commands_script_sha256",
+    "operator_commands_script_command_count",
+]
+MAINTAINER_FEEDBACK_PACKET_VALUE_FLAGS = {
+    "--repo-intake",
+    "--label-intake-dir",
+    "--feedback",
+    "--out",
+    "--min-repos",
+    "--min-maintainers",
+}
+MAINTAINER_FEEDBACK_PACKET_REPEATABLE_FLAGS = {"--label-intake-dir"}
+MAINTAINER_FEEDBACK_PACKET_BOOL_FLAGS = {
+    "--enforce-min-maintainers",
+    "--require-countable-cases",
+    "--skip-verify-existing",
+    "--overwrite",
+}
+RUNTIME_APPROVAL_STATUS_COMMAND_SCRIPT_FIELDS = [
+    "writes_runtime_command_script",
+    "runtime_commands_script",
+    "runtime_commands_script_sha256",
+    "runtime_commands_script_command_count",
 ]
 
 
@@ -134,10 +190,22 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def same_path(left: str, right: str) -> bool:
     if not left or not right:
         return False
     return str(Path(left).expanduser().resolve()) == str(Path(right).expanduser().resolve())
+
+
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def read_json(path: Path, input_name: str) -> dict:
@@ -338,6 +406,133 @@ def require_sha_list_field(*, errors: list[str], name: str, payload: dict, field
         if not SHA256_RE.fullmatch(text):
             errors.append(f"{name}: {field} must contain only sha256 bindings")
             return
+
+
+def require_pr_cleanup_export_plan(*, errors: list[str], payload: dict) -> None:
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="ready_for_pr_cleanup_export_handoff",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="writes_export_script",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="generated_script_runs_github_query",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="generated_script_runs_github_mutation",
+        expected=0,
+    )
+    for key in PR_CLEANUP_EXPORT_PLAN_READ_ONLY_FLAGS:
+        require_flag(errors=errors, name="pr_cleanup_export_plan", payload=payload, key=key, expected=0)
+
+    checklist_pr = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="checklist_pr",
+    )
+    if checklist_pr != 46:
+        errors.append("pr_cleanup_export_plan: checklist_pr must be 46")
+    stale_prs = payload.get("stale_prs")
+    if not isinstance(stale_prs, list) or stale_prs != [39, 40, 10, 5]:
+        errors.append("pr_cleanup_export_plan: stale_prs must be [39, 40, 10, 5]")
+    export_pr_count = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="export_pr_count",
+    )
+    if export_pr_count >= 0 and isinstance(stale_prs, list) and export_pr_count != 1 + len(stale_prs):
+        errors.append("pr_cleanup_export_plan: export_pr_count must match checklist plus stale PR count")
+
+    claim_files = payload.get("claim_files")
+    if not isinstance(claim_files, list) or not claim_files:
+        errors.append("pr_cleanup_export_plan: claim_files must be a non-empty list")
+        claim_files = []
+    claim_file_count = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="claim_file_count",
+    )
+    if claim_file_count >= 0 and claim_file_count != len(claim_files):
+        errors.append("pr_cleanup_export_plan: claim_file_count must match claim_files length")
+    seen_claims: set[str] = set()
+    for raw_path in claim_files:
+        path_text = str(raw_path or "").strip()
+        if not path_text:
+            errors.append("pr_cleanup_export_plan: claim_files entries must be non-empty paths")
+            continue
+        path = Path(path_text).expanduser().resolve()
+        if str(path) in seen_claims:
+            errors.append("pr_cleanup_export_plan: duplicate claim_files path")
+        seen_claims.add(str(path))
+        if is_forbidden_env_path(path):
+            errors.append("pr_cleanup_export_plan: claim_files must not include .env-like paths")
+        if not path.is_file():
+            errors.append(f"pr_cleanup_export_plan: claim_file is missing: {path}")
+
+    for field in ["out_sh_sha256"]:
+        require_sha_field(errors=errors, name="pr_cleanup_export_plan", payload=payload, field=field)
+    out_sh = str(payload.get("out_sh") or "").strip()
+    if not out_sh:
+        errors.append("pr_cleanup_export_plan: out_sh must be present")
+        return
+    script_path = Path(out_sh).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("pr_cleanup_export_plan: out_sh must not be .env-like")
+    if not script_path.is_file():
+        errors.append("pr_cleanup_export_plan: out_sh file must exist")
+        return
+    if sha256_file(script_path) != str(payload.get("out_sh_sha256") or ""):
+        errors.append("pr_cleanup_export_plan: out_sh_sha256 must match out_sh file")
+    script_text = script_path.read_text(encoding="utf-8")
+    if not script_text.startswith("#!/usr/bin/env bash\nset -euo pipefail\n"):
+        errors.append("pr_cleanup_export_plan: out_sh must start with bash strict-mode header")
+    for snippet in PR_CLEANUP_EXPORT_PLAN_FORBIDDEN_SCRIPT_SNIPPETS:
+        if snippet in script_text:
+            errors.append(f"pr_cleanup_export_plan: out_sh must not contain mutation command {snippet!r}")
+    if export_pr_count >= 0 and script_text.count("gh pr view ") != export_pr_count:
+        errors.append("pr_cleanup_export_plan: out_sh gh pr view count must match export_pr_count")
+    if "scripts/amr_beta_pr_cleanup_status.py" not in script_text:
+        errors.append("pr_cleanup_export_plan: out_sh must run amr_beta_pr_cleanup_status.py")
+    field_names = payload.get("gh_pr_view_fields")
+    if not isinstance(field_names, list) or not all(isinstance(field, str) and field for field in field_names):
+        errors.append("pr_cleanup_export_plan: gh_pr_view_fields must be a non-empty string list")
+        return
+    pr_state_out = str(payload.get("pr_state_out") or "").strip()
+    if not pr_state_out:
+        errors.append("pr_cleanup_export_plan: pr_state_out must be present")
+        return
+    script_lines = set(script_text.splitlines())
+    truncate_line = command_line([":"]) + " > " + shlex.quote(pr_state_out)
+    if truncate_line not in script_lines:
+        errors.append("pr_cleanup_export_plan: out_sh must truncate pr_state_out before export")
+    fields_csv = ",".join(field_names)
+    expected_prs = [checklist_pr, *stale_prs] if isinstance(stale_prs, list) else [checklist_pr]
+    for number in expected_prs:
+        expected_line = (
+            command_line(["gh", "pr", "view", number, "--json", fields_csv])
+            + " >> "
+            + shlex.quote(pr_state_out)
+        )
+        if expected_line not in script_lines:
+            errors.append(f"pr_cleanup_export_plan: out_sh missing exact gh pr view command for PR {number}")
 
 
 def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
@@ -762,6 +957,478 @@ def require_repo_operator_commands(
         expected_commands.append(expected_aggregate_command)
     if commands != expected_commands:
         errors.append("repo_audit_plan: operator_commands must exactly match per_repo commands plus aggregate reviewer packet command")
+
+    require_repo_operator_command_script(
+        errors=errors,
+        repo=repo,
+        commands=commands,
+        snapshot_lock_rows=snapshot_lock_rows,
+    )
+
+
+def repo_operator_command_script_text(repo: dict, commands: list[str]) -> str:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "# Generated by scripts/amr_beta_repo_audit_plan.py.",
+        "# This script runs the operator commands from a validated repo audit plan.",
+        "# It does not prove beta readiness by itself; verify outputs before use.",
+        f"# repo_snapshot_lock_sha256: {repo.get('repo_snapshot_lock_sha256', '')}",
+        f"# operator_commands_sha256: {repo.get('operator_commands_sha256', '')}",
+        f"# operator_command_count: {len(commands)}",
+        "",
+    ]
+    for index, command in enumerate(commands, start=1):
+        lines.extend([f"# command {index}", command, ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def require_repo_operator_command_script(
+    *,
+    errors: list[str],
+    repo: dict,
+    commands: list[str],
+    snapshot_lock_rows: dict[str, dict],
+) -> None:
+    if not any(field in repo for field in REPO_AUDIT_PLAN_COMMAND_SCRIPT_FIELDS):
+        return
+
+    errors.extend(
+        strict_int_flag_errors(
+            "repo_audit_plan",
+            repo,
+            ["writes_operator_command_script"],
+            {0, 1},
+        )
+    )
+    writes_script = truthy_int(repo, "writes_operator_command_script")
+    script_path_text = str(repo.get("operator_commands_script") or "").strip()
+    script_sha = str(repo.get("operator_commands_script_sha256") or "").strip()
+    script_count = repo.get("operator_commands_script_command_count")
+
+    if isinstance(script_count, bool) or not isinstance(script_count, int):
+        errors.append("repo_audit_plan: operator_commands_script_command_count must be an integer")
+        return
+
+    if not writes_script:
+        if script_path_text:
+            errors.append("repo_audit_plan: operator_commands_script must be empty when writes_operator_command_script=0")
+        if script_sha:
+            errors.append("repo_audit_plan: operator_commands_script_sha256 must be empty when writes_operator_command_script=0")
+        if script_count != 0:
+            errors.append("repo_audit_plan: operator_commands_script_command_count must be 0 when writes_operator_command_script=0")
+        return
+
+    if not script_path_text:
+        errors.append("repo_audit_plan: operator_commands_script is required when writes_operator_command_script=1")
+        return
+    script_path = Path(script_path_text).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("repo_audit_plan: operator_commands_script must not be .env-like")
+    for lock_row in snapshot_lock_rows.values():
+        repo_path = str(lock_row.get("repo_path_resolved") or "").strip()
+        if repo_path and (script_path == Path(repo_path).expanduser().resolve() or is_relative_to(script_path, Path(repo_path))):
+            errors.append("repo_audit_plan: operator_commands_script must not be inside a target repo")
+            break
+    if script_count != len(commands):
+        errors.append("repo_audit_plan: operator_commands_script_command_count must match operator_commands length")
+
+    expected_script_sha = sha256_text(repo_operator_command_script_text(repo, commands))
+    if script_sha != expected_script_sha:
+        errors.append("repo_audit_plan: operator_commands_script_sha256 must match operator command script content")
+    if not script_path.is_file():
+        errors.append("repo_audit_plan: operator_commands_script must exist")
+        return
+    if sha256_file(script_path) != script_sha:
+        errors.append("repo_audit_plan: operator_commands_script_sha256 must match operator_commands_script file")
+
+
+def label_operator_command_script_text(label: dict, commands: list[str]) -> str:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "# Generated by scripts/amr_beta_label_intake_plan.py.",
+        "# This script runs the operator commands from a validated label-intake plan.",
+        "# It does not prove beta readiness by itself; verify outputs before use.",
+        f"# repo_snapshot_lock_sha256: {label.get('repo_snapshot_lock_sha256', '')}",
+        f"# label_template_bundle_sha256: {label.get('label_template_bundle_sha256', '')}",
+        f"# decisions_sha256: {label.get('decisions_sha256', '')}",
+        f"# operator_commands_sha256: {label.get('operator_commands_sha256', '')}",
+        f"# operator_command_count: {len(commands)}",
+        "",
+    ]
+    for index, command in enumerate(commands, start=1):
+        lines.extend([f"# command {index}", command, ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def require_label_operator_command_script(
+    *,
+    errors: list[str],
+    label: dict,
+    commands: list[str],
+    repo_paths: list[str],
+) -> None:
+    if not any(field in label for field in LABEL_INTAKE_PLAN_COMMAND_SCRIPT_FIELDS):
+        return
+
+    errors.extend(
+        strict_int_flag_errors(
+            "label_intake_plan",
+            label,
+            ["writes_operator_command_script"],
+            {0, 1},
+        )
+    )
+    writes_script = truthy_int(label, "writes_operator_command_script")
+    script_path_text = str(label.get("operator_commands_script") or "").strip()
+    script_sha = str(label.get("operator_commands_script_sha256") or "").strip()
+    script_count = label.get("operator_commands_script_command_count")
+
+    if isinstance(script_count, bool) or not isinstance(script_count, int):
+        errors.append("label_intake_plan: operator_commands_script_command_count must be an integer")
+        return
+
+    if not writes_script:
+        if script_path_text:
+            errors.append("label_intake_plan: operator_commands_script must be empty when writes_operator_command_script=0")
+        if script_sha:
+            errors.append("label_intake_plan: operator_commands_script_sha256 must be empty when writes_operator_command_script=0")
+        if script_count != 0:
+            errors.append("label_intake_plan: operator_commands_script_command_count must be 0 when writes_operator_command_script=0")
+        return
+
+    if not script_path_text:
+        errors.append("label_intake_plan: operator_commands_script is required when writes_operator_command_script=1")
+        return
+    script_path = Path(script_path_text).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("label_intake_plan: operator_commands_script must not be .env-like")
+    for repo_path_text in repo_paths:
+        repo_path = Path(repo_path_text).expanduser().resolve()
+        if script_path == repo_path or is_relative_to(script_path, repo_path):
+            errors.append("label_intake_plan: operator_commands_script must not be inside a target repo")
+            break
+    if script_count != len(commands):
+        errors.append("label_intake_plan: operator_commands_script_command_count must match operator_commands length")
+
+    expected_script_sha = sha256_text(label_operator_command_script_text(label, commands))
+    if script_sha != expected_script_sha:
+        errors.append("label_intake_plan: operator_commands_script_sha256 must match operator command script content")
+    if not script_path.is_file():
+        errors.append("label_intake_plan: operator_commands_script must exist")
+        return
+    if sha256_file(script_path) != script_sha:
+        errors.append("label_intake_plan: operator_commands_script_sha256 must match operator_commands_script file")
+
+
+def maintainer_operator_command_script_text(feedback: dict, commands: list[str]) -> str:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "# Generated by scripts/amr_beta_maintainer_feedback_packet.py.",
+        "# This script reruns the maintainer-feedback packet/progress checks.",
+        "# It does not create feedback, emit raw feedback text, run benchmarks, or promote readiness.",
+        f"# repo_snapshot_lock_sha256: {feedback.get('repo_snapshot_lock_sha256', '')}",
+        f"# feedback_sha256: {feedback.get('feedback_sha256', '')}",
+        f"# feedback_bundle_sha256: {feedback.get('feedback_bundle_sha256', '')}",
+        f"# operator_commands_sha256: {feedback.get('operator_commands_sha256', '')}",
+        f"# operator_command_count: {len(commands)}",
+        "",
+    ]
+    for index, command in enumerate(commands, start=1):
+        lines.extend([f"# command {index}", command, ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def maintainer_feedback_repo_paths(feedback: dict) -> list[str]:
+    rows = feedback.get("repo_snapshot_lock_rows")
+    if not isinstance(rows, list):
+        return []
+    repo_paths: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        repo_path = str(row.get("repo_path_resolved") or row.get("repo_path") or "").strip()
+        if repo_path:
+            repo_paths.append(repo_path)
+    return repo_paths
+
+
+def require_maintainer_operator_command_script(
+    *,
+    errors: list[str],
+    feedback: dict,
+    commands: list[str],
+) -> None:
+    if not any(field in feedback for field in MAINTAINER_FEEDBACK_PACKET_COMMAND_SCRIPT_FIELDS):
+        return
+
+    errors.extend(
+        strict_int_flag_errors(
+            "maintainer_feedback_packet",
+            feedback,
+            ["writes_operator_command_script"],
+            {0, 1},
+        )
+    )
+    writes_script = truthy_int(feedback, "writes_operator_command_script")
+    script_path_text = str(feedback.get("operator_commands_script") or "").strip()
+    script_sha = str(feedback.get("operator_commands_script_sha256") or "").strip()
+    script_count = feedback.get("operator_commands_script_command_count")
+
+    if isinstance(script_count, bool) or not isinstance(script_count, int):
+        errors.append("maintainer_feedback_packet: operator_commands_script_command_count must be an integer")
+        return
+
+    if not writes_script:
+        if script_path_text:
+            errors.append(
+                "maintainer_feedback_packet: operator_commands_script must be empty when writes_operator_command_script=0"
+            )
+        if script_sha:
+            errors.append(
+                "maintainer_feedback_packet: operator_commands_script_sha256 must be empty when writes_operator_command_script=0"
+            )
+        if script_count != 0:
+            errors.append(
+                "maintainer_feedback_packet: operator_commands_script_command_count must be 0 when writes_operator_command_script=0"
+            )
+        return
+
+    if not script_path_text:
+        errors.append("maintainer_feedback_packet: operator_commands_script is required when writes_operator_command_script=1")
+        return
+    script_path = Path(script_path_text).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("maintainer_feedback_packet: operator_commands_script must not be .env-like")
+    for repo_path_text in maintainer_feedback_repo_paths(feedback):
+        repo_path = Path(repo_path_text).expanduser().resolve()
+        if script_path == repo_path or is_relative_to(script_path, repo_path):
+            errors.append("maintainer_feedback_packet: operator_commands_script must not be inside a target repo")
+            break
+    if script_count != len(commands):
+        errors.append("maintainer_feedback_packet: operator_commands_script_command_count must match operator_commands length")
+
+    expected_script_sha = sha256_text(maintainer_operator_command_script_text(feedback, commands))
+    if script_sha != expected_script_sha:
+        errors.append("maintainer_feedback_packet: operator_commands_script_sha256 must match operator command script content")
+    if not script_path.is_file():
+        errors.append("maintainer_feedback_packet: operator_commands_script must exist")
+        return
+    if sha256_file(script_path) != script_sha:
+        errors.append("maintainer_feedback_packet: operator_commands_script_sha256 must match operator_commands_script file")
+
+
+def require_maintainer_operator_command_allowlist(*, errors: list[str], commands: list[str], feedback: dict) -> None:
+    start_error_count = len(errors)
+    if len(commands) != 2:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands must exactly contain packet rerun and progress json.tool commands"
+        )
+        return
+    try:
+        packet_parts = shlex.split(commands[0])
+        progress_parts = shlex.split(commands[1])
+    except ValueError as exc:
+        errors.append(f"maintainer_feedback_packet: operator_commands must be shell-parseable: {exc}")
+        return
+    if packet_parts[:2] != ["python3", "scripts/amr_beta_maintainer_feedback_packet.py"]:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands[0] must rerun amr_beta_maintainer_feedback_packet.py"
+        )
+        return
+
+    values: dict[str, list[str]] = {}
+    bool_flags: set[str] = set()
+    index = 2
+    while index < len(packet_parts):
+        token = packet_parts[index]
+        if token in MAINTAINER_FEEDBACK_PACKET_BOOL_FLAGS:
+            bool_flags.add(token)
+            index += 1
+            continue
+        if token not in MAINTAINER_FEEDBACK_PACKET_VALUE_FLAGS:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] has unsupported flag/value {token!r}")
+            return
+        if index + 1 >= len(packet_parts):
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] missing value for {token}")
+            return
+        values.setdefault(token, []).append(packet_parts[index + 1])
+        index += 2
+
+    required_value_flags = {"--repo-intake", "--out", "--min-repos", "--min-maintainers"}
+    for flag in sorted(required_value_flags):
+        if flag not in values:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] missing required {flag}")
+    for flag, flag_values in values.items():
+        if flag not in MAINTAINER_FEEDBACK_PACKET_REPEATABLE_FLAGS and len(flag_values) > 1:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] repeats non-repeatable {flag}")
+    if "--overwrite" not in bool_flags:
+        errors.append("maintainer_feedback_packet: operator_commands[0] must include --overwrite")
+    if len(errors) > start_error_count:
+        return
+
+    out_dir = Path(values["--out"][0]).expanduser().resolve()
+    if str(feedback.get("out") or "").strip() and not same_path(values["--out"][0], str(feedback.get("out"))):
+        errors.append("maintainer_feedback_packet: operator_commands[0] --out must match packet out")
+    expected_min_repos = str(feedback.get("min_real_repos_required") or "").strip()
+    if expected_min_repos and values["--min-repos"][0] != expected_min_repos:
+        errors.append("maintainer_feedback_packet: operator_commands[0] --min-repos must match packet")
+    expected_min_maintainers = str(feedback.get("min_maintainer_feedback_required") or "").strip()
+    if expected_min_maintainers and values["--min-maintainers"][0] != expected_min_maintainers:
+        errors.append("maintainer_feedback_packet: operator_commands[0] --min-maintainers must match packet")
+
+    canonical_packet_command = command_line(packet_parts)
+    if commands[0] != canonical_packet_command:
+        errors.append("maintainer_feedback_packet: operator_commands[0] must use canonical quoting")
+
+    expected_progress = command_line(
+        ["python3", "-m", "json.tool", out_dir / "maintainer_feedback_progress_summary.json"]
+    )
+    if progress_parts != ["python3", "-m", "json.tool", str(out_dir / "maintainer_feedback_progress_summary.json")]:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands[1] must inspect maintainer_feedback_progress_summary.json with json.tool"
+        )
+    elif commands[1] != expected_progress:
+        errors.append("maintainer_feedback_packet: operator_commands[1] must use canonical quoting")
+
+
+def require_maintainer_operator_commands(*, errors: list[str], feedback: dict) -> None:
+    if "operator_commands" not in feedback and "operator_command_count" not in feedback and "operator_commands_sha256" not in feedback:
+        require_maintainer_operator_command_script(errors=errors, feedback=feedback, commands=[])
+        return
+    commands = feedback.get("operator_commands")
+    if (
+        commands == []
+        and count_int(feedback, "operator_command_count") == 0
+        and not str(feedback.get("operator_commands_sha256") or "")
+        and not truthy_int(feedback, "writes_operator_command_script")
+    ):
+        require_maintainer_operator_command_script(errors=errors, feedback=feedback, commands=[])
+        return
+    if not isinstance(commands, list) or not all(isinstance(command, str) and command for command in commands):
+        errors.append("maintainer_feedback_packet: operator_commands must be a non-empty string list")
+        return
+    command_count = require_exact_int(
+        errors=errors,
+        name="maintainer_feedback_packet",
+        payload=feedback,
+        key="operator_command_count",
+    )
+    if command_count >= 0 and command_count != len(commands):
+        errors.append("maintainer_feedback_packet: operator_command_count must match operator_commands length")
+    if str(feedback.get("operator_commands_sha256") or "") != sha256_json(commands):
+        errors.append("maintainer_feedback_packet: operator_commands_sha256 must match operator_commands")
+    require_maintainer_operator_command_allowlist(errors=errors, commands=commands, feedback=feedback)
+    require_maintainer_operator_command_script(errors=errors, feedback=feedback, commands=commands)
+
+
+def runtime_approved_command_script_text(status: dict, commands: list[str]) -> str:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "# Generated by scripts/amr_beta_runtime_approval_status.py.",
+        "# This script contains human-approved AMR beta runtime commands.",
+        "# It may run the long real_benchmark command; use only within the approved runtime budget.",
+        f"# approval_record_sha256: {status.get('approval_record_sha256', '')}",
+        f"# runtime_commands_sha256: {status.get('runtime_commands_sha256', '')}",
+        f"# approved_runtime_budget_minutes: {status.get('approved_runtime_budget_minutes', '')}",
+        f"# benchmark_out: {status.get('benchmark_out', '')}",
+        f"# runtime_command_count: {len(commands)}",
+        "",
+    ]
+    for index, command in enumerate(commands, start=1):
+        lines.extend([f"# command {index}", command, ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def require_runtime_command_script(
+    *,
+    errors: list[str],
+    status: dict,
+    commands: list[str],
+) -> None:
+    if not any(field in status for field in RUNTIME_APPROVAL_STATUS_COMMAND_SCRIPT_FIELDS):
+        return
+
+    errors.extend(
+        strict_int_flag_errors(
+            "runtime_approval_status",
+            status,
+            ["writes_runtime_command_script"],
+            {0, 1},
+        )
+    )
+    writes_script = truthy_int(status, "writes_runtime_command_script")
+    script_path_text = str(status.get("runtime_commands_script") or "").strip()
+    script_sha = str(status.get("runtime_commands_script_sha256") or "").strip()
+    script_count = status.get("runtime_commands_script_command_count")
+
+    if isinstance(script_count, bool) or not isinstance(script_count, int):
+        errors.append("runtime_approval_status: runtime_commands_script_command_count must be an integer")
+        return
+
+    if not writes_script:
+        if script_path_text:
+            errors.append("runtime_approval_status: runtime_commands_script must be empty when writes_runtime_command_script=0")
+        if script_sha:
+            errors.append(
+                "runtime_approval_status: runtime_commands_script_sha256 must be empty when writes_runtime_command_script=0"
+            )
+        if script_count != 0:
+            errors.append(
+                "runtime_approval_status: runtime_commands_script_command_count must be 0 when writes_runtime_command_script=0"
+            )
+        return
+
+    if not script_path_text:
+        errors.append("runtime_approval_status: runtime_commands_script is required when writes_runtime_command_script=1")
+        return
+    script_path = Path(script_path_text).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("runtime_approval_status: runtime_commands_script must not be .env-like")
+    benchmark_out = str(status.get("benchmark_out") or "").strip()
+    if benchmark_out:
+        benchmark_path = Path(benchmark_out).expanduser().resolve()
+        if script_path == benchmark_path or is_relative_to(script_path, benchmark_path):
+            errors.append("runtime_approval_status: runtime_commands_script must not be inside approved benchmark output")
+    if script_count != len(commands):
+        errors.append("runtime_approval_status: runtime_commands_script_command_count must match runtime_commands length")
+
+    expected_script_sha = sha256_text(runtime_approved_command_script_text(status, commands))
+    if script_sha != expected_script_sha:
+        errors.append("runtime_approval_status: runtime_commands_script_sha256 must match runtime command script content")
+    if not script_path.is_file():
+        errors.append("runtime_approval_status: runtime_commands_script must exist")
+        return
+    if sha256_file(script_path) != script_sha:
+        errors.append("runtime_approval_status: runtime_commands_script_sha256 must match runtime_commands_script file")
+
+
+def require_runtime_approval_status_commands(
+    *,
+    errors: list[str],
+    status: dict,
+    request: dict | None,
+) -> None:
+    if "runtime_commands" not in status and not any(
+        field in status for field in RUNTIME_APPROVAL_STATUS_COMMAND_SCRIPT_FIELDS
+    ):
+        return
+    commands = status.get("runtime_commands")
+    if not isinstance(commands, list) or not all(isinstance(command, str) and command for command in commands):
+        errors.append("runtime_approval_status: runtime_commands must be a non-empty string list")
+        return
+    if request and request.get("runtime_commands") != commands:
+        errors.append("runtime_approval_status: runtime_commands must match runtime_approval_request")
+    if str(status.get("runtime_commands_sha256") or "") != sha256_json(commands):
+        errors.append("runtime_approval_status: runtime_commands_sha256 must match runtime_commands")
+    require_runtime_command_script(errors=errors, status=status, commands=commands)
 
 
 def require_repo_intake_status(*, errors: list[str], payload: dict) -> None:
@@ -1276,10 +1943,14 @@ def require_label_operator_commands(
         errors.append("label_intake_plan: per_case length must match case_count")
 
     expected_commands: list[str] = []
+    repo_paths: list[str] = []
     for row in per_case:
         if not isinstance(row, dict):
             errors.append("label_intake_plan: per_case rows must be objects")
             return
+        repo_path = str(row.get("repo_path") or "").strip()
+        if repo_path:
+            repo_paths.append(repo_path)
         for field in LABEL_INTAKE_PLAN_COMMAND_FIELDS:
             command = row.get(field)
             if not isinstance(command, str) or not command:
@@ -1288,6 +1959,12 @@ def require_label_operator_commands(
             expected_commands.append(command)
     if commands != expected_commands:
         errors.append("label_intake_plan: operator_commands must exactly match per_case compile/verify commands")
+    require_label_operator_command_script(
+        errors=errors,
+        label=label,
+        commands=commands,
+        repo_paths=repo_paths,
+    )
 
 
 def require_label_template_fingerprints(*, errors: list[str], label: dict, case_count: int) -> None:
@@ -1528,6 +2205,7 @@ def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
     discovery_response = artifacts.get("repo_discovery_response")
@@ -1539,6 +2217,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     request = artifacts.get("runtime_approval_request")
     status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
+
+    if pr_export:
+        require_pr_cleanup_export_plan(errors=errors, payload=pr_export)
 
     if pr_cleanup:
         require_pr_cleanup_status(errors=errors, payload=pr_cleanup)
@@ -1903,6 +2584,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             key="output_path_guard_passed",
             expected=1,
             )
+        require_maintainer_operator_commands(errors=errors, feedback=feedback)
 
     if intake and repo:
         require_matching_artifact_field(
@@ -1996,6 +2678,20 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
                 expected=repo.get(key),
                 expected_name="repo_audit_plan",
             )
+
+    if pr_export and pr_cleanup:
+        require_matching_artifact_field(
+            errors=errors,
+            name="pr_cleanup_status",
+            payload=pr_cleanup,
+            field="input_pr_state",
+            expected=pr_export.get("pr_state_out"),
+            expected_name="pr_cleanup_export_plan",
+        )
+        export_claim_paths = sorted(str(path) for path in pr_export.get("claim_files", []))
+        cleanup_claim_paths = sorted(str(row.get("path") or "") for row in pr_cleanup.get("claim_scan_files", []))
+        if export_claim_paths and cleanup_claim_paths and export_claim_paths != cleanup_claim_paths:
+            errors.append("pr_cleanup_status: claim_scan_files must match pr_cleanup_export_plan claim_files")
 
     if request and not preflight:
         errors.append("runtime_approval_request: runtime_preflight is required")
@@ -2174,6 +2870,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             payload=status,
             field="approval_record_sha256",
         )
+        require_runtime_approval_status_commands(errors=errors, status=status, request=request)
 
     if benchmark and status:
         benchmark_meta = metas["benchmark_readiness"]
@@ -2195,6 +2892,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
 def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple[str, list[str]]:
     if errors:
         return "stage_0_claim_freeze", ["Resolve artifact validation errors before advancing."]
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
@@ -2206,6 +2904,10 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     benchmark = artifacts.get("benchmark_readiness")
 
     if not pr_cleanup or truthy_int(pr_cleanup, "stage_0_claim_freeze_verified") != 1:
+        if pr_export and truthy_int(pr_export, "ready_for_pr_cleanup_export_handoff") == 1:
+            return "stage_0_claim_freeze", [
+                "Run the PR cleanup export handoff script with authenticated gh, then validate stage-0 status."
+            ]
         return "stage_0_claim_freeze", [
             "Validate stage-0 PR cleanup and claim freeze from exported GitHub PR state."
         ]
@@ -2284,6 +2986,7 @@ def progress_summary(current: int, required: int) -> dict[str, int | float]:
 
 
 def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
     discovery_response = artifacts.get("repo_discovery_response")
@@ -2333,9 +3036,53 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
     blocked_gate_rows = count_int(benchmark, "blocked_gate_rows", count_int(backlog, "blocked_gate_rows"))
     passed_gate_rows = count_int(benchmark, "passed_gate_rows", 0)
     gate_rows = count_int(benchmark, "gate_rows", count_int(backlog, "gate_rows"))
+    human_label_progress = progress_summary(label_current, label_required)
+    human_label_progress.update(
+        {
+            "label_intake_plan_supplied": int(bool(label)),
+            "ready_for_label_intake_plan": count_int(label, "ready_for_label_intake_plan"),
+            "label_intake_plan_operator_command_count": count_int(label, "operator_command_count"),
+            "label_intake_plan_command_script_written": count_int(label, "writes_operator_command_script"),
+            "label_intake_plan_command_script_command_count": count_int(
+                label,
+                "operator_commands_script_command_count",
+            ),
+        }
+    )
+    maintainer_feedback_progress = progress_summary(maintainer_current, maintainer_required)
+    maintainer_feedback_progress.update(
+        {
+            "maintainer_feedback_packet_supplied": int(bool(feedback)),
+            "ready_for_runtime_preflight_feedback": count_int(feedback, "ready_for_runtime_preflight_feedback"),
+            "feedback_countable_case_rows": count_int(feedback, "feedback_countable_case_rows"),
+            "feedback_digest_fingerprint_rows": count_int(feedback, "feedback_digest_fingerprint_rows"),
+            "label_intake_verify_existing_passed_dirs": count_int(
+                feedback,
+                "label_intake_verify_existing_passed_dirs",
+            ),
+            "maintainer_feedback_packet_operator_command_count": count_int(feedback, "operator_command_count"),
+            "maintainer_feedback_packet_command_script_written": count_int(
+                feedback,
+                "writes_operator_command_script",
+            ),
+            "maintainer_feedback_packet_command_script_command_count": count_int(
+                feedback,
+                "operator_commands_script_command_count",
+            ),
+        }
+    )
+    status_runtime_commands = status.get("runtime_commands") if isinstance(status, dict) else []
+    approved_runtime_command_count = len(status_runtime_commands) if isinstance(status_runtime_commands, list) else 0
 
     return {
         "claim_freeze": {
+            "pr_cleanup_export_plan_supplied": int(bool(pr_export)),
+            "ready_for_pr_cleanup_export_handoff": count_int(
+                pr_export,
+                "ready_for_pr_cleanup_export_handoff",
+            ),
+            "pr_cleanup_export_pr_count": count_int(pr_export, "export_pr_count"),
+            "pr_cleanup_export_script_written": count_int(pr_export, "writes_export_script"),
             "pr_cleanup_status_supplied": int(bool(pr_cleanup)),
             "stage_0_claim_freeze_verified": count_int(pr_cleanup, "stage_0_claim_freeze_verified"),
             "checklist_pr_merged": count_int(pr_cleanup, "checklist_pr_merged"),
@@ -2405,9 +3152,15 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
             "repo_snapshot_lock_row_count": count_int(intake, "repo_snapshot_lock_row_count"),
             "repo_audit_plan_supplied": int(bool(repo)),
             "ready_for_real_benchmark_audit_plan": count_int(repo, "ready_for_real_benchmark_audit_plan"),
+            "repo_audit_plan_operator_command_count": count_int(repo, "operator_command_count"),
+            "repo_audit_plan_command_script_written": count_int(repo, "writes_operator_command_script"),
+            "repo_audit_plan_command_script_command_count": count_int(
+                repo,
+                "operator_commands_script_command_count",
+            ),
         },
-        "human_labels": progress_summary(label_current, label_required),
-        "maintainer_feedback": progress_summary(maintainer_current, maintainer_required),
+        "human_labels": human_label_progress,
+        "maintainer_feedback": maintainer_feedback_progress,
         "runtime_preflight": {
             "ready_to_request_runtime_approval": count_int(preflight, "ready_to_request_runtime_approval"),
             "input_path_preflight_passed": count_int(preflight, "input_path_preflight_passed"),
@@ -2419,6 +3172,12 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
             "ready_for_human_operator_benchmark_run": count_int(
                 status,
                 "ready_for_human_operator_benchmark_run",
+            ),
+            "approved_runtime_command_count": approved_runtime_command_count,
+            "runtime_command_script_written": count_int(status, "writes_runtime_command_script"),
+            "runtime_command_script_command_count": count_int(
+                status,
+                "runtime_commands_script_command_count",
             ),
         },
         "benchmark": {
@@ -2463,6 +3222,12 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "",
         "- claim_freeze_verified: "
         f"{payload['stage_progress']['claim_freeze']['stage_0_claim_freeze_verified']}",
+        "- pr_cleanup_export_plan_supplied: "
+        f"{payload['stage_progress']['claim_freeze']['pr_cleanup_export_plan_supplied']}",
+        "- pr_cleanup_export_handoff_ready: "
+        f"{payload['stage_progress']['claim_freeze']['ready_for_pr_cleanup_export_handoff']}",
+        "- pr_cleanup_export_pr_count: "
+        f"{payload['stage_progress']['claim_freeze']['pr_cleanup_export_pr_count']}",
         "- pr_cleanup_status_supplied: "
         f"{payload['stage_progress']['claim_freeze']['pr_cleanup_status_supplied']}",
         "- repo_intake: {current}/{required} "
@@ -2492,18 +3257,38 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "selected_remaining {repo_discovery_response_selected_rows_remaining_to_minimum})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
+        "- repo_audit_plan_commands: {repo_audit_plan_operator_command_count} "
+        "(script_written {repo_audit_plan_command_script_written}, "
+        "script_commands {repo_audit_plan_command_script_command_count})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
         "- human_labels: {current}/{required} "
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
+            **payload["stage_progress"]["human_labels"],
+        ),
+        "- label_intake_plan_commands: {label_intake_plan_operator_command_count} "
+        "(script_written {label_intake_plan_command_script_written}, "
+        "script_commands {label_intake_plan_command_script_command_count})".format(
             **payload["stage_progress"]["human_labels"],
         ),
         "- maintainer_feedback: {current}/{required} "
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
             **payload["stage_progress"]["maintainer_feedback"],
         ),
+        "- maintainer_feedback_packet_commands: {maintainer_feedback_packet_operator_command_count} "
+        "(script_written {maintainer_feedback_packet_command_script_written}, "
+        "script_commands {maintainer_feedback_packet_command_script_command_count})".format(
+            **payload["stage_progress"]["maintainer_feedback"],
+        ),
         "- runtime_preflight_ready: "
         f"{payload['stage_progress']['runtime_preflight']['ready_to_request_runtime_approval']}",
         "- runtime_approval_verified: "
         f"{payload['stage_progress']['runtime_approval']['approval_record_verified']}",
+        "- approved_runtime_commands: {approved_runtime_command_count} "
+        "(script_written {runtime_command_script_written}, "
+        "script_commands {runtime_command_script_command_count})".format(
+            **payload["stage_progress"]["runtime_approval"],
+        ),
         "- benchmark_readiness_supplied: "
         f"{payload['stage_progress']['benchmark']['benchmark_readiness_supplied']}",
         "- benchmark_blocked_gate_rows: "
@@ -2529,6 +3314,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pr-cleanup-export-plan", default="")
     parser.add_argument("--pr-cleanup-status", default="")
     parser.add_argument("--repo-discovery-status", default="")
     parser.add_argument("--repo-discovery-response", default="")
@@ -2551,6 +3337,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     artifact_args = {
+        "pr_cleanup_export_plan": args.pr_cleanup_export_plan,
         "pr_cleanup_status": args.pr_cleanup_status,
         "repo_discovery_status": args.repo_discovery_status,
         "repo_discovery_response": args.repo_discovery_response,
