@@ -103,6 +103,55 @@ def main() -> int:
         assert "human_owner_or_maintainer_contact_required" in by_repo[str(repo_a.resolve())]["blockers_before_counting"]
         assert "AMR Beta Repo Discovery Candidates" in out_md.read_text(encoding="utf-8")
 
+        runner_parent = tmp / "actions-runner" / "_work" / "demo"
+        runner_parent.mkdir(parents=True)
+        runner_repo, _head_runner = create_repo(runner_parent, "demo")
+        risk_out = tmp / "risk_discovery.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(tmp),
+                "--out-json",
+                str(risk_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        risk_payload = json.loads(proc.stdout)
+        risk_by_repo = {row["repo_path"]: row for row in risk_payload["candidates"]}
+        runner_row = risk_by_repo[str(runner_repo.resolve())]
+        assert "runner_worktree_path" in runner_row["path_risk_flags"]
+        assert runner_row["path_risk_flag_count"] == 1
+        assert runner_row["human_real_repo_source_confirmation_required"] == 1
+        assert "human_real_repo_source_confirmation_required" in runner_row["blockers_before_counting"]
+
+        hidden_parent = tmp / ".codex" / "plugins"
+        hidden_parent.mkdir(parents=True)
+        hidden_repo, _head_hidden = create_repo(hidden_parent, "plugin-repo")
+        hidden_out = tmp / "hidden_discovery.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(tmp),
+                "--include-hidden",
+                "--out-json",
+                str(hidden_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        hidden_payload = json.loads(proc.stdout)
+        hidden_by_repo = {row["repo_path"]: row for row in hidden_payload["candidates"]}
+        hidden_row = hidden_by_repo[str(hidden_repo.resolve())]
+        assert "hidden_path" in hidden_row["path_risk_flags"]
+        assert "codex_internal_path" in hidden_row["path_risk_flags"]
+
         nested = repo_a / "nested" / "deeper"
         nested.mkdir(parents=True)
         nested_out = tmp / "nested_discovery.json"

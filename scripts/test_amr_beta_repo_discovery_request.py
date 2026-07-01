@@ -115,6 +115,7 @@ def main() -> int:
         assert response_rows[0]["include_for_real_benchmark_intake"] == ""
         assert response_rows[0]["owner_or_maintainer_contact"] == ""
         assert response_rows[0]["real_benchmark_namespace_confirmed"] == ""
+        assert response_rows[0]["path_risk_flags"] == ""
         assert response_rows[0]["repo_path"] == str(repo_a.resolve())
         assert response_rows[0]["notes"] == "recommended_for_contact_request=1"
         assert response_rows[2]["notes"] == "clean_or_fix_repo_before_intake"
@@ -156,6 +157,36 @@ def main() -> int:
         ]
         assert all(row["notes"] == "recommended_for_contact_request=1" for row in recommended_rows)
         assert str(repo_dirty.resolve()) not in recommended_response_csv.read_text(encoding="utf-8")
+
+        risk_discovery = tmp / "risk_discovery.json"
+        risk_payload = json.loads(discovery.read_text(encoding="utf-8"))
+        risk_payload["candidates"][0]["path_risk_flags"] = ["runner_worktree_path"]
+        risk_payload["candidates"][0]["path_risk_flag_count"] = 1
+        risk_payload["candidates"][0]["human_real_repo_source_confirmation_required"] = 1
+        risk_discovery.write_text(json.dumps(risk_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        risk_request = tmp / "risk_request.json"
+        risk_response_csv = tmp / "risk_response_template.csv"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(risk_discovery),
+                "--out-json",
+                str(risk_request),
+                "--out-response-csv",
+                str(risk_response_csv),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        risk_request_payload = json.loads(proc.stdout)
+        assert risk_request_payload["request_rows"][0]["path_risk_flags"] == ["runner_worktree_path"]
+        assert risk_request_payload["request_rows"][0]["human_real_repo_source_confirmation_required"] == 1
+        with risk_response_csv.open(newline="", encoding="utf-8") as handle:
+            risk_response_rows = list(csv.DictReader(handle))
+        assert risk_response_rows[0]["path_risk_flags"] == "runner_worktree_path"
 
         missing_response_csv = tmp / "missing_response_csv.json"
         proc = run(

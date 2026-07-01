@@ -41,6 +41,7 @@ RESPONSE_TEMPLATE_COLUMNS = [
     "include_for_real_benchmark_intake",
     "owner_or_maintainer_contact",
     "real_benchmark_namespace_confirmed",
+    "path_risk_flags",
     "repo_path",
     "audit_mode",
     "notes",
@@ -125,6 +126,9 @@ def validate_discovery(payload: dict) -> list[str]:
             errors.append(f"{prefix}: owner_or_maintainer_contact_required must be 1")
         if int_flag(row, "real_benchmark_namespace_confirmation_required") != 1:
             errors.append(f"{prefix}: real_benchmark_namespace_confirmation_required must be 1")
+        risk_flags = row.get("path_risk_flags", [])
+        if not isinstance(risk_flags, list) or not all(isinstance(flag, str) for flag in risk_flags):
+            errors.append(f"{prefix}: path_risk_flags must be a string list")
         if int_flag(row, "counts_for_repo_intake") != 0:
             errors.append(f"{prefix}: counts_for_repo_intake must be 0")
         if str(row.get("suggested_namespace") or "") != "real_benchmark":
@@ -159,6 +163,11 @@ def build_request_rows(candidates: list[dict]) -> list[dict[str, object]]:
             "repo_status_readable": int_flag(row, "repo_status_readable"),
             "suggested_audit_mode": row.get("suggested_audit_mode", "quick"),
             "suggested_namespace": "real_benchmark",
+            "path_risk_flags": row.get("path_risk_flags", []),
+            "path_risk_flag_count": int_flag(row, "path_risk_flag_count"),
+            "human_real_repo_source_confirmation_required": int_flag(
+                row, "human_real_repo_source_confirmation_required"
+            ),
             "include_for_real_benchmark_intake_required": 1,
             "owner_or_maintainer_contact_required": 1,
             "real_benchmark_namespace_confirmation_required": 1,
@@ -264,18 +273,19 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "",
         "## Candidate Rows",
         "",
-        "| suggested_case_id | recommended | include_for_real_benchmark_intake | contact | namespace_confirmed | clean | head | status | repo_path | blockers |",
-        "|---|---:|---|---|---|---:|---:|---:|---|---|",
+        "| suggested_case_id | recommended | include_for_real_benchmark_intake | contact | namespace_confirmed | clean | head | status | risk_flags | repo_path | blockers |",
+        "|---|---:|---|---|---|---:|---:|---:|---|---|---|",
     ]
     for row in payload["request_rows"]:
         blockers = ",".join(str(item) for item in row.get("blockers_before_counting", []))
         lines.append(
-            "| {case_id} | {recommended} |  |  |  | {clean} | {head} | {status} | {repo} | {blockers} |".format(
+            "| {case_id} | {recommended} |  |  |  | {clean} | {head} | {status} | {risk_flags} | {repo} | {blockers} |".format(
                 case_id=markdown_cell(row.get("suggested_case_id", "")),
                 recommended=row.get("recommended_for_contact_request", 0),
                 clean=markdown_cell(row.get("clean_worktree_actual")),
                 head=row.get("repo_head_readable", 0),
                 status=row.get("repo_status_readable", 0),
+                risk_flags=markdown_cell(",".join(str(flag) for flag in row.get("path_risk_flags", []))),
                 repo=markdown_cell(row.get("repo_path", "")),
                 blockers=markdown_cell(blockers),
             )
@@ -321,6 +331,7 @@ def write_response_csv(
                     "include_for_real_benchmark_intake": "",
                     "owner_or_maintainer_contact": "",
                     "real_benchmark_namespace_confirmed": "",
+                    "path_risk_flags": ",".join(str(flag) for flag in row.get("path_risk_flags", [])),
                     "repo_path": str(row.get("repo_path", "")),
                     "audit_mode": str(row.get("suggested_audit_mode", "quick")),
                     "notes": (
