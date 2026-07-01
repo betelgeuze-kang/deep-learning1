@@ -173,6 +173,110 @@ def main() -> int:
         for command in payload["operator_commands"]:
             assert command in command_script
 
+        proc = run_tool("--verify-existing", str(out_json), "--json")
+        assert proc.returncode == 0, proc.stderr
+        verify_payload = json.loads(proc.stdout)
+        assert verify_payload["schema"] == "amr_beta_repo_audit_plan_verify_existing.v1"
+        assert verify_payload["verify_existing_passed"] == 1
+        assert verify_payload["plan_sha256"].startswith("sha256:")
+        assert verify_payload["plan_payload_sha256"].startswith("sha256:")
+        assert verify_payload["runs_audit"] == 0
+        assert verify_payload["creates_benchmark_evidence"] == 0
+        assert verify_payload["design_partner_beta_candidate_ready"] == 0
+
+        forbidden_env_plan = tmp / ".env"
+        forbidden_env_plan.write_text("repo_audit_plan=secret-bearing-placeholder\n", encoding="utf-8")
+        proc = run_tool("--verify-existing", str(forbidden_env_plan), "--json")
+        assert proc.returncode == 1
+        forbidden_env_verify = json.loads(proc.stdout)
+        assert forbidden_env_verify["verify_existing_passed"] == 0
+        assert forbidden_env_verify["plan_sha256"] == ""
+        assert forbidden_env_verify["plan_payload_sha256"] == ""
+        assert "refusing .env-like plan path" in proc.stderr
+
+        forbidden_env_symlink = tmp / ".env.audit_plan"
+        forbidden_env_symlink.symlink_to(out_json)
+        proc = run_tool("--verify-existing", str(forbidden_env_symlink), "--json")
+        assert proc.returncode == 1
+        forbidden_env_symlink_verify = json.loads(proc.stdout)
+        assert forbidden_env_symlink_verify["verify_existing_passed"] == 0
+        assert forbidden_env_symlink_verify["plan_sha256"] == ""
+        assert forbidden_env_symlink_verify["plan_payload_sha256"] == ""
+        assert "refusing .env-like plan path" in proc.stderr
+
+        bool_tampered_plan_json = tmp / "bool_tampered_repo_audit_plan.json"
+        bool_tampered_plan = json.loads(out_json.read_text(encoding="utf-8"))
+        bool_tampered_plan["ready_for_real_benchmark_audit_plan"] = True
+        bool_tampered_plan_json.write_text(
+            json.dumps(bool_tampered_plan, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_tool("--verify-existing", str(bool_tampered_plan_json), "--json")
+        assert proc.returncode == 1
+        bool_tampered_verify = json.loads(proc.stdout)
+        assert bool_tampered_verify["verify_existing_passed"] == 0
+        assert "ready_for_real_benchmark_audit_plan must be integer 1" in proc.stderr
+
+        tampered_plan_json = tmp / "tampered_repo_audit_plan.json"
+        tampered_plan = json.loads(out_json.read_text(encoding="utf-8"))
+        tampered_plan["valid_repo_rows"] = 99
+        tampered_plan_json.write_text(
+            json.dumps(tampered_plan, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_tool("--verify-existing", str(tampered_plan_json), "--json")
+        assert proc.returncode == 1
+        tampered_verify = json.loads(proc.stdout)
+        assert tampered_verify["verify_existing_passed"] == 0
+        assert "valid_repo_rows must match current repo intake and command plan" in proc.stderr
+
+        nine_repo_intake = tmp / "nine_repo_audit_intake.md"
+        nine_repo_plan_json = tmp / "nine_repo_audit_plan.json"
+        write_intake(nine_repo_intake, repos[:9])
+        proc = run_tool(
+            "--repo-intake",
+            str(nine_repo_intake),
+            "--artifact-root",
+            str(tmp / "nine_repo_audit_artifacts"),
+            "--min-repos",
+            "9",
+            "--out-json",
+            str(nine_repo_plan_json),
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        nine_repo_plan = json.loads(nine_repo_plan_json.read_text(encoding="utf-8"))
+        assert nine_repo_plan["ready_for_real_benchmark_audit_plan"] == 1
+        assert nine_repo_plan["min_real_repos_required"] == 9
+        proc = run_tool("--verify-existing", str(nine_repo_plan_json), "--json")
+        assert proc.returncode == 1
+        nine_repo_verify = json.loads(proc.stdout)
+        assert nine_repo_verify["verify_existing_passed"] == 0
+        assert "min_real_repos_required must be at least 10" in proc.stderr
+
+        out_commands.write_text(command_script + "# tampered\n", encoding="utf-8")
+        proc = run_tool("--verify-existing", str(out_json), "--json")
+        assert proc.returncode == 1
+        script_drift_verify = json.loads(proc.stdout)
+        assert script_drift_verify["verify_existing_passed"] == 0
+        assert "operator_commands_script_sha256 must match expected command script" in proc.stderr
+        out_commands.write_text(command_script, encoding="utf-8")
+
+        forbidden_script_symlink = tmp / ".env.audit_commands"
+        forbidden_script_symlink.symlink_to(out_commands)
+        forbidden_script_plan_json = tmp / "forbidden_script_repo_audit_plan.json"
+        forbidden_script_plan = json.loads(out_json.read_text(encoding="utf-8"))
+        forbidden_script_plan["operator_commands_script"] = str(forbidden_script_symlink)
+        forbidden_script_plan_json.write_text(
+            json.dumps(forbidden_script_plan, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_tool("--verify-existing", str(forbidden_script_plan_json), "--json")
+        assert proc.returncode == 1
+        forbidden_script_verify = json.loads(proc.stdout)
+        assert forbidden_script_verify["verify_existing_passed"] == 0
+        assert "operator_commands_script must not be .env-like" in proc.stderr
+
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)
         (repos[0][0] / "UNTRACKED.txt").write_text("dirty\n", encoding="utf-8")

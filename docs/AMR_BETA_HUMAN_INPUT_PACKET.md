@@ -166,6 +166,12 @@ human-input artifact that marks itself ready without meeting the 300-label and
   that repo before evidence generation. The optional command script is a
   handoff artifact only; creating it does not run audits, generate templates,
   write reviewer packets, or create benchmark evidence.
+- [ ] Before running the saved audit handoff commands, recheck the audit plan
+  against the current intake sheet, local git state, and optional command
+  script with
+  `python3 scripts/amr_beta_repo_audit_plan.py --verify-existing results/amr_beta_repo_audit_plan.json`.
+  This keeps `runs_audit=0`, `writes_reviewer_packets=0`, and
+  `creates_benchmark_evidence=0` during the recheck.
 - [ ] Run each emitted audit verify command before its label-template command,
   and each emitted label-template verify command before reviewer-packet handoff.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
