@@ -26,6 +26,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
         out_sh = tmp / "amr_beta_pr_cleanup_export.sh"
+        out_json = tmp / "amr_beta_pr_cleanup_export_plan.json"
         pr_state = tmp / "amr_beta_pr_cleanup_state.jsonl"
         status_json = tmp / "amr_beta_pr_cleanup_status.json"
         status_md = tmp / "amr_beta_pr_cleanup_status.md"
@@ -33,6 +34,8 @@ def main() -> int:
         proc = run_tool(
             "--out-sh",
             str(out_sh),
+            "--out-json",
+            str(out_json),
             "--pr-state-out",
             str(pr_state),
             "--status-json-out",
@@ -46,6 +49,8 @@ def main() -> int:
         assert payload["schema"] == "amr_beta_pr_cleanup_export_plan.v1"
         assert payload["ready_for_pr_cleanup_export_handoff"] == 1
         assert payload["writes_export_script"] == 1
+        assert payload["writes_export_plan_json"] == 1
+        assert payload["out_json"] == str(out_json.resolve())
         assert payload["out_sh_sha256"].startswith("sha256:")
         assert payload["export_pr_count"] == 5
         assert payload["checklist_pr"] == 46
@@ -61,6 +66,10 @@ def main() -> int:
         assert payload["generated_script_runs_github_mutation"] == 0
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert out_sh.exists()
+        assert out_json.exists()
+        saved_payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert saved_payload["schema"] == payload["schema"]
+        assert saved_payload["out_sh_sha256"] == payload["out_sh_sha256"]
         assert out_sh.stat().st_mode & 0o111
 
         text = out_sh.read_text(encoding="utf-8")
@@ -95,6 +104,12 @@ def main() -> int:
         assert proc.returncode == 1
         assert "out_sh already exists; use --overwrite" in proc.stderr
         assert out_sh.read_text(encoding="utf-8") == original
+
+        json_collision = tmp / "json_collision.sh"
+        proc = run_tool("--out-sh", str(json_collision), "--out-json", str(out_json), "--json")
+        assert proc.returncode == 1
+        assert "out_json already exists; use --overwrite" in proc.stderr
+        assert not json_collision.exists()
 
         duplicate = tmp / "duplicate_pr.sh"
         proc = run_tool("--out-sh", str(duplicate), "--stale-pr", "46", "--json")

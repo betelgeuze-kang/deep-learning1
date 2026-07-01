@@ -253,6 +253,91 @@ def pr_cleanup_status_payload() -> dict:
     }
 
 
+def pr_cleanup_export_plan_payload(script_path: Path, *, mutation: bool = False) -> dict:
+    claim_files = [
+        str((ROOT / "README.md").resolve()),
+        str((ROOT / "README.ko.md").resolve()),
+        str((ROOT / "docs" / "AMR_BETA_HUMAN_INPUT_PACKET.md").resolve()),
+    ]
+    pr_state = "/tmp/amr_beta_pr_cleanup_state.jsonl"
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "mkdir -p /tmp",
+        ": > /tmp/amr_beta_pr_cleanup_state.jsonl",
+    ]
+    for number in [46, 39, 40, 10, 5]:
+        lines.append(
+            "gh pr view "
+            f"{number} --json number,state,title,url,closed,mergedAt,closedAt,headRefName,baseRefName "
+            ">> /tmp/amr_beta_pr_cleanup_state.jsonl"
+        )
+    validate = [
+        "python3",
+        "scripts/amr_beta_pr_cleanup_status.py",
+        "--pr-state",
+        pr_state,
+        "--checklist-pr",
+        "46",
+    ]
+    for number in [39, 40, 10, 5]:
+        validate.extend(["--stale-pr", str(number)])
+    for claim_file in claim_files:
+        validate.extend(["--claim-file", claim_file])
+    validate.extend(
+        [
+            "--require-claim-scan",
+            "--out-json",
+            "/tmp/amr_beta_pr_cleanup_status.json",
+            "--out-md",
+            "/tmp/amr_beta_pr_cleanup_status.md",
+            "--overwrite",
+        ]
+    )
+    lines.append(command_line(validate))
+    if mutation:
+        lines.append("gh pr close 39")
+    script_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {
+        "schema": "amr_beta_pr_cleanup_export_plan.v1",
+        "ready_for_pr_cleanup_export_handoff": 1,
+        "out_sh": str(script_path),
+        "out_sh_sha256": sha256_file(script_path),
+        "out_json": "/tmp/amr_beta_pr_cleanup_export_plan.json",
+        "writes_export_plan_json": 1,
+        "pr_state_out": pr_state,
+        "status_json_out": "/tmp/amr_beta_pr_cleanup_status.json",
+        "status_md_out": "/tmp/amr_beta_pr_cleanup_status.md",
+        "checklist_pr": 46,
+        "stale_prs": [39, 40, 10, 5],
+        "export_pr_count": 5,
+        "gh_pr_view_fields": [
+            "number",
+            "state",
+            "title",
+            "url",
+            "closed",
+            "mergedAt",
+            "closedAt",
+            "headRefName",
+            "baseRefName",
+        ],
+        "claim_files": claim_files,
+        "claim_file_count": len(claim_files),
+        "writes_export_script": 1,
+        "runs_github_query": 0,
+        "runs_github_mutation": 0,
+        "runs_git_push": 0,
+        "closes_pull_requests": 0,
+        "merges_pull_requests": 0,
+        "creates_benchmark_evidence": 0,
+        "generated_script_runs_github_query": 1,
+        "generated_script_runs_github_mutation": 0,
+        **base_blocked(),
+    }
+
+
 def repo_intake_status_payload() -> dict:
     snapshot_rows = repo_snapshot_lock_rows()
     return {
@@ -677,10 +762,16 @@ def main() -> int:
         benchmark_out = tmp / "audit_benchmark"
         benchmark_out.mkdir()
         readiness = benchmark_out / "benchmark_readiness.json"
+        pr_export = tmp / "pr_cleanup_export_plan.json"
+        pr_export_script = tmp / "pr_cleanup_export.sh"
 
         write_json(
             pr_cleanup,
             pr_cleanup_status_payload(),
+        )
+        write_json(
+            pr_export,
+            pr_cleanup_export_plan_payload(pr_export_script),
         )
         write_json(
             repo_discovery,
@@ -747,6 +838,28 @@ def main() -> int:
         assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_status_supplied"] == 0
         assert payload["stage_progress"]["claim_freeze"]["stage_0_claim_freeze_verified"] == 0
         assert "Validate stage-0 PR cleanup" in payload["next_blockers"][0]
+
+        proc = run_tool(
+            "--pr-cleanup-export-plan",
+            str(pr_export),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert "Run the PR cleanup export handoff script" in payload["next_blockers"][0]
+        assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_export_plan_supplied"] == 1
+        assert payload["stage_progress"]["claim_freeze"]["ready_for_pr_cleanup_export_handoff"] == 1
+        assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_export_pr_count"] == 5
+        assert payload["stage_progress"]["claim_freeze"]["pr_cleanup_export_script_written"] == 1
+        markdown = out_md.read_text(encoding="utf-8")
+        assert "pr_cleanup_export_plan_supplied: 1" in markdown
+        assert "pr_cleanup_export_handoff_ready: 1" in markdown
 
         proc = run_tool(
             "--pr-cleanup-status",
@@ -1073,6 +1186,22 @@ def main() -> int:
         assert proc.returncode == 1
         assert "pr_cleanup_status: must set claim_freeze_scan_passed=1" in proc.stderr
         assert "pr_cleanup_status: claim_scan_blocked_promotions must be 0" in proc.stderr
+
+        bad_pr_export = tmp / "bad_pr_cleanup_export_plan.json"
+        bad_pr_export_script = tmp / "bad_pr_cleanup_export.sh"
+        write_json(
+            bad_pr_export,
+            pr_cleanup_export_plan_payload(bad_pr_export_script, mutation=True),
+        )
+        proc = run_tool(
+            "--pr-cleanup-export-plan",
+            str(bad_pr_export),
+            "--out-json",
+            str(tmp / "bad_pr_cleanup_export_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_export_plan: out_sh must not contain mutation command 'gh pr close'" in proc.stderr
 
         contradictory_checklist = tmp / "contradictory_checklist_pr_cleanup_status.json"
         contradictory_checklist_payload = pr_cleanup_status_payload()

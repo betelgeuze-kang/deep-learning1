@@ -59,8 +59,8 @@ def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
         if resolved in seen:
             errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
         seen[resolved] = name
-        if name == "out_sh" and path.exists() and not overwrite:
-            errors.append(f"out_sh already exists; use --overwrite: {path}")
+        if name in {"out_sh", "out_json"} and path.exists() and not overwrite:
+            errors.append(f"{name} already exists; use --overwrite: {path}")
     return errors
 
 
@@ -160,6 +160,7 @@ def script_text(
 def build_payload(
     *,
     out_sh: Path,
+    out_json: Path | None,
     pr_state_out: Path,
     status_json_out: Path,
     status_md_out: Path,
@@ -174,6 +175,8 @@ def build_payload(
         "ready_for_pr_cleanup_export_handoff": int(not errors),
         "out_sh": str(out_sh),
         "out_sh_sha256": script_sha256,
+        "out_json": str(out_json) if out_json else "",
+        "writes_export_plan_json": int(bool(out_json) and not errors),
         "pr_state_out": str(pr_state_out),
         "status_json_out": str(status_json_out),
         "status_md_out": str(status_md_out),
@@ -208,9 +211,19 @@ def write_script(path: Path, text: str, overwrite: bool) -> str:
     return sha256_file(path)
 
 
+def write_json(path: Path, payload: dict[str, object], overwrite: bool) -> None:
+    if pr_cleanup.is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like JSON output path")
+    if path.exists() and not overwrite:
+        raise ValueError(f"out_json already exists; use --overwrite: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-sh", required=True, help="Shell handoff script to write.")
+    parser.add_argument("--out-json", default="", help="Optional export-plan JSON artifact.")
     parser.add_argument("--pr-state-out", default="results/amr_beta_pr_cleanup_state.jsonl")
     parser.add_argument("--status-json-out", default="results/amr_beta_pr_cleanup_status.json")
     parser.add_argument("--status-md-out", default="results/amr_beta_pr_cleanup_status.md")
@@ -225,6 +238,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     out_sh = Path(args.out_sh).expanduser().resolve()
+    out_json = Path(args.out_json).expanduser().resolve() if args.out_json else None
     pr_state_out = Path(args.pr_state_out).expanduser().resolve()
     status_json_out = Path(args.status_json_out).expanduser().resolve()
     status_md_out = Path(args.status_md_out).expanduser().resolve()
@@ -239,6 +253,8 @@ def main(argv: list[str]) -> int:
         "status_json_out": status_json_out,
         "status_md_out": status_md_out,
     }
+    if out_json:
+        output_paths["out_json"] = out_json
     errors = [
         *output_exists_errors(output_paths, args.overwrite),
         *claim_file_errors(claim_files),
@@ -263,6 +279,7 @@ def main(argv: list[str]) -> int:
             errors.append(str(exc))
     payload = build_payload(
         out_sh=out_sh,
+        out_json=out_json,
         pr_state_out=pr_state_out,
         status_json_out=status_json_out,
         status_md_out=status_md_out,
@@ -272,6 +289,14 @@ def main(argv: list[str]) -> int:
         script_sha256=script_sha,
         errors=errors,
     )
+    if out_json and not errors:
+        try:
+            write_json(out_json, payload, args.overwrite)
+        except Exception as exc:
+            errors.append(str(exc))
+            payload["ready_for_pr_cleanup_export_handoff"] = 0
+            payload["writes_export_plan_json"] = 0
+            payload["errors"] = errors
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     if errors:

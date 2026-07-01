@@ -27,6 +27,7 @@ BLOCKED_FLAGS = {
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
+    "pr_cleanup_export_plan": "amr_beta_pr_cleanup_export_plan.v1",
     "pr_cleanup_status": "amr_beta_pr_cleanup_status.v1",
     "repo_discovery_status": "amr_beta_repo_intake_discover.v1",
     "repo_discovery_response": "amr_beta_repo_discovery_response.v1",
@@ -73,6 +74,22 @@ REPO_AUDIT_PLAN_READ_ONLY_FLAGS = [
     "runs_label_template_generation",
     "writes_reviewer_packets",
     "creates_benchmark_evidence",
+]
+PR_CLEANUP_EXPORT_PLAN_READ_ONLY_FLAGS = [
+    "runs_github_query",
+    "runs_github_mutation",
+    "runs_git_push",
+    "closes_pull_requests",
+    "merges_pull_requests",
+    "creates_benchmark_evidence",
+]
+PR_CLEANUP_EXPORT_PLAN_FORBIDDEN_SCRIPT_SNIPPETS = [
+    "gh pr close",
+    "gh pr merge",
+    "gh pr create",
+    "git push",
+    "git merge",
+    "git reset",
 ]
 REPO_INTAKE_STATUS_READ_ONLY_FLAGS = [
     "runs_audit",
@@ -356,6 +373,111 @@ def require_sha_list_field(*, errors: list[str], name: str, payload: dict, field
         if not SHA256_RE.fullmatch(text):
             errors.append(f"{name}: {field} must contain only sha256 bindings")
             return
+
+
+def require_pr_cleanup_export_plan(*, errors: list[str], payload: dict) -> None:
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="ready_for_pr_cleanup_export_handoff",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="writes_export_script",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="generated_script_runs_github_query",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="generated_script_runs_github_mutation",
+        expected=0,
+    )
+    for key in PR_CLEANUP_EXPORT_PLAN_READ_ONLY_FLAGS:
+        require_flag(errors=errors, name="pr_cleanup_export_plan", payload=payload, key=key, expected=0)
+
+    checklist_pr = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="checklist_pr",
+    )
+    if checklist_pr != 46:
+        errors.append("pr_cleanup_export_plan: checklist_pr must be 46")
+    stale_prs = payload.get("stale_prs")
+    if not isinstance(stale_prs, list) or sorted(stale_prs) != [5, 10, 39, 40]:
+        errors.append("pr_cleanup_export_plan: stale_prs must be [39, 40, 10, 5]")
+    export_pr_count = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="export_pr_count",
+    )
+    if export_pr_count >= 0 and isinstance(stale_prs, list) and export_pr_count != 1 + len(stale_prs):
+        errors.append("pr_cleanup_export_plan: export_pr_count must match checklist plus stale PR count")
+
+    claim_files = payload.get("claim_files")
+    if not isinstance(claim_files, list) or not claim_files:
+        errors.append("pr_cleanup_export_plan: claim_files must be a non-empty list")
+        claim_files = []
+    claim_file_count = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_export_plan",
+        payload=payload,
+        key="claim_file_count",
+    )
+    if claim_file_count >= 0 and claim_file_count != len(claim_files):
+        errors.append("pr_cleanup_export_plan: claim_file_count must match claim_files length")
+    seen_claims: set[str] = set()
+    for raw_path in claim_files:
+        path_text = str(raw_path or "").strip()
+        if not path_text:
+            errors.append("pr_cleanup_export_plan: claim_files entries must be non-empty paths")
+            continue
+        path = Path(path_text).expanduser().resolve()
+        if str(path) in seen_claims:
+            errors.append("pr_cleanup_export_plan: duplicate claim_files path")
+        seen_claims.add(str(path))
+        if is_forbidden_env_path(path):
+            errors.append("pr_cleanup_export_plan: claim_files must not include .env-like paths")
+        if not path.is_file():
+            errors.append(f"pr_cleanup_export_plan: claim_file is missing: {path}")
+
+    for field in ["out_sh_sha256"]:
+        require_sha_field(errors=errors, name="pr_cleanup_export_plan", payload=payload, field=field)
+    out_sh = str(payload.get("out_sh") or "").strip()
+    if not out_sh:
+        errors.append("pr_cleanup_export_plan: out_sh must be present")
+        return
+    script_path = Path(out_sh).expanduser().resolve()
+    if is_forbidden_env_path(script_path):
+        errors.append("pr_cleanup_export_plan: out_sh must not be .env-like")
+    if not script_path.is_file():
+        errors.append("pr_cleanup_export_plan: out_sh file must exist")
+        return
+    if sha256_file(script_path) != str(payload.get("out_sh_sha256") or ""):
+        errors.append("pr_cleanup_export_plan: out_sh_sha256 must match out_sh file")
+    script_text = script_path.read_text(encoding="utf-8")
+    if not script_text.startswith("#!/usr/bin/env bash\nset -euo pipefail\n"):
+        errors.append("pr_cleanup_export_plan: out_sh must start with bash strict-mode header")
+    for snippet in PR_CLEANUP_EXPORT_PLAN_FORBIDDEN_SCRIPT_SNIPPETS:
+        if snippet in script_text:
+            errors.append(f"pr_cleanup_export_plan: out_sh must not contain mutation command {snippet!r}")
+    if export_pr_count >= 0 and script_text.count("gh pr view ") != export_pr_count:
+        errors.append("pr_cleanup_export_plan: out_sh gh pr view count must match export_pr_count")
+    if "scripts/amr_beta_pr_cleanup_status.py" not in script_text:
+        errors.append("pr_cleanup_export_plan: out_sh must run amr_beta_pr_cleanup_status.py")
 
 
 def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
@@ -1631,6 +1753,7 @@ def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
     discovery_response = artifacts.get("repo_discovery_response")
@@ -1642,6 +1765,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     request = artifacts.get("runtime_approval_request")
     status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
+
+    if pr_export:
+        require_pr_cleanup_export_plan(errors=errors, payload=pr_export)
 
     if pr_cleanup:
         require_pr_cleanup_status(errors=errors, payload=pr_cleanup)
@@ -2100,6 +2226,20 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
                 expected_name="repo_audit_plan",
             )
 
+    if pr_export and pr_cleanup:
+        require_matching_artifact_field(
+            errors=errors,
+            name="pr_cleanup_status",
+            payload=pr_cleanup,
+            field="input_pr_state",
+            expected=pr_export.get("pr_state_out"),
+            expected_name="pr_cleanup_export_plan",
+        )
+        export_claim_paths = sorted(str(path) for path in pr_export.get("claim_files", []))
+        cleanup_claim_paths = sorted(str(row.get("path") or "") for row in pr_cleanup.get("claim_scan_files", []))
+        if export_claim_paths and cleanup_claim_paths and export_claim_paths != cleanup_claim_paths:
+            errors.append("pr_cleanup_status: claim_scan_files must match pr_cleanup_export_plan claim_files")
+
     if request and not preflight:
         errors.append("runtime_approval_request: runtime_preflight is required")
     if status and not request:
@@ -2298,6 +2438,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
 def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple[str, list[str]]:
     if errors:
         return "stage_0_claim_freeze", ["Resolve artifact validation errors before advancing."]
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
@@ -2309,6 +2450,10 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     benchmark = artifacts.get("benchmark_readiness")
 
     if not pr_cleanup or truthy_int(pr_cleanup, "stage_0_claim_freeze_verified") != 1:
+        if pr_export and truthy_int(pr_export, "ready_for_pr_cleanup_export_handoff") == 1:
+            return "stage_0_claim_freeze", [
+                "Run the PR cleanup export handoff script with authenticated gh, then validate stage-0 status."
+            ]
         return "stage_0_claim_freeze", [
             "Validate stage-0 PR cleanup and claim freeze from exported GitHub PR state."
         ]
@@ -2387,6 +2532,7 @@ def progress_summary(current: int, required: int) -> dict[str, int | float]:
 
 
 def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
+    pr_export = artifacts.get("pr_cleanup_export_plan")
     pr_cleanup = artifacts.get("pr_cleanup_status")
     discovery = artifacts.get("repo_discovery_status")
     discovery_response = artifacts.get("repo_discovery_response")
@@ -2439,6 +2585,13 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
 
     return {
         "claim_freeze": {
+            "pr_cleanup_export_plan_supplied": int(bool(pr_export)),
+            "ready_for_pr_cleanup_export_handoff": count_int(
+                pr_export,
+                "ready_for_pr_cleanup_export_handoff",
+            ),
+            "pr_cleanup_export_pr_count": count_int(pr_export, "export_pr_count"),
+            "pr_cleanup_export_script_written": count_int(pr_export, "writes_export_script"),
             "pr_cleanup_status_supplied": int(bool(pr_cleanup)),
             "stage_0_claim_freeze_verified": count_int(pr_cleanup, "stage_0_claim_freeze_verified"),
             "checklist_pr_merged": count_int(pr_cleanup, "checklist_pr_merged"),
@@ -2572,6 +2725,12 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "",
         "- claim_freeze_verified: "
         f"{payload['stage_progress']['claim_freeze']['stage_0_claim_freeze_verified']}",
+        "- pr_cleanup_export_plan_supplied: "
+        f"{payload['stage_progress']['claim_freeze']['pr_cleanup_export_plan_supplied']}",
+        "- pr_cleanup_export_handoff_ready: "
+        f"{payload['stage_progress']['claim_freeze']['ready_for_pr_cleanup_export_handoff']}",
+        "- pr_cleanup_export_pr_count: "
+        f"{payload['stage_progress']['claim_freeze']['pr_cleanup_export_pr_count']}",
         "- pr_cleanup_status_supplied: "
         f"{payload['stage_progress']['claim_freeze']['pr_cleanup_status_supplied']}",
         "- repo_intake: {current}/{required} "
@@ -2643,6 +2802,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pr-cleanup-export-plan", default="")
     parser.add_argument("--pr-cleanup-status", default="")
     parser.add_argument("--repo-discovery-status", default="")
     parser.add_argument("--repo-discovery-response", default="")
@@ -2665,6 +2825,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     artifact_args = {
+        "pr_cleanup_export_plan": args.pr_cleanup_export_plan,
         "pr_cleanup_status": args.pr_cleanup_status,
         "repo_discovery_status": args.repo_discovery_status,
         "repo_discovery_response": args.repo_discovery_response,
