@@ -691,6 +691,55 @@ def main() -> int:
         assert "pr_cleanup_status: must set claim_freeze_scan_passed=1" in proc.stderr
         assert "pr_cleanup_status: claim_scan_blocked_promotions must be 0" in proc.stderr
 
+        contradictory_checklist = tmp / "contradictory_checklist_pr_cleanup_status.json"
+        contradictory_checklist_payload = pr_cleanup_status_payload()
+        contradictory_checklist_payload["checklist_pr_state"] = "CLOSED"
+        contradictory_checklist_payload["checklist_pr_merged_at"] = ""
+        write_json(contradictory_checklist, contradictory_checklist_payload)
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(contradictory_checklist),
+            "--out-json",
+            str(tmp / "contradictory_checklist_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_status: checklist_pr_state must be MERGED" in proc.stderr
+        assert "pr_cleanup_status: checklist_pr_merged_at must be present" in proc.stderr
+
+        duplicate_stale = tmp / "duplicate_stale_pr_cleanup_status.json"
+        duplicate_stale_payload = pr_cleanup_status_payload()
+        duplicate_stale_payload["stale_pr_statuses"] = [
+            dict(duplicate_stale_payload["stale_pr_statuses"][0]) for _ in range(4)
+        ]
+        write_json(duplicate_stale, duplicate_stale_payload)
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(duplicate_stale),
+            "--out-json",
+            str(tmp / "duplicate_stale_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_status: stale_pr_statuses must include each stale PR exactly once" in proc.stderr
+
+        inconsistent_claim_hits = tmp / "inconsistent_claim_hits_pr_cleanup_status.json"
+        inconsistent_claim_hits_payload = pr_cleanup_status_payload()
+        inconsistent_claim_hits_payload["claim_scan_hits"] = [
+            {"path": "/tmp/README.md", "line": 3, "key": "release_ready"}
+        ]
+        write_json(inconsistent_claim_hits, inconsistent_claim_hits_payload)
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(inconsistent_claim_hits),
+            "--out-json",
+            str(tmp / "inconsistent_claim_hits_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_status: claim_scan_blocked_promotions must match claim_scan_hits length" in proc.stderr
+        assert "pr_cleanup_status: claim_scan_hits must be empty" in proc.stderr
+
         missing_request_status = tmp / "missing_request_status.json"
         proc = run_tool(
             "--repo-audit-plan",

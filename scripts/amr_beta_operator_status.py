@@ -346,9 +346,14 @@ def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
     checklist_pr = require_exact_int(errors=errors, name="pr_cleanup_status", payload=payload, key="checklist_pr_number")
     if checklist_pr != 46:
         errors.append("pr_cleanup_status: checklist_pr_number must be 46")
+    if str(payload.get("checklist_pr_state") or "").upper() != "MERGED":
+        errors.append("pr_cleanup_status: checklist_pr_state must be MERGED")
+    if not str(payload.get("checklist_pr_merged_at") or "").strip():
+        errors.append("pr_cleanup_status: checklist_pr_merged_at must be present")
 
+    expected_stale_numbers = {39, 40, 10, 5}
     stale_numbers = payload.get("stale_pr_numbers")
-    if not isinstance(stale_numbers, list) or sorted(stale_numbers) != [5, 10, 39, 40]:
+    if not isinstance(stale_numbers, list) or sorted(stale_numbers) != sorted(expected_stale_numbers):
         errors.append("pr_cleanup_status: stale_pr_numbers must be [39, 40, 10, 5]")
     stale_statuses = payload.get("stale_pr_statuses")
     if not isinstance(stale_statuses, list):
@@ -364,19 +369,28 @@ def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
         errors.append("pr_cleanup_status: stale_pr_closed_count must be 4")
     if len(stale_statuses) != 4:
         errors.append("pr_cleanup_status: stale_pr_statuses must include exactly 4 rows")
+    stale_status_numbers: list[int] = []
     for row in stale_statuses:
         if not isinstance(row, dict):
             errors.append("pr_cleanup_status: stale_pr_statuses rows must be objects")
             continue
-        number = row.get("number")
-        if number not in {39, 40, 10, 5}:
+        raw_number = row.get("number")
+        try:
+            number = int(raw_number)
+        except (TypeError, ValueError):
+            number = -1
+        if number not in expected_stale_numbers:
             errors.append("pr_cleanup_status: stale_pr_statuses number must be one of [39, 40, 10, 5]")
+        else:
+            stale_status_numbers.append(number)
         if str(row.get("state") or "").upper() != "CLOSED":
             errors.append(f"pr_cleanup_status: stale PR #{number} must be CLOSED")
         if int(row.get("closed_without_merge", 0)) != 1:
             errors.append(f"pr_cleanup_status: stale PR #{number} must be closed without merge")
         if str(row.get("merged_at") or ""):
             errors.append(f"pr_cleanup_status: stale PR #{number} must not have merged_at")
+    if sorted(stale_status_numbers) != sorted(expected_stale_numbers):
+        errors.append("pr_cleanup_status: stale_pr_statuses must include each stale PR exactly once")
 
     claim_count = require_int_at_least(
         errors=errors,
@@ -393,6 +407,14 @@ def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
     )
     if blocked_promotions != 0:
         errors.append("pr_cleanup_status: claim_scan_blocked_promotions must be 0")
+    claim_hits = payload.get("claim_scan_hits")
+    if not isinstance(claim_hits, list):
+        errors.append("pr_cleanup_status: claim_scan_hits must be a list")
+        claim_hits = []
+    if blocked_promotions >= 0 and blocked_promotions != len(claim_hits):
+        errors.append("pr_cleanup_status: claim_scan_blocked_promotions must match claim_scan_hits length")
+    if claim_hits:
+        errors.append("pr_cleanup_status: claim_scan_hits must be empty")
     claim_files = payload.get("claim_scan_files")
     if not isinstance(claim_files, list):
         errors.append("pr_cleanup_status: claim_scan_files must be a list")

@@ -30,7 +30,8 @@ READY_PROMOTION_RE = re.compile(
     r"release_ready|"
     r"public_comparison_claim_ready|"
     r"real_model_execution_ready"
-    r")[\"']?\s*[:=]\s*(?:[\"']?1[\"']?|true)\b"
+    r")[\"']?\s*[:=]\s*(?:[\"']?1[\"']?|true)\b",
+    re.IGNORECASE,
 )
 
 
@@ -223,7 +224,7 @@ def scan_claim_files(paths: list[str]) -> tuple[list[str], list[dict], list[dict
             match = READY_PROMOTION_RE.search(line)
             if not match:
                 continue
-            key = match.group(1)
+            key = match.group(1).lower()
             hits.append({"path": str(path), "line": line_number, "key": key})
             errors.append(f"claim freeze violation: {key}=1 in {path}:{line_number}")
     return errors, hits, claim_files
