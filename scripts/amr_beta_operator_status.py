@@ -1757,58 +1757,83 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
         errors.append("repo_discovery_response: ready_for_repo_intake_collect_command must be 1 when threshold is met")
 
     completion = payload.get("response_completion")
-    if completion is not None:
-        if not isinstance(completion, dict):
-            errors.append("repo_discovery_response: response_completion must be an object")
-        else:
-            completion_name = "repo_discovery_response.response_completion"
-            completion_ints = {
-                key: require_int_at_least(
-                    errors=errors,
-                    name=completion_name,
-                    payload=completion,
-                    key=key,
-                    minimum=0,
-                )
-                for key in [
-                    "request_row_count",
-                    "response_row_count",
-                    "recommended_request_rows",
-                    "selected_truthy_response_rows",
-                    "unselected_response_rows",
-                    "blank_include_response_rows",
-                    "invalid_include_response_rows",
-                    "duplicate_case_id_response_rows",
-                    "selected_unknown_case_id_rows",
-                    "selected_not_recommended_rows",
-                    "selected_missing_or_invalid_contact_rows",
-                    "selected_missing_namespace_confirmation_rows",
-                    "selected_missing_source_confirmation_rows",
-                    "selected_repo_path_mismatch_rows",
-                    "selected_response_rows_remaining_to_minimum",
-                    "human_required_cells_remaining",
-                ]
-            }
-            if completion_ints["response_row_count"] != response_rows:
-                errors.append("repo_discovery_response: response_completion response_row_count must match response_row_count")
-            if completion_ints["selected_truthy_response_rows"] < selected_rows_count:
+    if completion is None:
+        errors.append("repo_discovery_response: response_completion is required")
+    elif not isinstance(completion, dict):
+        errors.append("repo_discovery_response: response_completion must be an object")
+    else:
+        completion_name = "repo_discovery_response.response_completion"
+        completion_ints = {
+            key: require_int_at_least(
+                errors=errors,
+                name=completion_name,
+                payload=completion,
+                key=key,
+                minimum=0,
+            )
+            for key in [
+                "request_row_count",
+                "response_row_count",
+                "recommended_request_rows",
+                "selected_truthy_response_rows",
+                "unselected_response_rows",
+                "blank_include_response_rows",
+                "invalid_include_response_rows",
+                "duplicate_case_id_response_rows",
+                "selected_unknown_case_id_rows",
+                "selected_not_recommended_rows",
+                "selected_missing_or_invalid_contact_rows",
+                "selected_missing_namespace_confirmation_rows",
+                "selected_missing_source_confirmation_rows",
+                "selected_repo_path_mismatch_rows",
+                "selected_response_rows_remaining_to_minimum",
+                "human_required_cells_remaining",
+            ]
+        }
+        if completion_ints["response_row_count"] != response_rows:
+            errors.append("repo_discovery_response: response_completion response_row_count must match response_row_count")
+        if completion_ints["selected_truthy_response_rows"] < selected_rows_count:
+            errors.append(
+                "repo_discovery_response: response_completion selected_truthy_response_rows "
+                "must be >= selected_response_rows"
+            )
+        if "human_required_cells_remaining" in payload:
+            top_level_remaining = require_int_at_least(
+                errors=errors,
+                name="repo_discovery_response",
+                payload=payload,
+                key="human_required_cells_remaining",
+                minimum=0,
+            )
+            if top_level_remaining != completion_ints["human_required_cells_remaining"]:
                 errors.append(
-                    "repo_discovery_response: response_completion selected_truthy_response_rows "
-                    "must be >= selected_response_rows"
+                    "repo_discovery_response: human_required_cells_remaining must match response_completion"
                 )
-            if "human_required_cells_remaining" in payload:
-                top_level_remaining = require_int_at_least(
-                    errors=errors,
-                    name="repo_discovery_response",
-                    payload=payload,
-                    key="human_required_cells_remaining",
-                    minimum=0,
+        if "request_response_template_row_count" in payload:
+            template_rows = require_int_at_least(
+                errors=errors,
+                name="repo_discovery_response",
+                payload=payload,
+                key="request_response_template_row_count",
+                minimum=0,
+            )
+            if template_rows > completion_ints["request_row_count"]:
+                errors.append(
+                    "repo_discovery_response: request_response_template_row_count "
+                    "must be <= response_completion request_row_count"
                 )
-                if top_level_remaining != completion_ints["human_required_cells_remaining"]:
-                    errors.append(
-                        "repo_discovery_response: human_required_cells_remaining must match response_completion"
-                    )
-            if "request_response_template_row_count" in payload:
+        if "request_response_template_recommended_only" in payload:
+            recommended_only = require_exact_int(
+                errors=errors,
+                name="repo_discovery_response",
+                payload=payload,
+                key="request_response_template_recommended_only",
+            )
+            if recommended_only not in {0, 1}:
+                errors.append(
+                    "repo_discovery_response: request_response_template_recommended_only must be one of [0, 1]"
+                )
+            elif recommended_only == 1 and "request_response_template_row_count" in payload:
                 template_rows = require_int_at_least(
                     errors=errors,
                     name="repo_discovery_response",
@@ -1816,35 +1841,11 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
                     key="request_response_template_row_count",
                     minimum=0,
                 )
-                if template_rows > completion_ints["request_row_count"]:
+                if template_rows > completion_ints["recommended_request_rows"]:
                     errors.append(
-                        "repo_discovery_response: request_response_template_row_count "
-                        "must be <= response_completion request_row_count"
+                        "repo_discovery_response: recommended-only template row count "
+                        "must be <= response_completion recommended_request_rows"
                     )
-            if "request_response_template_recommended_only" in payload:
-                recommended_only = require_exact_int(
-                    errors=errors,
-                    name="repo_discovery_response",
-                    payload=payload,
-                    key="request_response_template_recommended_only",
-                )
-                if recommended_only not in {0, 1}:
-                    errors.append(
-                        "repo_discovery_response: request_response_template_recommended_only must be one of [0, 1]"
-                    )
-                elif recommended_only == 1 and "request_response_template_row_count" in payload:
-                    template_rows = require_int_at_least(
-                        errors=errors,
-                        name="repo_discovery_response",
-                        payload=payload,
-                        key="request_response_template_row_count",
-                        minimum=0,
-                    )
-                    if template_rows > completion_ints["recommended_request_rows"]:
-                        errors.append(
-                            "repo_discovery_response: recommended-only template row count "
-                            "must be <= response_completion recommended_request_rows"
-                        )
 
     require_sha_field(
         errors=errors,

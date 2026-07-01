@@ -1040,6 +1040,20 @@ def main() -> int:
         assert legacy_payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_row_count"] == 0
         assert "repo_discovery_response_template: rows 0" in legacy_out_md.read_text(encoding="utf-8")
 
+        missing_completion = tmp / "missing_completion_response.json"
+        missing_completion_payload = repo_discovery_response_payload(selected_count=10)
+        del missing_completion_payload["response_completion"]
+        write_json(missing_completion, missing_completion_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(missing_completion),
+            "--out-json",
+            str(tmp / "missing_completion_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_discovery_response: response_completion is required" in proc.stderr
+
         stale_source_completion = tmp / "stale_source_completion_response.json"
         stale_source_completion_payload = repo_discovery_response_payload()
         del stale_source_completion_payload["response_completion"]["selected_missing_source_confirmation_rows"]
