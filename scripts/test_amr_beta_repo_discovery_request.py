@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import csv
 import subprocess
 import sys
 import tempfile
@@ -66,6 +67,7 @@ def main() -> int:
 
         out_json = tmp / "request.json"
         out_md = tmp / "request.md"
+        out_response_csv = tmp / "response_template.csv"
         proc = run(
             [
                 sys.executable,
@@ -76,6 +78,8 @@ def main() -> int:
                 str(out_json),
                 "--out-md",
                 str(out_md),
+                "--out-response-csv",
+                str(out_response_csv),
                 "--json",
             ],
             cwd=ROOT,
@@ -86,6 +90,8 @@ def main() -> int:
         assert payload["candidate_repo_count"] == 3
         assert payload["candidate_repos_with_clean_head"] == 2
         assert payload["request_row_count"] == 3
+        assert payload["response_template_csv"] == str(out_response_csv.resolve())
+        assert payload["writes_response_template_csv"] == 1
         assert payload["recommended_contact_request_rows"] == 2
         assert payload["clean_candidate_shortfall_to_minimum"] == 8
         assert payload["repo_intake_rows_counted"] == 0
@@ -98,7 +104,18 @@ def main() -> int:
         assert all(row["owner_or_maintainer_contact_required"] == 1 for row in payload["request_rows"])
         assert all(row["real_benchmark_namespace_confirmation_required"] == 1 for row in payload["request_rows"])
         assert out_json.exists()
+        assert out_response_csv.exists()
         assert json.loads(out_json.read_text(encoding="utf-8")) == payload
+        with out_response_csv.open(newline="", encoding="utf-8") as handle:
+            response_rows = list(csv.DictReader(handle))
+        assert len(response_rows) == 3
+        assert response_rows[0]["suggested_case_id"] == "candidate-01-repo-a"
+        assert response_rows[0]["include_for_real_benchmark_intake"] == ""
+        assert response_rows[0]["owner_or_maintainer_contact"] == ""
+        assert response_rows[0]["real_benchmark_namespace_confirmed"] == ""
+        assert response_rows[0]["repo_path"] == str(repo_a.resolve())
+        assert response_rows[0]["notes"] == "recommended_for_contact_request=1"
+        assert response_rows[2]["notes"] == "clean_or_fix_repo_before_intake"
         markdown = out_md.read_text(encoding="utf-8")
         assert "AMR Beta Repo Discovery Request" in markdown
         assert "include_for_real_benchmark_intake" in markdown
@@ -145,6 +162,27 @@ def main() -> int:
         assert proc.returncode == 1
         assert "repo_discovery: candidates row 1: counts_for_repo_intake must be 0" in proc.stderr
         assert not bad_out.exists()
+
+        unsafe_response_csv = repo_b / "response_template.csv"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(tmp / "unsafe_response_template_request.json"),
+                "--out-response-csv",
+                str(unsafe_response_csv),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        unsafe_response_payload = json.loads(proc.stdout)
+        assert unsafe_response_payload["writes_response_template_csv"] == 0
+        assert "out_response_csv must not be inside target repo" in proc.stderr
+        assert not unsafe_response_csv.exists()
 
         assert str(repo_b.resolve()) in markdown
 
