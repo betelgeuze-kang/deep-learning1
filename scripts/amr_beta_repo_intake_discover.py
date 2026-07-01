@@ -131,7 +131,7 @@ def path_risk_flags(repo_root: Path) -> list[str]:
         flags.append("config_internal_path")
     if "_work" in lowered or any("runner" in part for part in lowered):
         flags.append("runner_worktree_path")
-    if repo_root == PROJECT_ROOT:
+    if repo_root == PROJECT_ROOT or PROJECT_ROOT in repo_root.parents:
         flags.append("current_artifact_repo")
     return flags
 

@@ -127,9 +127,21 @@ def validate_discovery(payload: dict) -> list[str]:
             errors.append(f"{prefix}: owner_or_maintainer_contact_required must be 1")
         if int_flag(row, "real_benchmark_namespace_confirmation_required") != 1:
             errors.append(f"{prefix}: real_benchmark_namespace_confirmation_required must be 1")
+        if "path_risk_flags" not in row:
+            errors.append(f"{prefix}: path_risk_flags is required")
+        if "path_risk_flag_count" not in row:
+            errors.append(f"{prefix}: path_risk_flag_count is required")
+        if "human_real_repo_source_confirmation_required" not in row:
+            errors.append(f"{prefix}: human_real_repo_source_confirmation_required is required")
         risk_flags = row.get("path_risk_flags", [])
         if not isinstance(risk_flags, list) or not all(isinstance(flag, str) for flag in risk_flags):
             errors.append(f"{prefix}: path_risk_flags must be a string list")
+        elif int_flag(row, "path_risk_flag_count") != len(risk_flags):
+            errors.append(f"{prefix}: path_risk_flag_count must match path_risk_flags length")
+        if int_flag(row, "human_real_repo_source_confirmation_required") != int(bool(risk_flags)):
+            errors.append(
+                f"{prefix}: human_real_repo_source_confirmation_required must match path_risk_flags"
+            )
         if int_flag(row, "counts_for_repo_intake") != 0:
             errors.append(f"{prefix}: counts_for_repo_intake must be 0")
         if str(row.get("suggested_namespace") or "") != "real_benchmark":

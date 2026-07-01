@@ -191,6 +191,29 @@ def main() -> int:
         assert risk_response_rows[0]["human_real_repo_source_confirmed"] == ""
         assert risk_response_rows[0]["path_risk_flags"] == "runner_worktree_path"
 
+        stale_discovery = tmp / "stale_discovery.json"
+        stale_payload = json.loads(discovery.read_text(encoding="utf-8"))
+        del stale_payload["candidates"][0]["path_risk_flags"]
+        del stale_payload["candidates"][0]["path_risk_flag_count"]
+        del stale_payload["candidates"][0]["human_real_repo_source_confirmation_required"]
+        stale_discovery.write_text(json.dumps(stale_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(stale_discovery),
+                "--out-json",
+                str(tmp / "stale_request.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        assert "path_risk_flags is required" in proc.stderr
+        stale_status = json.loads(proc.stdout)
+        assert any("path_risk_flags is required" in error for error in stale_status["errors"])
+
         missing_response_csv = tmp / "missing_response_csv.json"
         proc = run(
             [

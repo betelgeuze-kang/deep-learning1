@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_repo_intake_discover.py"
+DISCOVER_SPEC = importlib.util.spec_from_file_location("amr_beta_repo_intake_discover", TOOL)
+assert DISCOVER_SPEC and DISCOVER_SPEC.loader
+DISCOVER_MODULE = importlib.util.module_from_spec(DISCOVER_SPEC)
+DISCOVER_SPEC.loader.exec_module(DISCOVER_MODULE)
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -45,6 +50,8 @@ def create_repo(root: Path, name: str) -> tuple[Path, str]:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert "current_artifact_repo" in DISCOVER_MODULE.path_risk_flags(ROOT / "nested-artifact-repo")
+
         repo_a, head_a = create_repo(tmp, "repo-a")
         repo_b, head_b = create_repo(tmp, "repo-b")
         repo_dirty, _head_dirty = create_repo(tmp, "repo-dirty")
