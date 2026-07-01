@@ -54,7 +54,9 @@ agent-written maintainer feedback.
   The output keeps `design_partner_beta_candidate_ready=0`,
   `release_ready=0`, `public_comparison_claim_ready=0`, and
   `real_model_execution_ready=0`; it only proves the PR cleanup snapshot and
-  scanned-file claim freeze.
+  scanned-file claim freeze. At least one `--claim-file` is required, and the
+  status binds each scanned claim file with a sha256 so the freeze evidence
+  identifies the exact text that was checked.
 
 At any point, summarize the current local operator stage from existing AMR beta
 artifacts without creating evidence. Pass only artifact arguments whose files

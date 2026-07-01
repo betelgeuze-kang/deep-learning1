@@ -25,12 +25,12 @@ BLOCKED_FLAGS = {
     "real_model_execution_ready": 0,
 }
 READY_PROMOTION_RE = re.compile(
-    r"\b("
+    r"(?<![A-Za-z0-9_.-])[\"']?("
     r"design_partner_beta_candidate_ready|"
     r"release_ready|"
     r"public_comparison_claim_ready|"
     r"real_model_execution_ready"
-    r")\s*[:=]\s*[\"']?1\b"
+    r")[\"']?\s*[:=]\s*(?:[\"']?1[\"']?|true)\b"
 )
 
 
@@ -67,6 +67,10 @@ def pr_state(row: dict) -> str:
 
 def pr_closed(row: dict) -> bool:
     return pr_state(row) in {"CLOSED", "MERGED"} or truthy(row.get("closed"))
+
+
+def pr_closed_without_merge(row: dict) -> bool:
+    return pr_state(row) == "CLOSED" and not bool(str(row.get("mergedAt") or "").strip())
 
 
 def pr_merged(row: dict) -> bool:
@@ -161,16 +165,27 @@ def validate_stale_prs(rows_by_number: dict[int, dict], stale_prs: list[int]) ->
         row = rows_by_number.get(number)
         if row is None:
             errors.append(f"stale PR #{number} missing from PR state export")
-            statuses.append({"number": number, "state": "missing", "closed": 0, "url": ""})
+            statuses.append(
+                {
+                    "number": number,
+                    "state": "missing",
+                    "closed": 0,
+                    "closed_without_merge": 0,
+                    "url": "",
+                }
+            )
             continue
         state = pr_state(row)
         closed = pr_closed(row)
+        closed_without_merge = pr_closed_without_merge(row)
         closed_at = str(row.get("closedAt") or "")
         merged_at = str(row.get("mergedAt") or "")
-        if not closed:
-            errors.append(f"stale PR #{number} must be closed or merged")
+        if not closed_without_merge:
+            errors.append(f"stale PR #{number} must be closed without merging")
         if state == "OPEN":
             errors.append(f"stale PR #{number} must not remain open")
+        if pr_merged(row):
+            errors.append(f"stale PR #{number} must not be merged")
         if closed and not (closed_at or merged_at):
             errors.append(f"stale PR #{number} must include closedAt or mergedAt")
         statuses.append(
@@ -178,6 +193,7 @@ def validate_stale_prs(rows_by_number: dict[int, dict], stale_prs: list[int]) ->
                 "number": number,
                 "state": state,
                 "closed": int(closed),
+                "closed_without_merge": int(closed_without_merge),
                 "closed_at": closed_at,
                 "merged_at": merged_at,
                 "head": str(row.get("headRefName") or ""),
@@ -188,9 +204,10 @@ def validate_stale_prs(rows_by_number: dict[int, dict], stale_prs: list[int]) ->
     return errors, statuses
 
 
-def scan_claim_files(paths: list[str]) -> tuple[list[str], list[dict]]:
+def scan_claim_files(paths: list[str]) -> tuple[list[str], list[dict], list[dict]]:
     errors: list[str] = []
     hits: list[dict] = []
+    claim_files: list[dict] = []
     for raw_path in paths:
         path = Path(raw_path).expanduser().resolve()
         if is_forbidden_env_path(path):
@@ -201,6 +218,7 @@ def scan_claim_files(paths: list[str]) -> tuple[list[str], list[dict]]:
         except Exception as exc:
             errors.append(f"claim file unreadable: {path}: {exc}")
             continue
+        claim_files.append({"path": str(path), "sha256": sha256_file(path)})
         for line_number, line in enumerate(lines, start=1):
             match = READY_PROMOTION_RE.search(line)
             if not match:
@@ -208,7 +226,24 @@ def scan_claim_files(paths: list[str]) -> tuple[list[str], list[dict]]:
             key = match.group(1)
             hits.append({"path": str(path), "line": line_number, "key": key})
             errors.append(f"claim freeze violation: {key}=1 in {path}:{line_number}")
-    return errors, hits
+    return errors, hits, claim_files
+
+
+def validate_output_paths(outputs: dict[str, Path], inputs: dict[str, Path]) -> list[str]:
+    errors: list[str] = []
+    seen_outputs: dict[Path, str] = {}
+    resolved_inputs = {name: path.resolve() for name, path in inputs.items()}
+    for name, path in outputs.items():
+        resolved = path.resolve()
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen_outputs:
+            errors.append(f"{name} must not reuse {seen_outputs[resolved]} path: {resolved}")
+        seen_outputs[resolved] = name
+        for input_name, input_path in resolved_inputs.items():
+            if resolved == input_path:
+                errors.append(f"{name} must not overwrite {input_name}: {resolved}")
+    return errors
 
 
 def write_json(path: Path, payload: dict, overwrite: bool) -> None:
@@ -284,14 +319,24 @@ def main(argv: list[str]) -> int:
             base_branch=args.base_branch,
         )
         stale_errors, stale_statuses = validate_stale_prs(rows_by_number, stale_prs)
-        claim_errors, claim_hits = scan_claim_files(args.claim_file)
+        claim_errors, claim_hits, claim_files = scan_claim_files(args.claim_file)
         errors = [*checklist_errors, *stale_errors, *claim_errors]
         if duplicate_numbers:
             errors.extend(f"duplicate PR #{number} in PR state export" for number in sorted(set(duplicate_numbers)))
-        if args.require_claim_scan and not args.claim_file:
-            errors.append("--require-claim-scan requires at least one --claim-file")
+        if not args.claim_file:
+            errors.append("at least one --claim-file is required to verify claim freeze")
+        output_paths = {}
+        if args.out_json:
+            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        input_paths = {"pr_state": pr_state_path}
+        for index, raw_claim_file in enumerate(args.claim_file, start=1):
+            input_paths[f"claim_file[{index}]"] = Path(raw_claim_file).expanduser().resolve()
+        output_path_errors = validate_output_paths(output_paths, input_paths)
+        errors.extend(output_path_errors)
 
-        stale_closed_count = sum(1 for row in stale_statuses if row["closed"] == 1)
+        stale_closed_count = sum(1 for row in stale_statuses if row["closed_without_merge"] == 1)
         summary = {
             "schema": SCHEMA,
             "input_pr_state": str(pr_state_path),
@@ -303,9 +348,11 @@ def main(argv: list[str]) -> int:
             "stale_prs_closed": int(stale_closed_count == len(stale_prs) and not stale_errors),
             "stale_pr_statuses": stale_statuses,
             "claim_scan_file_count": len(args.claim_file),
+            "claim_scan_files": claim_files,
             "claim_scan_blocked_promotions": len(claim_hits),
             "claim_scan_hits": claim_hits,
-            "claim_freeze_scan_passed": int(not claim_errors and (bool(args.claim_file) or not args.require_claim_scan)),
+            "claim_freeze_scan_passed": int(not claim_errors and bool(args.claim_file)),
+            "output_path_guard_passed": int(not output_path_errors),
             "stage_0_claim_freeze_verified": int(not errors),
             "reads_pr_state_export": 1,
             "runs_github_query": 0,

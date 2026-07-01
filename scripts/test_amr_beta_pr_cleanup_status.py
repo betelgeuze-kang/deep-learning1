@@ -115,7 +115,10 @@ def main() -> int:
         assert payload["stale_pr_closed_count"] == 4
         assert payload["stale_prs_closed"] == 1
         assert payload["claim_freeze_scan_passed"] == 1
+        assert payload["claim_scan_files"][0]["path"] == str(claim_file.resolve())
+        assert payload["claim_scan_files"][0]["sha256"].startswith("sha256:")
         assert payload["claim_scan_blocked_promotions"] == 0
+        assert payload["output_path_guard_passed"] == 1
         assert payload["runs_github_query"] == 0
         assert payload["runs_github_mutation"] == 0
         assert payload["creates_benchmark_evidence"] == 0
@@ -157,8 +160,26 @@ def main() -> int:
         write_json(open_stale, {"pull_requests": open_stale_rows})
         proc = run_tool("--pr-state", str(open_stale), "--claim-file", str(claim_file), "--json")
         assert proc.returncode == 1
-        assert "stale PR #39 must be closed or merged" in proc.stderr
+        assert "stale PR #39 must be closed without merging" in proc.stderr
         assert "stale PR #39 must not remain open" in proc.stderr
+
+        merged_stale_rows = valid_pr_rows()
+        for row in merged_stale_rows:
+            if row["number"] == 39:
+                row.update(
+                    {
+                        "state": "MERGED",
+                        "closed": True,
+                        "closedAt": "2026-06-29T16:11:01Z",
+                        "mergedAt": "2026-06-29T16:11:00Z",
+                    }
+                )
+        merged_stale = tmp / "merged_stale.json"
+        write_json(merged_stale, merged_stale_rows)
+        proc = run_tool("--pr-state", str(merged_stale), "--claim-file", str(claim_file), "--json")
+        assert proc.returncode == 1
+        assert "stale PR #39 must be closed without merging" in proc.stderr
+        assert "stale PR #39 must not be merged" in proc.stderr
 
         unmerged_checklist_rows = valid_pr_rows()
         for row in unmerged_checklist_rows:
@@ -172,7 +193,7 @@ def main() -> int:
 
         promoted_claim = tmp / "promoted_claim.md"
         promoted_key = "release_ready"
-        promoted_claim.write_text(f"{promoted_key} = 1\n", encoding="utf-8")
+        promoted_claim.write_text(f'"{promoted_key}": true\n', encoding="utf-8")
         proc = run_tool(
             "--pr-state",
             str(pr_state),
@@ -185,9 +206,25 @@ def main() -> int:
         assert f"claim freeze violation: {promoted_key}=1" in proc.stderr
         assert load_json_prefix(proc.stdout)["claim_scan_blocked_promotions"] == 1
 
-        proc = run_tool("--pr-state", str(pr_state), "--require-claim-scan", "--json")
+        collision_before = pr_state.read_text(encoding="utf-8")
+        proc = run_tool(
+            "--pr-state",
+            str(pr_state),
+            "--claim-file",
+            str(claim_file),
+            "--out-json",
+            str(pr_state),
+            "--overwrite",
+            "--json",
+        )
         assert proc.returncode == 1
-        assert "--require-claim-scan requires at least one --claim-file" in proc.stderr
+        assert "out_json must not overwrite pr_state" in proc.stderr
+        assert load_json_prefix(proc.stdout)["output_path_guard_passed"] == 0
+        assert pr_state.read_text(encoding="utf-8") == collision_before
+
+        proc = run_tool("--pr-state", str(pr_state), "--json")
+        assert proc.returncode == 1
+        assert "at least one --claim-file is required to verify claim freeze" in proc.stderr
 
     print("AMR beta PR cleanup status smoke OK")
     return 0
