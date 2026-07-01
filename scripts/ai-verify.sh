@@ -415,6 +415,9 @@ fi
 if [ -f scripts/test_amr_beta_human_input_packet.py ]; then
   python3 scripts/test_amr_beta_human_input_packet.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_pr_cleanup_status.py ]; then
+  python3 scripts/test_amr_beta_pr_cleanup_status.py >/dev/null
+fi
 if [ -f scripts/test_amr_beta_repo_intake_validate.py ]; then
   python3 scripts/test_amr_beta_repo_intake_validate.py >/dev/null
 fi
