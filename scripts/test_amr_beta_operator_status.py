@@ -332,6 +332,7 @@ def pr_cleanup_export_plan_payload(
         "#!/usr/bin/env bash",
         "set -euo pipefail",
         "",
+        "# This script exports PR state with gh pr view and runs the local validator.",
         "mkdir -p /tmp",
         ": > /tmp/amr_beta_pr_cleanup_state.jsonl",
     ]

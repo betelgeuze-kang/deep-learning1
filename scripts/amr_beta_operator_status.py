@@ -507,7 +507,8 @@ def require_pr_cleanup_export_plan(*, errors: list[str], payload: dict) -> None:
     for snippet in PR_CLEANUP_EXPORT_PLAN_FORBIDDEN_SCRIPT_SNIPPETS:
         if snippet in script_text:
             errors.append(f"pr_cleanup_export_plan: out_sh must not contain mutation command {snippet!r}")
-    if export_pr_count >= 0 and script_text.count("gh pr view ") != export_pr_count:
+    view_command_count = sum(1 for line in script_text.splitlines() if line.startswith("gh pr view "))
+    if export_pr_count >= 0 and view_command_count != export_pr_count:
         errors.append("pr_cleanup_export_plan: out_sh gh pr view count must match export_pr_count")
     if "scripts/amr_beta_pr_cleanup_status.py" not in script_text:
         errors.append("pr_cleanup_export_plan: out_sh must run amr_beta_pr_cleanup_status.py")
