@@ -115,6 +115,7 @@ def main() -> int:
         assert response_rows[0]["include_for_real_benchmark_intake"] == ""
         assert response_rows[0]["owner_or_maintainer_contact"] == ""
         assert response_rows[0]["real_benchmark_namespace_confirmed"] == ""
+        assert response_rows[0]["human_real_repo_source_confirmed"] == ""
         assert response_rows[0]["path_risk_flags"] == ""
         assert response_rows[0]["repo_path"] == str(repo_a.resolve())
         assert response_rows[0]["notes"] == "recommended_for_contact_request=1"
@@ -182,10 +183,12 @@ def main() -> int:
         )
         assert proc.returncode == 0, proc.stderr
         risk_request_payload = json.loads(proc.stdout)
+        assert "human_real_repo_source_confirmed" in risk_request_payload["human_fields_required"]
         assert risk_request_payload["request_rows"][0]["path_risk_flags"] == ["runner_worktree_path"]
         assert risk_request_payload["request_rows"][0]["human_real_repo_source_confirmation_required"] == 1
         with risk_response_csv.open(newline="", encoding="utf-8") as handle:
             risk_response_rows = list(csv.DictReader(handle))
+        assert risk_response_rows[0]["human_real_repo_source_confirmed"] == ""
         assert risk_response_rows[0]["path_risk_flags"] == "runner_worktree_path"
 
         missing_response_csv = tmp / "missing_response_csv.json"

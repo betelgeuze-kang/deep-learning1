@@ -41,6 +41,7 @@ RESPONSE_TEMPLATE_COLUMNS = [
     "include_for_real_benchmark_intake",
     "owner_or_maintainer_contact",
     "real_benchmark_namespace_confirmed",
+    "human_real_repo_source_confirmed",
     "path_risk_flags",
     "repo_path",
     "audit_mode",
@@ -224,6 +225,7 @@ def build_payload(
             "include_for_real_benchmark_intake",
             "owner_or_maintainer_contact",
             "real_benchmark_namespace_confirmed",
+            "human_real_repo_source_confirmed",
         ],
         "repo_intake_rows_counted": 0,
         "ready_for_repo_intake": 0,
@@ -270,16 +272,17 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "- include_for_real_benchmark_intake",
         "- owner_or_maintainer_contact",
         "- real_benchmark_namespace_confirmed",
+        "- human_real_repo_source_confirmed",
         "",
         "## Candidate Rows",
         "",
-        "| suggested_case_id | recommended | include_for_real_benchmark_intake | contact | namespace_confirmed | clean | head | status | risk_flags | repo_path | blockers |",
-        "|---|---:|---|---|---|---:|---:|---:|---|---|---|",
+        "| suggested_case_id | recommended | include_for_real_benchmark_intake | contact | namespace_confirmed | source_confirmed | clean | head | status | risk_flags | repo_path | blockers |",
+        "|---|---:|---|---|---|---|---:|---:|---:|---|---|---|",
     ]
     for row in payload["request_rows"]:
         blockers = ",".join(str(item) for item in row.get("blockers_before_counting", []))
         lines.append(
-            "| {case_id} | {recommended} |  |  |  | {clean} | {head} | {status} | {risk_flags} | {repo} | {blockers} |".format(
+            "| {case_id} | {recommended} |  |  |  |  | {clean} | {head} | {status} | {risk_flags} | {repo} | {blockers} |".format(
                 case_id=markdown_cell(row.get("suggested_case_id", "")),
                 recommended=row.get("recommended_for_contact_request", 0),
                 clean=markdown_cell(row.get("clean_worktree_actual")),
@@ -331,6 +334,7 @@ def write_response_csv(
                     "include_for_real_benchmark_intake": "",
                     "owner_or_maintainer_contact": "",
                     "real_benchmark_namespace_confirmed": "",
+                    "human_real_repo_source_confirmed": "",
                     "path_risk_flags": ",".join(str(flag) for flag in row.get("path_risk_flags", [])),
                     "repo_path": str(row.get("repo_path", "")),
                     "audit_mode": str(row.get("suggested_audit_mode", "quick")),

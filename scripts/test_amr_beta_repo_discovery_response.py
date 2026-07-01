@@ -49,6 +49,7 @@ def write_response(path: Path, rows: list[dict[str, str]]) -> None:
         "include_for_real_benchmark_intake",
         "owner_or_maintainer_contact",
         "real_benchmark_namespace_confirmed",
+        "human_real_repo_source_confirmed",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -165,6 +166,7 @@ def main() -> int:
         assert completion["blank_include_response_rows"] == 0
         assert completion["selected_missing_or_invalid_contact_rows"] == 0
         assert completion["selected_missing_namespace_confirmation_rows"] == 0
+        assert completion["selected_missing_source_confirmation_rows"] == 0
         assert completion["selected_response_rows_remaining_to_minimum"] == 0
         assert "<contact-for-candidate-01-repo-a>" in payload["collector_command_redacted"]
         assert "maintainer-01-contact" not in proc.stdout
@@ -173,6 +175,88 @@ def main() -> int:
         assert payload["selected_rows"][0]["owner_or_maintainer_contact_sha256"].startswith("sha256:")
         assert str(repo_a.resolve()) in payload["collector_command_redacted"]
         assert not (tmp / "repo_intake.md").exists()
+
+        risk_request_json = tmp / "risk_request.json"
+        risk_request_payload = json.loads(request_json.read_text(encoding="utf-8"))
+        risk_request_payload["request_rows"][0]["path_risk_flags"] = ["runner_worktree_path"]
+        risk_request_payload["request_rows"][0]["path_risk_flag_count"] = 1
+        risk_request_payload["request_rows"][0]["human_real_repo_source_confirmation_required"] = 1
+        risk_request_json.write_text(
+            json.dumps(risk_request_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        risk_missing_response = tmp / "risk_missing_response.csv"
+        write_response(
+            risk_missing_response,
+            [
+                {
+                    "suggested_case_id": "candidate-01-repo-a",
+                    "include_for_real_benchmark_intake": "true",
+                    "owner_or_maintainer_contact": "maintainer-01-contact",
+                    "real_benchmark_namespace_confirmed": "true",
+                }
+            ],
+        )
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(risk_request_json),
+                "--response",
+                str(risk_missing_response),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(tmp / "risk_missing_response_status.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        risk_missing_payload = json.loads(proc.stdout)
+        assert risk_missing_payload["ready_for_repo_intake_collect_command"] == 0
+        assert risk_missing_payload["human_required_cells_remaining"] == 1
+        assert (
+            risk_missing_payload["response_completion"]["selected_missing_source_confirmation_rows"]
+            == 1
+        )
+        assert "human_real_repo_source_confirmed must be true" in proc.stderr
+
+        risk_confirmed_response = tmp / "risk_confirmed_response.csv"
+        write_response(
+            risk_confirmed_response,
+            [
+                {
+                    "suggested_case_id": "candidate-01-repo-a",
+                    "include_for_real_benchmark_intake": "true",
+                    "owner_or_maintainer_contact": "maintainer-01-contact",
+                    "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
+                }
+            ],
+        )
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(risk_request_json),
+                "--response",
+                str(risk_confirmed_response),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(tmp / "risk_confirmed_response_status.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        risk_confirmed_payload = json.loads(proc.stdout)
+        assert risk_confirmed_payload["ready_for_repo_intake_collect_command"] == 1
+        assert risk_confirmed_payload["human_required_cells_remaining"] == 0
+        assert risk_confirmed_payload["selected_rows"][0]["human_real_repo_source_confirmed"] == 1
 
         blank_response = tmp / "blank_response.csv"
         write_response(
