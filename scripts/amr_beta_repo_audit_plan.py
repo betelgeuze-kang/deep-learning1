@@ -37,9 +37,33 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def sha256_json(payload: object) -> str:
     data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def is_exact_int(value: object, expected: int | None = None) -> bool:
+    if type(value) is not int:
+        return False
+    return expected is None or value == expected
+
+
+def strict_json_equal(left: object, right: object) -> bool:
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        if left.keys() != right.keys():
+            return False
+        return all(strict_json_equal(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        if len(left) != len(right):
+            return False
+        return all(strict_json_equal(left_item, right_item) for left_item, right_item in zip(left, right))
+    return left == right
 
 
 def command_line(parts: list[object]) -> str:
@@ -329,14 +353,156 @@ def write_command_script(path: Path, payload: dict, overwrite: bool) -> str:
     return sha256_file(path)
 
 
+def apply_saved_command_script_metadata(
+    *,
+    payload: dict,
+    saved_plan: dict,
+    target_repo_paths: list[str],
+) -> list[str]:
+    errors: list[str] = []
+    writes_script = saved_plan.get("writes_operator_command_script", 0)
+    if not is_exact_int(writes_script) or writes_script not in {0, 1}:
+        errors.append("plan: writes_operator_command_script must be an integer 0 or 1")
+        return errors
+    if writes_script == 0:
+        return errors
+    raw_script = str(saved_plan.get("operator_commands_script") or "").strip()
+    if not raw_script:
+        errors.append("plan: operator_commands_script is required when writes_operator_command_script=1")
+        return errors
+    raw_script_path = Path(raw_script).expanduser()
+    if is_forbidden_env_path(raw_script_path):
+        errors.append("plan: operator_commands_script must not be .env-like")
+        return errors
+    script_path = raw_script_path.resolve()
+    script_path_errors = repo_intake.validate_output_paths(
+        {"operator_commands_script": script_path},
+        target_repo_paths,
+    )
+    errors.extend(f"plan: {error}" for error in script_path_errors)
+    payload["writes_operator_command_script"] = 1
+    payload["operator_commands_script"] = str(script_path)
+    payload["operator_commands_script_sha256"] = sha256_text(command_script_text(payload))
+    payload["operator_commands_script_command_count"] = payload["operator_command_count"]
+    if script_path_errors:
+        return errors
+    if not script_path.is_file():
+        errors.append(f"plan: operator_commands_script must exist: {script_path}")
+        return errors
+    actual_sha = sha256_file(script_path)
+    if actual_sha != payload["operator_commands_script_sha256"]:
+        errors.append("plan: operator_commands_script_sha256 must match expected command script")
+    return errors
+
+
+def recompute_plan_payload(plan_path: Path, saved_plan: dict) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    raw_intake = str(saved_plan.get("repo_intake") or "").strip()
+    if not raw_intake:
+        return {}, ["plan: repo_intake must be present"]
+    raw_artifact_root = str(saved_plan.get("artifact_root") or "").strip()
+    if not raw_artifact_root:
+        return {}, ["plan: artifact_root must be present"]
+    raw_intake_path = Path(raw_intake).expanduser()
+    raw_artifact_root_path = Path(raw_artifact_root).expanduser()
+    if is_forbidden_env_path(raw_intake_path):
+        return {}, ["plan: refusing .env-like repo intake path"]
+    if is_forbidden_env_path(raw_artifact_root_path):
+        return {}, ["plan: refusing .env-like artifact root path"]
+    intake_path = raw_intake_path.resolve()
+    artifact_root = raw_artifact_root_path.resolve()
+    if is_forbidden_env_path(intake_path):
+        return {}, ["plan: refusing .env-like repo intake path"]
+    if is_forbidden_env_path(artifact_root):
+        return {}, ["plan: refusing .env-like artifact root path"]
+    min_repos = saved_plan.get("min_real_repos_required", repo_intake.MIN_REAL_REPOS_FOR_BETA)
+    if not is_exact_int(min_repos):
+        errors.append("plan: min_real_repos_required must be an integer")
+        min_repos = repo_intake.MIN_REAL_REPOS_FOR_BETA
+    elif min_repos < repo_intake.MIN_REAL_REPOS_FOR_BETA:
+        errors.append(f"plan: min_real_repos_required must be at least {repo_intake.MIN_REAL_REPOS_FOR_BETA}")
+        min_repos = repo_intake.MIN_REAL_REPOS_FOR_BETA
+    try:
+        raw_rows = repo_intake.read_rows(intake_path)
+        row_errors, summary = repo_intake.validate_rows(raw_rows, min_repos=min_repos)
+        if row_errors:
+            return {}, [*errors, *row_errors]
+        rows = normalized_valid_rows(raw_rows)
+        target_repo_paths = sorted({row["repo_path_resolved"] for row in rows if row.get("repo_path_resolved")})
+        input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
+        output_path_errors = repo_intake.validate_output_paths(
+            {"verify_existing_plan": plan_path.resolve()},
+            target_repo_paths,
+        )
+        artifact_root_errors = validate_artifact_root(artifact_root, rows)
+        path_errors = [*input_path_errors, *output_path_errors, *artifact_root_errors]
+        payload = build_payload(
+            intake_path=intake_path,
+            rows=rows,
+            summary=summary,
+            artifact_root=artifact_root,
+        )
+        payload["input_path_guard_passed"] = int(not input_path_errors)
+        payload["output_path_guard_passed"] = int(not output_path_errors)
+        payload["errors"] = path_errors
+        script_errors = apply_saved_command_script_metadata(
+            payload=payload,
+            saved_plan=saved_plan,
+            target_repo_paths=target_repo_paths,
+        )
+        return payload, [*errors, *path_errors, *script_errors]
+    except Exception as exc:
+        return {}, [*errors, f"plan: recompute error: {exc}"]
+
+
+def verify_existing_plan(path: Path) -> tuple[dict, list[str]]:
+    errors: list[str] = []
+    if is_forbidden_env_path(path):
+        return {}, ["plan: refusing .env-like plan path"]
+    if not path.is_file():
+        return {}, [f"plan: missing plan JSON: {path}"]
+    try:
+        saved_plan = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {}, [f"plan: parse error: {exc}"]
+    if not isinstance(saved_plan, dict):
+        return {}, ["plan: plan JSON must be an object"]
+    if saved_plan.get("schema") != SCHEMA:
+        errors.append(f"plan: schema must be {SCHEMA}")
+    for key in [
+        "runs_audit",
+        "runs_label_template_generation",
+        "writes_reviewer_packets",
+        "creates_benchmark_evidence",
+    ]:
+        if not is_exact_int(saved_plan.get(key), 0):
+            errors.append(f"plan: must keep {key}=0")
+    for key, expected in BLOCKED_FLAGS.items():
+        if not is_exact_int(saved_plan.get(key), expected):
+            errors.append(f"plan: must keep {key}={expected}")
+    if not is_exact_int(saved_plan.get("ready_for_real_benchmark_audit_plan"), 1):
+        errors.append("plan: ready_for_real_benchmark_audit_plan must be integer 1")
+    recomputed, recompute_errors = recompute_plan_payload(path, saved_plan)
+    errors.extend(recompute_errors)
+    if not recomputed:
+        return saved_plan, errors
+    if set(saved_plan.keys()) != set(recomputed.keys()):
+        errors.append("plan: key set must match current repo intake and command plan")
+    for key in sorted(set(saved_plan) | set(recomputed)):
+        if not strict_json_equal(saved_plan.get(key), recomputed.get(key)):
+            errors.append(f"plan: {key} must match current repo intake and command plan")
+    return saved_plan, errors
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-intake", required=True, help="Filled repo-intake Markdown or CSV.")
+    parser.add_argument("--repo-intake", default="", help="Filled repo-intake Markdown or CSV.")
     parser.add_argument("--artifact-root", default="results/amr_beta_repo_audit_work")
     parser.add_argument("--min-repos", type=int, default=repo_intake.MIN_REAL_REPOS_FOR_BETA)
-    parser.add_argument("--out-json", required=True, help="Repo audit plan JSON output.")
+    parser.add_argument("--out-json", default="", help="Repo audit plan JSON output.")
     parser.add_argument("--out-md", default="", help="Optional Markdown plan output.")
     parser.add_argument("--out-commands-sh", default="", help="Optional shell handoff script for operator commands.")
+    parser.add_argument("--verify-existing", default="", help="Verify an existing repo audit plan JSON.")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser
@@ -345,6 +511,48 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.verify_existing:
+            raw_plan_path = Path(args.verify_existing).expanduser()
+            if is_forbidden_env_path(raw_plan_path):
+                plan_path = raw_plan_path.absolute()
+                plan, verify_errors = {}, ["plan: refusing .env-like plan path"]
+            else:
+                plan_path = raw_plan_path.resolve()
+                plan, verify_errors = verify_existing_plan(plan_path)
+            plan_sha256 = ""
+            plan_payload_sha256 = ""
+            if plan and not is_forbidden_env_path(plan_path):
+                plan_sha256 = sha256_file(plan_path)
+                plan_payload_sha256 = sha256_json(plan)
+            payload = {
+                "schema": "amr_beta_repo_audit_plan_verify_existing.v1",
+                "verify_existing": str(plan_path),
+                "verify_existing_passed": int(not verify_errors),
+                "plan_sha256": plan_sha256,
+                "plan_payload_sha256": plan_payload_sha256,
+                "runs_audit": 0,
+                "runs_label_template_generation": 0,
+                "writes_reviewer_packets": 0,
+                "creates_benchmark_evidence": 0,
+                "design_partner_beta_candidate_ready": 0,
+                "release_ready": 0,
+                "public_comparison_claim_ready": 0,
+                "real_model_execution_ready": 0,
+                "errors": verify_errors,
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            if verify_errors:
+                for error in verify_errors:
+                    print(error, file=sys.stderr)
+                return 1
+            if not args.json:
+                print("repo_audit_plan_verify: ok")
+            return 0
+        if not args.repo_intake:
+            raise ValueError("--repo-intake is required unless --verify-existing is used")
+        if not args.out_json:
+            raise ValueError("--out-json is required unless --verify-existing is used")
         intake_path = Path(args.repo_intake).expanduser().resolve()
         artifact_root = Path(args.artifact_root).expanduser().resolve()
         if is_forbidden_env_path(intake_path):

@@ -86,6 +86,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "amr_beta_repo_intake_validate.py --verify-existing",
     "runs_audit=0",
     "python3 scripts/amr_beta_repo_audit_plan.py",
+    "amr_beta_repo_audit_plan.py --verify-existing",
     "runs_audit=0",
     "creates_benchmark_evidence=0",
     "python3 scripts/amr_beta_human_input_status.py",
