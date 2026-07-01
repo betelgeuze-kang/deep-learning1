@@ -285,7 +285,7 @@ def main(argv: list[str]) -> int:
     try:
         repo_path = Path(args.repo_intake).expanduser().resolve()
         repo_rows, repo_errors, repo_summary = load_repo_intake(repo_path, args.min_repos)
-        target_repo_paths = sorted({str(row.get("repo_path_resolved") or "") for row in repo_rows})
+        target_repo_paths = repo_intake.target_repo_paths_from_statuses(repo_summary.get("row_statuses", []))
         input_path_errors = validate_input_path("repo_intake", repo_path, target_repo_paths)
         for index, raw_dir in enumerate(args.label_intake_dir, start=1):
             input_path_errors.extend(

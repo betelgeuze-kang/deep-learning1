@@ -442,6 +442,42 @@ def main() -> int:
         assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stdout
         assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stderr
 
+        nested_repo_intake = tmp / "nested_repo_intake.md"
+        nested_repo_path = repos[0][1] / "nested"
+        nested_repo_path.mkdir()
+        write_repo_intake(nested_repo_intake, [(repos[0][0], nested_repo_path, repos[0][2]), *repos[1:]])
+        nested_feedback_args = [
+            "--repo-intake",
+            str(nested_repo_intake),
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(unsafe_feedback),
+            "--min-repos",
+            "10",
+            "--min-labels",
+            "10",
+            "--min-maintainers",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in updated_template_dirs:
+            nested_feedback_args.extend(["--template-dir", str(template_dir)])
+        for intake_dir in updated_label_intake_dirs:
+            nested_feedback_args.extend(["--label-intake-dir", str(intake_dir)])
+        proc = run_tool(*nested_feedback_args)
+        assert proc.returncode == 1
+        nested_feedback_payload = json.loads(proc.stdout)
+        assert nested_feedback_payload["ready_to_request_runtime_approval"] == 0
+        assert nested_feedback_payload["input_path_preflight_passed"] == 0
+        assert nested_feedback_payload["feedback_sha256"] == ""
+        assert nested_feedback_payload["next_commands"] == []
+        assert "repo_path must be git worktree root" in proc.stderr
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stdout
+        assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stderr
+
         unsafe_label_intake = repos[0][1] / ignored_label_dir_name
         make_label_intake(unsafe_label_intake, repos[0][0], repos[0][1], repos[0][2])
         status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][1])

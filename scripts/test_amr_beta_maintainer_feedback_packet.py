@@ -242,6 +242,28 @@ def main() -> int:
         assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stdout
         assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stderr
 
+        nested_repo_intake = tmp / "nested_repo_intake.md"
+        nested_repo_path = repos[0][1] / "nested"
+        nested_repo_path.mkdir()
+        write_repo_intake(nested_repo_intake, [(repos[0][0], nested_repo_path, repos[0][2]), *repos[1:]])
+        proc = run_tool(
+            "--repo-intake",
+            str(nested_repo_intake),
+            "--feedback",
+            str(unsafe_feedback),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        nested_payload = json.loads(proc.stdout)
+        assert nested_payload["input_path_guard_passed"] == 0
+        assert nested_payload["output_path_guard_passed"] == 1
+        assert "repo_path must be git worktree root" in proc.stderr
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stdout
+        assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stderr
+
         feedback = tmp / "feedback.jsonl"
         feedback_rows = [
             {

@@ -328,7 +328,7 @@ def main(argv: list[str]) -> int:
         repo_rows = repo_intake.read_rows(repo_path)
         repo_errors, repo_summary = repo_intake.validate_rows(repo_rows, min_repos=args.min_repos)
         repo_by_case, _repo_by_path = repo_context(repo_rows)
-        target_repo_paths = sorted({context["repo_path"] for context in repo_by_case.values()})
+        target_repo_paths = repo_intake.target_repo_paths_from_statuses(repo_summary.get("row_statuses", []))
         input_paths = {
             "repo_intake": repo_path,
             "decisions": decisions_path,
