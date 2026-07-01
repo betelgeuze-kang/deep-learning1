@@ -1783,6 +1783,7 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
                     "selected_not_recommended_rows",
                     "selected_missing_or_invalid_contact_rows",
                     "selected_missing_namespace_confirmation_rows",
+                    "selected_missing_source_confirmation_rows",
                     "selected_repo_path_mismatch_rows",
                     "selected_response_rows_remaining_to_minimum",
                     "human_required_cells_remaining",
@@ -3143,6 +3144,11 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
                 "response_completion",
                 "selected_missing_namespace_confirmation_rows",
             ),
+            "repo_discovery_response_missing_source_confirmation_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_missing_source_confirmation_rows",
+            ),
             "repo_discovery_response_selected_rows_remaining_to_minimum": nested_count_int(
                 discovery_response,
                 "response_completion",
@@ -3255,6 +3261,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "(blank_include {repo_discovery_response_blank_include_rows}, "
         "missing_contact {repo_discovery_response_missing_contact_rows}, "
         "missing_namespace {repo_discovery_response_missing_namespace_rows}, "
+        "missing_source_confirmation {repo_discovery_response_missing_source_confirmation_rows}, "
         "selected_remaining {repo_discovery_response_selected_rows_remaining_to_minimum})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
