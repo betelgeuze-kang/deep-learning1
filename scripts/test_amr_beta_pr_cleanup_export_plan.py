@@ -111,6 +111,32 @@ def main() -> int:
         assert "out_json already exists; use --overwrite" in proc.stderr
         assert not json_collision.exists()
 
+        existing_state = tmp / "existing_state.jsonl"
+        existing_state.write_text("source artifact\n", encoding="utf-8")
+        existing_state_script = tmp / "existing_state.sh"
+        proc = run_tool(
+            "--out-sh",
+            str(existing_state_script),
+            "--pr-state-out",
+            str(existing_state),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_state_out already exists; use --overwrite" in proc.stderr
+        assert not existing_state_script.exists()
+
+        claim_collision = tmp / "claim_collision.sh"
+        proc = run_tool(
+            "--out-sh",
+            str(claim_collision),
+            "--pr-state-out",
+            str(ROOT / "README.md"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_state_out must not collide with claim_file" in proc.stderr
+        assert not claim_collision.exists()
+
         duplicate = tmp / "duplicate_pr.sh"
         proc = run_tool("--out-sh", str(duplicate), "--stale-pr", "46", "--json")
         assert proc.returncode == 1

@@ -34,6 +34,8 @@ MANAGED_OUTPUTS = {
     "maintainer_feedback_missing_cases.jsonl",
     "maintainer_feedback_progress_summary.json",
 }
+
+
 def is_forbidden_env_path(path: Path) -> bool:
     name = path.name
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
@@ -441,6 +443,8 @@ def main(argv: list[str]) -> int:
             )
             if not out_path:
                 output_path_errors.append("--out-commands-sh requires --out")
+            elif command_script_path == out_path or is_relative_to(command_script_path, out_path):
+                output_path_errors.append("out_commands_sh must not be inside out")
         known_case_ids = {str(row.get("case_id") or "").strip() for row in repo_rows if str(row.get("case_id") or "").strip()}
 
         label_summary = {

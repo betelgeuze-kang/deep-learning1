@@ -49,9 +49,10 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
-def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
+def output_exists_errors(paths: dict[str, Path], claim_files: list[Path], overwrite: bool) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
+    claim_file_set = {path.resolve() for path in claim_files}
     for name, path in paths.items():
         resolved = path.resolve()
         if pr_cleanup.is_forbidden_env_path(resolved):
@@ -59,7 +60,11 @@ def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
         if resolved in seen:
             errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
         seen[resolved] = name
-        if name in {"out_sh", "out_json"} and path.exists() and not overwrite:
+        if resolved in claim_file_set:
+            errors.append(f"{name} must not collide with claim_file: {resolved}")
+        if path.exists() and path.is_dir():
+            errors.append(f"{name} must not be an existing directory: {path}")
+        elif path.exists() and not overwrite:
             errors.append(f"{name} already exists; use --overwrite: {path}")
     return errors
 
@@ -256,7 +261,7 @@ def main(argv: list[str]) -> int:
     if out_json:
         output_paths["out_json"] = out_json
     errors = [
-        *output_exists_errors(output_paths, args.overwrite),
+        *output_exists_errors(output_paths, claim_files, args.overwrite),
         *claim_file_errors(claim_files),
         *pr_number_errors(args.checklist_pr, stale_prs),
     ]

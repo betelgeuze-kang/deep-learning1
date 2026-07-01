@@ -168,6 +168,29 @@ def main() -> int:
         packet_text = (out_dir / "maintainer_feedback_request_packet.jsonl").read_text(encoding="utf-8")
         assert "Reviewed case-" not in packet_text
 
+        nested_out = tmp / "feedback_packet_nested_script"
+        nested_commands = nested_out / "feedback_packet_commands.sh"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--out",
+            str(nested_out),
+            "--out-commands-sh",
+            str(nested_commands),
+            "--min-repos",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        nested_payload = json.loads(proc.stdout)
+        assert nested_payload["output_path_guard_passed"] == 0
+        assert "out_commands_sh must not be inside out" in proc.stderr
+        assert not nested_out.exists()
+        assert not nested_commands.exists()
+
         unsafe_out = repos[0][1] / "feedback_packet"
         unsafe_commands = repos[0][1] / "feedback_packet_commands.sh"
         proc = run_tool(

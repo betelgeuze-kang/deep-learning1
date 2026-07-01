@@ -316,7 +316,12 @@ def pr_cleanup_status_payload() -> dict:
     }
 
 
-def pr_cleanup_export_plan_payload(script_path: Path, *, mutation: bool = False) -> dict:
+def pr_cleanup_export_plan_payload(
+    script_path: Path,
+    *,
+    mutation: bool = False,
+    wrong_prs: bool = False,
+) -> dict:
     claim_files = [
         str((ROOT / "README.md").resolve()),
         str((ROOT / "README.ko.md").resolve()),
@@ -330,7 +335,8 @@ def pr_cleanup_export_plan_payload(script_path: Path, *, mutation: bool = False)
         "mkdir -p /tmp",
         ": > /tmp/amr_beta_pr_cleanup_state.jsonl",
     ]
-    for number in [46, 39, 40, 10, 5]:
+    export_numbers = [46, 101, 102, 103, 104] if wrong_prs else [46, 39, 40, 10, 5]
+    for number in export_numbers:
         lines.append(
             "gh pr view "
             f"{number} --json number,state,title,url,closed,mergedAt,closedAt,headRefName,baseRefName "
@@ -1428,6 +1434,22 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "pr_cleanup_export_plan: out_sh must not contain mutation command 'gh pr close'" in proc.stderr
+
+        wrong_pr_export = tmp / "wrong_pr_cleanup_export_plan.json"
+        wrong_pr_export_script = tmp / "wrong_pr_cleanup_export.sh"
+        write_json(
+            wrong_pr_export,
+            pr_cleanup_export_plan_payload(wrong_pr_export_script, wrong_prs=True),
+        )
+        proc = run_tool(
+            "--pr-cleanup-export-plan",
+            str(wrong_pr_export),
+            "--out-json",
+            str(tmp / "wrong_pr_cleanup_export_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "pr_cleanup_export_plan: out_sh missing exact gh pr view command for PR 39" in proc.stderr
 
         contradictory_checklist = tmp / "contradictory_checklist_pr_cleanup_status.json"
         contradictory_checklist_payload = pr_cleanup_status_payload()
@@ -2652,6 +2674,29 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "maintainer_feedback_packet: operator_commands_sha256 must match operator_commands" in proc.stderr
+
+        mutating_feedback_command = tmp / "mutating_feedback_command.json"
+        mutating_feedback_command_payload = maintainer_feedback_packet_payload()
+        mutating_feedback_command_payload["operator_commands"][0] = "gh pr close 39"
+        mutating_feedback_command_payload["operator_commands_sha256"] = sha256_json(
+            mutating_feedback_command_payload["operator_commands"]
+        )
+        write_json(mutating_feedback_command, mutating_feedback_command_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(mutating_feedback_command),
+            "--out-json",
+            str(tmp / "mutating_feedback_command_status.json"),
+        )
+        assert proc.returncode == 1
+        assert (
+            "maintainer_feedback_packet: operator_commands[0] must rerun amr_beta_maintainer_feedback_packet.py"
+            in proc.stderr
+        )
 
         tampered_feedback_script = tmp / "tampered_feedback_script.json"
         tampered_feedback_script_payload = maintainer_feedback_packet_payload()

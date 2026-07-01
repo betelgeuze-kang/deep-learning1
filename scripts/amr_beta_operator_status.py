@@ -149,6 +149,21 @@ MAINTAINER_FEEDBACK_PACKET_COMMAND_SCRIPT_FIELDS = [
     "operator_commands_script_sha256",
     "operator_commands_script_command_count",
 ]
+MAINTAINER_FEEDBACK_PACKET_VALUE_FLAGS = {
+    "--repo-intake",
+    "--label-intake-dir",
+    "--feedback",
+    "--out",
+    "--min-repos",
+    "--min-maintainers",
+}
+MAINTAINER_FEEDBACK_PACKET_REPEATABLE_FLAGS = {"--label-intake-dir"}
+MAINTAINER_FEEDBACK_PACKET_BOOL_FLAGS = {
+    "--enforce-min-maintainers",
+    "--require-countable-cases",
+    "--skip-verify-existing",
+    "--overwrite",
+}
 RUNTIME_APPROVAL_STATUS_COMMAND_SCRIPT_FIELDS = [
     "writes_runtime_command_script",
     "runtime_commands_script",
@@ -434,7 +449,7 @@ def require_pr_cleanup_export_plan(*, errors: list[str], payload: dict) -> None:
     if checklist_pr != 46:
         errors.append("pr_cleanup_export_plan: checklist_pr must be 46")
     stale_prs = payload.get("stale_prs")
-    if not isinstance(stale_prs, list) or sorted(stale_prs) != [5, 10, 39, 40]:
+    if not isinstance(stale_prs, list) or stale_prs != [39, 40, 10, 5]:
         errors.append("pr_cleanup_export_plan: stale_prs must be [39, 40, 10, 5]")
     export_pr_count = require_exact_int(
         errors=errors,
@@ -496,6 +511,28 @@ def require_pr_cleanup_export_plan(*, errors: list[str], payload: dict) -> None:
         errors.append("pr_cleanup_export_plan: out_sh gh pr view count must match export_pr_count")
     if "scripts/amr_beta_pr_cleanup_status.py" not in script_text:
         errors.append("pr_cleanup_export_plan: out_sh must run amr_beta_pr_cleanup_status.py")
+    field_names = payload.get("gh_pr_view_fields")
+    if not isinstance(field_names, list) or not all(isinstance(field, str) and field for field in field_names):
+        errors.append("pr_cleanup_export_plan: gh_pr_view_fields must be a non-empty string list")
+        return
+    pr_state_out = str(payload.get("pr_state_out") or "").strip()
+    if not pr_state_out:
+        errors.append("pr_cleanup_export_plan: pr_state_out must be present")
+        return
+    script_lines = set(script_text.splitlines())
+    truncate_line = command_line([":"]) + " > " + shlex.quote(pr_state_out)
+    if truncate_line not in script_lines:
+        errors.append("pr_cleanup_export_plan: out_sh must truncate pr_state_out before export")
+    fields_csv = ",".join(field_names)
+    expected_prs = [checklist_pr, *stale_prs] if isinstance(stale_prs, list) else [checklist_pr]
+    for number in expected_prs:
+        expected_line = (
+            command_line(["gh", "pr", "view", number, "--json", fields_csv])
+            + " >> "
+            + shlex.quote(pr_state_out)
+        )
+        if expected_line not in script_lines:
+            errors.append(f"pr_cleanup_export_plan: out_sh missing exact gh pr view command for PR {number}")
 
 
 def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
@@ -1186,6 +1223,80 @@ def require_maintainer_operator_command_script(
         errors.append("maintainer_feedback_packet: operator_commands_script_sha256 must match operator_commands_script file")
 
 
+def require_maintainer_operator_command_allowlist(*, errors: list[str], commands: list[str], feedback: dict) -> None:
+    start_error_count = len(errors)
+    if len(commands) != 2:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands must exactly contain packet rerun and progress json.tool commands"
+        )
+        return
+    try:
+        packet_parts = shlex.split(commands[0])
+        progress_parts = shlex.split(commands[1])
+    except ValueError as exc:
+        errors.append(f"maintainer_feedback_packet: operator_commands must be shell-parseable: {exc}")
+        return
+    if packet_parts[:2] != ["python3", "scripts/amr_beta_maintainer_feedback_packet.py"]:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands[0] must rerun amr_beta_maintainer_feedback_packet.py"
+        )
+        return
+
+    values: dict[str, list[str]] = {}
+    bool_flags: set[str] = set()
+    index = 2
+    while index < len(packet_parts):
+        token = packet_parts[index]
+        if token in MAINTAINER_FEEDBACK_PACKET_BOOL_FLAGS:
+            bool_flags.add(token)
+            index += 1
+            continue
+        if token not in MAINTAINER_FEEDBACK_PACKET_VALUE_FLAGS:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] has unsupported flag/value {token!r}")
+            return
+        if index + 1 >= len(packet_parts):
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] missing value for {token}")
+            return
+        values.setdefault(token, []).append(packet_parts[index + 1])
+        index += 2
+
+    required_value_flags = {"--repo-intake", "--out", "--min-repos", "--min-maintainers"}
+    for flag in sorted(required_value_flags):
+        if flag not in values:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] missing required {flag}")
+    for flag, flag_values in values.items():
+        if flag not in MAINTAINER_FEEDBACK_PACKET_REPEATABLE_FLAGS and len(flag_values) > 1:
+            errors.append(f"maintainer_feedback_packet: operator_commands[0] repeats non-repeatable {flag}")
+    if "--overwrite" not in bool_flags:
+        errors.append("maintainer_feedback_packet: operator_commands[0] must include --overwrite")
+    if len(errors) > start_error_count:
+        return
+
+    out_dir = Path(values["--out"][0]).expanduser().resolve()
+    if str(feedback.get("out") or "").strip() and not same_path(values["--out"][0], str(feedback.get("out"))):
+        errors.append("maintainer_feedback_packet: operator_commands[0] --out must match packet out")
+    expected_min_repos = str(feedback.get("min_real_repos_required") or "").strip()
+    if expected_min_repos and values["--min-repos"][0] != expected_min_repos:
+        errors.append("maintainer_feedback_packet: operator_commands[0] --min-repos must match packet")
+    expected_min_maintainers = str(feedback.get("min_maintainer_feedback_required") or "").strip()
+    if expected_min_maintainers and values["--min-maintainers"][0] != expected_min_maintainers:
+        errors.append("maintainer_feedback_packet: operator_commands[0] --min-maintainers must match packet")
+
+    canonical_packet_command = command_line(packet_parts)
+    if commands[0] != canonical_packet_command:
+        errors.append("maintainer_feedback_packet: operator_commands[0] must use canonical quoting")
+
+    expected_progress = command_line(
+        ["python3", "-m", "json.tool", out_dir / "maintainer_feedback_progress_summary.json"]
+    )
+    if progress_parts != ["python3", "-m", "json.tool", str(out_dir / "maintainer_feedback_progress_summary.json")]:
+        errors.append(
+            "maintainer_feedback_packet: operator_commands[1] must inspect maintainer_feedback_progress_summary.json with json.tool"
+        )
+    elif commands[1] != expected_progress:
+        errors.append("maintainer_feedback_packet: operator_commands[1] must use canonical quoting")
+
+
 def require_maintainer_operator_commands(*, errors: list[str], feedback: dict) -> None:
     if "operator_commands" not in feedback and "operator_command_count" not in feedback and "operator_commands_sha256" not in feedback:
         require_maintainer_operator_command_script(errors=errors, feedback=feedback, commands=[])
@@ -1212,6 +1323,7 @@ def require_maintainer_operator_commands(*, errors: list[str], feedback: dict) -
         errors.append("maintainer_feedback_packet: operator_command_count must match operator_commands length")
     if str(feedback.get("operator_commands_sha256") or "") != sha256_json(commands):
         errors.append("maintainer_feedback_packet: operator_commands_sha256 must match operator_commands")
+    require_maintainer_operator_command_allowlist(errors=errors, commands=commands, feedback=feedback)
     require_maintainer_operator_command_script(errors=errors, feedback=feedback, commands=commands)
 
 
