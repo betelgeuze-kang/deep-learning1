@@ -336,6 +336,8 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
         "repo_discovery_request_sha256": fake_sha(4000),
         "human_response": "/tmp/amr_beta_repo_discovery_response.csv",
         "human_response_sha256": fake_sha(4001),
+        "request_response_template_recommended_only": 0,
+        "request_response_template_row_count": response_count,
         "response_row_count": response_count,
         "response_completion": {
             "request_row_count": response_count,
@@ -771,6 +773,9 @@ def main() -> int:
         assert payload["stage_progress"]["repo_intake"]["valid_selected_response_rows"] == 6
         assert payload["stage_progress"]["repo_intake"]["ready_for_repo_intake_collect_command"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_rows_counted"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_recommended_only"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_row_count"] == 9
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_recommended_request_rows"] == 6
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_human_required_cells_remaining"] == 3
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_blank_include_rows"] == 3
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_contact_rows"] == 0
@@ -779,11 +784,32 @@ def main() -> int:
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
         assert "repo_discovery_response: 6/10 (selected 6, ready_command 0, supplied 1, rows_counted 0)" in markdown
+        assert "repo_discovery_response_template: rows 9 (recommended_only 0, recommended_request_rows 6)" in markdown
         assert (
             "repo_discovery_response_completion: human_required_cells 3 "
             "(blank_include 3, missing_contact 0, missing_namespace 0, selected_remaining 4)"
             in markdown
         )
+
+        legacy_response = tmp / "legacy_repo_discovery_response.json"
+        legacy_response_payload = repo_discovery_response_payload()
+        del legacy_response_payload["request_response_template_row_count"]
+        del legacy_response_payload["request_response_template_recommended_only"]
+        write_json(legacy_response, legacy_response_payload)
+        legacy_out_json = tmp / "legacy_repo_discovery_response_operator_status.json"
+        legacy_out_md = tmp / "legacy_repo_discovery_response_operator_status.md"
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(legacy_response),
+            "--out-json",
+            str(legacy_out_json),
+            "--out-md",
+            str(legacy_out_md),
+        )
+        assert proc.returncode == 0, proc.stderr
+        legacy_payload = json.loads(legacy_out_json.read_text(encoding="utf-8"))
+        assert legacy_payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_row_count"] == 0
+        assert "repo_discovery_response_template: rows 0" in legacy_out_md.read_text(encoding="utf-8")
 
         proc = run_tool(
             "--pr-cleanup-status",
@@ -1106,6 +1132,21 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "human_required_cells_remaining must match response_completion" in proc.stderr
+
+        overstated_recommended_template = tmp / "overstated_recommended_template_response.json"
+        overstated_recommended_template_payload = repo_discovery_response_payload()
+        overstated_recommended_template_payload["request_response_template_recommended_only"] = 1
+        overstated_recommended_template_payload["request_response_template_row_count"] = 9
+        write_json(overstated_recommended_template, overstated_recommended_template_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(overstated_recommended_template),
+            "--out-json",
+            str(tmp / "overstated_recommended_template_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "recommended-only template row count must be <= response_completion recommended_request_rows" in proc.stderr
 
         mismatched_repo_intake = tmp / "mismatched_repo_intake_status.json"
         mismatched_repo_intake_payload = repo_intake_status_payload()
