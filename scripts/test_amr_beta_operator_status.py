@@ -748,6 +748,60 @@ def label_intake_plan_payload() -> dict:
     }
 
 
+def human_input_status_payload(
+    *,
+    valid_labels: int = 120,
+    non_synthetic_labels: int = 120,
+    synthetic_or_unverified_labels: int = 0,
+    maintainers: int = 1,
+    ready: int = 0,
+) -> dict:
+    errors: list[str] = []
+    if non_synthetic_labels < 300:
+        errors.append(
+            f"non_synthetic_valid_human_label_rows {non_synthetic_labels} below required minimum 300"
+        )
+    if maintainers < 3:
+        errors.append(f"distinct_maintainer_id_count {maintainers} below required minimum 3")
+    return {
+        "schema": "amr_beta_human_input_status.v1",
+        "total_decision_rows": valid_labels,
+        "valid_human_label_rows": valid_labels,
+        "non_synthetic_valid_human_label_rows": non_synthetic_labels,
+        "synthetic_or_unverified_human_label_rows": synthetic_or_unverified_labels,
+        "template_dir_count": 10,
+        "template_candidate_rows": max(300, valid_labels),
+        "template_non_synthetic_candidate_rows": max(300, valid_labels),
+        "template_synthetic_or_unverified_candidate_rows": 0,
+        "min_human_label_rows_required": 300,
+        "remaining_human_label_rows": max(0, 300 - non_synthetic_labels),
+        "human_label_progress_percent": round(min(non_synthetic_labels, 300) * 100.0 / 300, 2),
+        "human_label_requirement_met": int(non_synthetic_labels >= 300),
+        "total_feedback_rows": maintainers,
+        "valid_feedback_rows": maintainers,
+        "valid_feedback_text_input_rows": maintainers,
+        "valid_feedback_hash_only_rows": 0,
+        "valid_feedback_digest_rows": maintainers,
+        "distinct_maintainer_id_count": maintainers,
+        "feedback_countable_case_rows": maintainers,
+        "distinct_countable_maintainer_id_count": maintainers,
+        "min_maintainer_feedback_required": 3,
+        "effective_maintainer_id_count": maintainers,
+        "remaining_distinct_maintainer_ids": max(0, 3 - maintainers),
+        "maintainer_feedback_progress_percent": round(min(maintainers, 3) * 100.0 / 3, 2),
+        "maintainer_feedback_requirement_met": int(maintainers >= 3),
+        "feedback_counts_for_beta_precheck": int(maintainers >= 3),
+        "ready_for_real_benchmark_inputs": ready,
+        "compiles_labels": 0,
+        "creates_benchmark_evidence": 0,
+        "runs_benchmark": 0,
+        "input_path_guard_passed": 1,
+        "output_path_guard_passed": 1,
+        **base_blocked(),
+        "errors": errors,
+    }
+
+
 def maintainer_feedback_packet_payload() -> dict:
     binding = binding_payload()
     commands = [
@@ -847,6 +901,7 @@ def main() -> int:
         repo_discovery_response = tmp / "repo_discovery_response.json"
         repo_intake = tmp / "repo_intake_status.json"
         repo = tmp / "repo_plan.json"
+        human_input = tmp / "human_input_status.json"
         label = tmp / "label_plan.json"
         feedback = tmp / "feedback_packet.json"
         preflight = tmp / "preflight.json"
@@ -882,6 +937,10 @@ def main() -> int:
         write_json(
             repo,
             repo_audit_plan_payload(),
+        )
+        write_json(
+            human_input,
+            human_input_status_payload(),
         )
         write_json(
             label,
@@ -1171,6 +1230,73 @@ def main() -> int:
         assert payload["stage_progress"]["maintainer_feedback"]["remaining"] == 3
         assert payload["stage_progress"]["runtime_preflight"]["ready_to_request_runtime_approval"] == 0
         assert payload["stage_progress"]["benchmark"]["benchmark_readiness_supplied"] == 0
+
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-intake-status",
+            str(repo_intake),
+            "--repo-audit-plan",
+            str(repo),
+            "--human-input-status",
+            str(human_input),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_1_repo_intake_plan_ready"
+        assert payload["artifacts"]["human_input_status"]["schema"] == "amr_beta_human_input_status.v1"
+        assert payload["stage_progress"]["human_labels"]["current"] == 120
+        assert payload["stage_progress"]["human_labels"]["remaining"] == 180
+        assert payload["stage_progress"]["human_labels"]["human_input_status_supplied"] == 1
+        assert payload["stage_progress"]["human_labels"]["human_input_status_ready_for_real_benchmark_inputs"] == 0
+        assert payload["stage_progress"]["human_labels"]["human_input_status_total_decision_rows"] == 120
+        assert payload["stage_progress"]["human_labels"]["human_input_status_valid_human_label_rows"] == 120
+        assert (
+            payload["stage_progress"]["human_labels"][
+                "human_input_status_non_synthetic_valid_human_label_rows"
+            ]
+            == 120
+        )
+        assert (
+            payload["stage_progress"]["human_labels"][
+                "human_input_status_synthetic_or_unverified_human_label_rows"
+            ]
+            == 0
+        )
+        assert payload["stage_progress"]["maintainer_feedback"]["current"] == 1
+        assert payload["stage_progress"]["maintainer_feedback"]["remaining"] == 2
+        assert payload["stage_progress"]["maintainer_feedback"]["human_input_status_supplied"] == 1
+        assert payload["stage_progress"]["maintainer_feedback"]["human_input_status_valid_feedback_rows"] == 1
+        assert (
+            payload["stage_progress"]["maintainer_feedback"][
+                "human_input_status_effective_maintainer_id_count"
+            ]
+            == 1
+        )
+        markdown = out_md.read_text(encoding="utf-8")
+        assert "human_labels: 120/300" in markdown
+        assert "human_input_status_labels: supplied 1, ready 0, decisions 120" in markdown
+        assert "human_input_status_feedback: supplied 1, ready 0, valid_feedback_rows 1" in markdown
+
+        overready_human_input = tmp / "overready_human_input_status.json"
+        write_json(overready_human_input, human_input_status_payload(ready=1))
+        proc = run_tool(
+            "--human-input-status",
+            str(overready_human_input),
+            "--out-json",
+            str(tmp / "overready_human_input_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "human_input_status: human_label_requirement_met must be 1 when ready" in proc.stderr
+        assert "human_input_status: maintainer_feedback_requirement_met must be 1 when ready" in proc.stderr
+        assert "human_input_status: feedback_counts_for_beta_precheck must be 1 when ready" in proc.stderr
 
         repo_script_plan = tmp / "repo_plan_with_script.json"
         repo_script = tmp / "repo_audit_commands.sh"

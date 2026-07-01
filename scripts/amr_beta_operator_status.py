@@ -33,6 +33,7 @@ KNOWN_ARTIFACTS = {
     "repo_discovery_response": "amr_beta_repo_discovery_response.v1",
     "repo_intake_status": "amr_beta_repo_intake_validate.v1",
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
+    "human_input_status": "amr_beta_human_input_status.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
     "maintainer_feedback_packet": "amr_beta_maintainer_feedback_packet.v1",
     "runtime_preflight": "amr_beta_runtime_preflight.v1",
@@ -272,7 +273,7 @@ def load_optional(path_text: str, name: str) -> tuple[dict | None, dict | None, 
         errors.append(f"{name}: unexpected schema {meta['schema']!r}")
     errors.extend(artifact_claim_errors(name, payload))
     raw_errors = payload.get("errors", [])
-    if raw_errors and name != "repo_intake_status":
+    if raw_errors and name not in {"repo_intake_status", "human_input_status"}:
         errors.append(f"{name}: artifact contains errors")
     return payload, meta, errors
 
@@ -1556,6 +1557,155 @@ def require_repo_intake_status(*, errors: list[str], payload: dict) -> None:
             errors.append(f"repo_intake_status: {key} must be 1 when ready")
 
 
+def require_human_input_status(*, errors: list[str], payload: dict) -> None:
+    name = "human_input_status"
+    min_labels = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="min_human_label_rows_required",
+        minimum=300,
+    )
+    valid_labels = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="valid_human_label_rows",
+        minimum=0,
+    )
+    non_synthetic_labels = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="non_synthetic_valid_human_label_rows",
+        minimum=0,
+    )
+    synthetic_or_unverified_labels = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="synthetic_or_unverified_human_label_rows",
+        minimum=0,
+    )
+    if valid_labels >= 0 and non_synthetic_labels >= 0 and synthetic_or_unverified_labels >= 0:
+        if valid_labels != non_synthetic_labels + synthetic_or_unverified_labels:
+            errors.append(
+                "human_input_status: valid_human_label_rows must equal "
+                "non_synthetic_valid_human_label_rows + synthetic_or_unverified_human_label_rows"
+            )
+    label_remaining = require_exact_int(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="remaining_human_label_rows",
+    )
+    if label_remaining >= 0 and min_labels >= 0 and non_synthetic_labels >= 0:
+        expected_remaining = max(0, min_labels - non_synthetic_labels)
+        if label_remaining != expected_remaining:
+            errors.append("human_input_status: remaining_human_label_rows must match non-synthetic label count")
+    label_met = require_exact_int(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="human_label_requirement_met",
+    )
+    if label_met not in {0, 1}:
+        errors.append("human_input_status: human_label_requirement_met must be one of [0, 1]")
+    elif min_labels >= 0 and non_synthetic_labels >= 0:
+        expected_met = int(non_synthetic_labels >= min_labels)
+        if label_met != expected_met:
+            errors.append("human_input_status: human_label_requirement_met must match non-synthetic label count")
+
+    min_maintainers = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="min_maintainer_feedback_required",
+        minimum=3,
+    )
+    effective_maintainers = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="effective_maintainer_id_count",
+        minimum=0,
+    )
+    maintainer_remaining = require_exact_int(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="remaining_distinct_maintainer_ids",
+    )
+    if maintainer_remaining >= 0 and min_maintainers >= 0 and effective_maintainers >= 0:
+        expected_remaining = max(0, min_maintainers - effective_maintainers)
+        if maintainer_remaining != expected_remaining:
+            errors.append("human_input_status: remaining_distinct_maintainer_ids must match effective maintainer count")
+    maintainer_met = require_exact_int(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="maintainer_feedback_requirement_met",
+    )
+    if maintainer_met not in {0, 1}:
+        errors.append("human_input_status: maintainer_feedback_requirement_met must be one of [0, 1]")
+    elif min_maintainers >= 0 and effective_maintainers >= 0:
+        expected_met = int(effective_maintainers >= min_maintainers)
+        if maintainer_met != expected_met:
+            errors.append("human_input_status: maintainer_feedback_requirement_met must match effective maintainer count")
+
+    template_candidates = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="template_candidate_rows",
+        minimum=0,
+    )
+    template_non_synthetic = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="template_non_synthetic_candidate_rows",
+        minimum=0,
+    )
+    template_synthetic = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="template_synthetic_or_unverified_candidate_rows",
+        minimum=0,
+    )
+    if template_candidates >= 0 and template_non_synthetic >= 0 and template_synthetic >= 0:
+        if template_candidates != template_non_synthetic + template_synthetic:
+            errors.append(
+                "human_input_status: template_candidate_rows must equal "
+                "template_non_synthetic_candidate_rows + template_synthetic_or_unverified_candidate_rows"
+            )
+
+    for key in ["compiles_labels", "creates_benchmark_evidence", "runs_benchmark"]:
+        require_flag(errors=errors, name=name, payload=payload, key=key, expected=0)
+    for key in ["input_path_guard_passed", "output_path_guard_passed", "feedback_counts_for_beta_precheck"]:
+        value = require_exact_int(errors=errors, name=name, payload=payload, key=key)
+        if value not in {0, 1}:
+            errors.append(f"human_input_status: {key} must be one of [0, 1]")
+
+    ready = require_exact_int(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="ready_for_real_benchmark_inputs",
+    )
+    if ready not in {0, 1}:
+        errors.append("human_input_status: ready_for_real_benchmark_inputs must be one of [0, 1]")
+    elif ready == 1:
+        if label_met != 1:
+            errors.append("human_input_status: human_label_requirement_met must be 1 when ready")
+        if maintainer_met != 1:
+            errors.append("human_input_status: maintainer_feedback_requirement_met must be 1 when ready")
+        for key in ["input_path_guard_passed", "output_path_guard_passed", "feedback_counts_for_beta_precheck"]:
+            if truthy_int(payload, key) != 1:
+                errors.append(f"human_input_status: {key} must be 1 when ready")
+
+
 def require_discovery_row_flag(
     *,
     errors: list[str],
@@ -2304,6 +2454,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     discovery_response = artifacts.get("repo_discovery_response")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
+    human_input = artifacts.get("human_input_status")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
     preflight = artifacts.get("runtime_preflight")
@@ -2366,6 +2517,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             require_flag(errors=errors, name="repo_audit_plan", payload=repo, key=key, expected=0)
         require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="input_path_guard_passed", expected=1)
         require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="output_path_guard_passed", expected=1)
+
+    if human_input:
+        require_human_input_status(errors=errors, payload=human_input)
 
     if label:
         require_flag(
@@ -3085,6 +3239,7 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
     discovery_response = artifacts.get("repo_discovery_response")
     intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
+    human_input = artifacts.get("human_input_status")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
     preflight = artifacts.get("runtime_preflight")
@@ -3110,18 +3265,22 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
 
     label_required = max(
         300,
+        count_int(human_input, "min_human_label_rows_required", 300),
         count_int(label, "min_human_label_rows_required", 300),
     )
     label_current = max(
+        count_int(human_input, "non_synthetic_valid_human_label_rows"),
         count_int(label, "valid_human_label_rows"),
         count_int(feedback, "label_intake_label_rows"),
     )
 
     maintainer_required = max(
         3,
+        count_int(human_input, "min_maintainer_feedback_required", 3),
         count_int(feedback, "min_maintainer_feedback_required", 3),
     )
     maintainer_current = max(
+        count_int(human_input, "effective_maintainer_id_count"),
         count_int(feedback, "distinct_countable_maintainer_id_count"),
         count_int(feedback, "distinct_maintainer_id_count"),
     )
@@ -3133,6 +3292,29 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
     human_label_progress.update(
         {
             "label_intake_plan_supplied": int(bool(label)),
+            "human_input_status_supplied": int(bool(human_input)),
+            "human_input_status_ready_for_real_benchmark_inputs": count_int(
+                human_input,
+                "ready_for_real_benchmark_inputs",
+            ),
+            "human_input_status_total_decision_rows": count_int(human_input, "total_decision_rows"),
+            "human_input_status_valid_human_label_rows": count_int(human_input, "valid_human_label_rows"),
+            "human_input_status_non_synthetic_valid_human_label_rows": count_int(
+                human_input,
+                "non_synthetic_valid_human_label_rows",
+            ),
+            "human_input_status_synthetic_or_unverified_human_label_rows": count_int(
+                human_input,
+                "synthetic_or_unverified_human_label_rows",
+            ),
+            "human_input_status_input_path_guard_passed": count_int(
+                human_input,
+                "input_path_guard_passed",
+            ),
+            "human_input_status_output_path_guard_passed": count_int(
+                human_input,
+                "output_path_guard_passed",
+            ),
             "ready_for_label_intake_plan": count_int(label, "ready_for_label_intake_plan"),
             "label_intake_plan_operator_command_count": count_int(label, "operator_command_count"),
             "label_intake_plan_command_script_written": count_int(label, "writes_operator_command_script"),
@@ -3146,6 +3328,20 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
     maintainer_feedback_progress.update(
         {
             "maintainer_feedback_packet_supplied": int(bool(feedback)),
+            "human_input_status_supplied": int(bool(human_input)),
+            "human_input_status_ready_for_real_benchmark_inputs": count_int(
+                human_input,
+                "ready_for_real_benchmark_inputs",
+            ),
+            "human_input_status_effective_maintainer_id_count": count_int(
+                human_input,
+                "effective_maintainer_id_count",
+            ),
+            "human_input_status_valid_feedback_rows": count_int(human_input, "valid_feedback_rows"),
+            "human_input_status_feedback_counts_for_beta_precheck": count_int(
+                human_input,
+                "feedback_counts_for_beta_precheck",
+            ),
             "ready_for_runtime_preflight_feedback": count_int(feedback, "ready_for_runtime_preflight_feedback"),
             "feedback_countable_case_rows": count_int(feedback, "feedback_countable_case_rows"),
             "feedback_digest_fingerprint_rows": count_int(feedback, "feedback_digest_fingerprint_rows"),
@@ -3385,6 +3581,16 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
             **payload["stage_progress"]["human_labels"],
         ),
+        "- human_input_status_labels: supplied {human_input_status_supplied}, "
+        "ready {human_input_status_ready_for_real_benchmark_inputs}, "
+        "decisions {human_input_status_total_decision_rows}, "
+        "valid {human_input_status_valid_human_label_rows}, "
+        "non_synthetic {human_input_status_non_synthetic_valid_human_label_rows}, "
+        "synthetic_or_unverified {human_input_status_synthetic_or_unverified_human_label_rows}, "
+        "input_guard {human_input_status_input_path_guard_passed}, "
+        "output_guard {human_input_status_output_path_guard_passed}".format(
+            **payload["stage_progress"]["human_labels"],
+        ),
         "- label_intake_plan_commands: {label_intake_plan_operator_command_count} "
         "(script_written {label_intake_plan_command_script_written}, "
         "script_commands {label_intake_plan_command_script_command_count})".format(
@@ -3392,6 +3598,13 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         ),
         "- maintainer_feedback: {current}/{required} "
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
+            **payload["stage_progress"]["maintainer_feedback"],
+        ),
+        "- human_input_status_feedback: supplied {human_input_status_supplied}, "
+        "ready {human_input_status_ready_for_real_benchmark_inputs}, "
+        "valid_feedback_rows {human_input_status_valid_feedback_rows}, "
+        "effective_maintainers {human_input_status_effective_maintainer_id_count}, "
+        "counts_for_beta_precheck {human_input_status_feedback_counts_for_beta_precheck}".format(
             **payload["stage_progress"]["maintainer_feedback"],
         ),
         "- maintainer_feedback_packet_commands: {maintainer_feedback_packet_operator_command_count} "
@@ -3439,6 +3652,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-discovery-response", default="")
     parser.add_argument("--repo-intake-status", default="")
     parser.add_argument("--repo-audit-plan", default="")
+    parser.add_argument("--human-input-status", default="")
     parser.add_argument("--label-intake-plan", default="")
     parser.add_argument("--maintainer-feedback-packet", default="")
     parser.add_argument("--runtime-preflight", default="")
@@ -3462,6 +3676,7 @@ def main(argv: list[str]) -> int:
         "repo_discovery_response": args.repo_discovery_response,
         "repo_intake_status": args.repo_intake_status,
         "repo_audit_plan": args.repo_audit_plan,
+        "human_input_status": args.human_input_status,
         "label_intake_plan": args.label_intake_plan,
         "maintainer_feedback_packet": args.maintainer_feedback_packet,
         "runtime_preflight": args.runtime_preflight,
