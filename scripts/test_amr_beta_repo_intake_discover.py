@@ -84,6 +84,10 @@ def main() -> int:
         assert payload["schema"] == "amr_beta_repo_intake_discover.v1"
         assert payload["candidate_repo_count"] == 5
         assert payload["candidate_repos_with_clean_head"] == 2
+        assert payload["candidate_repos_with_path_risk"] == 0
+        assert payload["candidate_repos_with_clean_head_and_path_risk"] == 0
+        assert payload["candidate_repos_with_clean_head_and_no_path_risk"] == 2
+        assert payload["clean_risk_free_candidate_shortfall_to_minimum"] == 8
         assert payload["repo_intake_rows_counted"] == 0
         assert payload["ready_for_repo_intake"] == 0
         assert payload["candidate_rows_cannot_count_without_human_contact"] == 1
@@ -128,6 +132,9 @@ def main() -> int:
         )
         assert proc.returncode == 0, proc.stderr
         risk_payload = json.loads(proc.stdout)
+        assert risk_payload["candidate_repos_with_path_risk"] == 1
+        assert risk_payload["candidate_repos_with_clean_head_and_path_risk"] == 1
+        assert risk_payload["candidate_repos_with_clean_head_and_no_path_risk"] == 2
         risk_by_repo = {row["repo_path"]: row for row in risk_payload["candidates"]}
         runner_row = risk_by_repo[str(runner_repo.resolve())]
         assert "runner_worktree_path" in runner_row["path_risk_flags"]

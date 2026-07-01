@@ -1597,15 +1597,55 @@ def require_repo_discovery_status(*, errors: list[str], payload: dict) -> None:
         key="candidate_repos_with_clean_head",
         minimum=0,
     )
-    require_int_at_least(
+    path_risk_count = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_status",
+        payload=payload,
+        key="candidate_repos_with_path_risk",
+        minimum=0,
+    )
+    clean_path_risk_count = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_status",
+        payload=payload,
+        key="candidate_repos_with_clean_head_and_path_risk",
+        minimum=0,
+    )
+    clean_no_path_risk_count = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_status",
+        payload=payload,
+        key="candidate_repos_with_clean_head_and_no_path_risk",
+        minimum=0,
+    )
+    min_real_repos = require_int_at_least(
         errors=errors,
         name="repo_discovery_status",
         payload=payload,
         key="min_real_repos_required",
         minimum=10,
     )
+    risk_free_shortfall = require_int_at_least(
+        errors=errors,
+        name="repo_discovery_status",
+        payload=payload,
+        key="clean_risk_free_candidate_shortfall_to_minimum",
+        minimum=0,
+    )
     if clean_head_count > candidate_count:
         errors.append("repo_discovery_status: candidate_repos_with_clean_head must be <= candidate_repo_count")
+    if path_risk_count > candidate_count:
+        errors.append("repo_discovery_status: candidate_repos_with_path_risk must be <= candidate_repo_count")
+    if clean_path_risk_count > clean_head_count:
+        errors.append(
+            "repo_discovery_status: candidate_repos_with_clean_head_and_path_risk "
+            "must be <= candidate_repos_with_clean_head"
+        )
+    if clean_no_path_risk_count > clean_head_count:
+        errors.append(
+            "repo_discovery_status: candidate_repos_with_clean_head_and_no_path_risk "
+            "must be <= candidate_repos_with_clean_head"
+        )
 
     candidates = payload.get("candidates")
     if not isinstance(candidates, list):
@@ -1615,6 +1655,9 @@ def require_repo_discovery_status(*, errors: list[str], payload: dict) -> None:
         errors.append("repo_discovery_status: candidate_repo_count must match candidates length")
 
     ready_rows = 0
+    risk_rows = 0
+    ready_risk_rows = 0
+    ready_no_risk_rows = 0
     seen_paths: set[str] = set()
     for index, row in enumerate(candidates, start=1):
         prefix = f"repo_discovery_status: candidates row {index}"
@@ -1686,6 +1729,35 @@ def require_repo_discovery_status(*, errors: list[str], payload: dict) -> None:
         if str(row.get("suggested_namespace") or "").strip() != "real_benchmark":
             errors.append(f"{prefix}: suggested_namespace must be real_benchmark")
 
+        risk_flags = row.get("path_risk_flags")
+        if not isinstance(risk_flags, list) or not all(isinstance(flag, str) for flag in risk_flags):
+            errors.append(f"{prefix}: path_risk_flags must be a string list")
+            risk_flags = []
+        risk_flag_count = require_int_at_least(
+            errors=errors,
+            name=prefix,
+            payload=row,
+            key="path_risk_flag_count",
+            minimum=0,
+        )
+        if risk_flag_count != len(risk_flags):
+            errors.append(f"{prefix}: path_risk_flag_count must match path_risk_flags length")
+        source_required = require_discovery_row_flag(
+            errors=errors,
+            prefix=prefix,
+            row=row,
+            key="human_real_repo_source_confirmation_required",
+        )
+        has_path_risk = bool(risk_flags)
+        risk_rows += int(has_path_risk)
+        if source_required != int(has_path_risk):
+            errors.append(f"{prefix}: human_real_repo_source_confirmation_required must match path_risk_flags")
+        if ready == 1:
+            if has_path_risk:
+                ready_risk_rows += 1
+            else:
+                ready_no_risk_rows += 1
+
         blockers = row.get("blockers_before_counting")
         if not isinstance(blockers, list):
             errors.append(f"{prefix}: blockers_before_counting must be a list")
@@ -1699,6 +1771,24 @@ def require_repo_discovery_status(*, errors: list[str], payload: dict) -> None:
 
     if clean_head_count >= 0 and ready_rows != clean_head_count:
         errors.append("repo_discovery_status: candidate_repos_with_clean_head must match ready candidate rows")
+    if path_risk_count >= 0 and risk_rows != path_risk_count:
+        errors.append("repo_discovery_status: candidate_repos_with_path_risk must match candidate rows")
+    if clean_path_risk_count >= 0 and ready_risk_rows != clean_path_risk_count:
+        errors.append(
+            "repo_discovery_status: candidate_repos_with_clean_head_and_path_risk "
+            "must match ready candidate rows"
+        )
+    if clean_no_path_risk_count >= 0 and ready_no_risk_rows != clean_no_path_risk_count:
+        errors.append(
+            "repo_discovery_status: candidate_repos_with_clean_head_and_no_path_risk "
+            "must match ready candidate rows"
+        )
+    expected_shortfall = max(0, min_real_repos - ready_no_risk_rows)
+    if risk_free_shortfall >= 0 and risk_free_shortfall != expected_shortfall:
+        errors.append(
+            "repo_discovery_status: clean_risk_free_candidate_shortfall_to_minimum "
+            "must match ready risk-free candidate rows"
+        )
 
 
 def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None:
@@ -3099,6 +3189,19 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
             "repo_discovery_status_supplied": int(bool(discovery)),
             "candidate_repo_count": count_int(discovery, "candidate_repo_count"),
             "candidate_repos_with_clean_head": count_int(discovery, "candidate_repos_with_clean_head"),
+            "candidate_repos_with_path_risk": count_int(discovery, "candidate_repos_with_path_risk"),
+            "candidate_repos_with_clean_head_and_path_risk": count_int(
+                discovery,
+                "candidate_repos_with_clean_head_and_path_risk",
+            ),
+            "candidate_repos_with_clean_head_and_no_path_risk": count_int(
+                discovery,
+                "candidate_repos_with_clean_head_and_no_path_risk",
+            ),
+            "clean_risk_free_candidate_shortfall_to_minimum": count_int(
+                discovery,
+                "clean_risk_free_candidate_shortfall_to_minimum",
+            ),
             "candidate_rows_cannot_count_without_human_contact": count_int(
                 discovery,
                 "candidate_rows_cannot_count_without_human_contact",
@@ -3245,6 +3348,13 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "- repo_discovery_candidates: {candidate_repo_count} "
         "(clean_head {candidate_repos_with_clean_head}, supplied {repo_discovery_status_supplied}, "
         "rows_counted {repo_discovery_rows_counted})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
+        "- repo_discovery_risk_free_clean_candidates: "
+        "{candidate_repos_with_clean_head_and_no_path_risk}/{required} "
+        "(path_risk_candidates {candidate_repos_with_path_risk}, "
+        "clean_with_path_risk {candidate_repos_with_clean_head_and_path_risk}, "
+        "shortfall {clean_risk_free_candidate_shortfall_to_minimum})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
         "- repo_discovery_response: {valid_selected_response_rows}/{required} "

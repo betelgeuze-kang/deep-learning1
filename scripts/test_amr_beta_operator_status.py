@@ -451,6 +451,9 @@ def repo_discovery_status_payload(candidate_count: int = 9, clean_count: int = 6
             "suggested_audit_mode": "quick",
             "suggested_namespace": "real_benchmark",
             "real_benchmark_namespace_confirmation_required": 1,
+            "path_risk_flags": [],
+            "path_risk_flag_count": 0,
+            "human_real_repo_source_confirmation_required": 0,
             "ready_for_intake_after_human_contact": clean,
             "counts_for_repo_intake": 0,
             "blockers_before_counting": [
@@ -468,6 +471,10 @@ def repo_discovery_status_payload(candidate_count: int = 9, clean_count: int = 6
         "include_hidden": 0,
         "candidate_repo_count": len(candidates),
         "candidate_repos_with_clean_head": clean_count,
+        "candidate_repos_with_path_risk": 0,
+        "candidate_repos_with_clean_head_and_path_risk": 0,
+        "candidate_repos_with_clean_head_and_no_path_risk": clean_count,
+        "clean_risk_free_candidate_shortfall_to_minimum": max(0, 10 - clean_count),
         "min_real_repos_required": 10,
         "repo_intake_rows_counted": 0,
         "ready_for_repo_intake": 0,
@@ -969,11 +976,20 @@ def main() -> int:
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_status_supplied"] == 1
         assert payload["stage_progress"]["repo_intake"]["candidate_repo_count"] == 9
         assert payload["stage_progress"]["repo_intake"]["candidate_repos_with_clean_head"] == 6
+        assert payload["stage_progress"]["repo_intake"]["candidate_repos_with_path_risk"] == 0
+        assert payload["stage_progress"]["repo_intake"]["candidate_repos_with_clean_head_and_path_risk"] == 0
+        assert payload["stage_progress"]["repo_intake"]["candidate_repos_with_clean_head_and_no_path_risk"] == 6
+        assert payload["stage_progress"]["repo_intake"]["clean_risk_free_candidate_shortfall_to_minimum"] == 4
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_rows_counted"] == 0
         assert payload["stage_progress"]["repo_intake"]["candidate_rows_cannot_count_without_human_contact"] == 1
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
         assert "repo_discovery_candidates: 9 (clean_head 6, supplied 1, rows_counted 0)" in markdown
+        assert (
+            "repo_discovery_risk_free_clean_candidates: 6/10 "
+            "(path_risk_candidates 0, clean_with_path_risk 0, shortfall 4)"
+            in markdown
+        )
 
         proc = run_tool(
             "--pr-cleanup-status",

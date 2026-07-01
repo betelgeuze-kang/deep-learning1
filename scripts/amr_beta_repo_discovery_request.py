@@ -111,7 +111,18 @@ def validate_discovery(payload: dict) -> list[str]:
         return errors
     if int_flag(payload, "candidate_repo_count", len(candidates)) != len(candidates):
         errors.append("repo_discovery: candidate_repo_count must match candidates length")
+    for key in [
+        "candidate_repos_with_path_risk",
+        "candidate_repos_with_clean_head_and_path_risk",
+        "candidate_repos_with_clean_head_and_no_path_risk",
+        "clean_risk_free_candidate_shortfall_to_minimum",
+    ]:
+        if key not in payload:
+            errors.append(f"repo_discovery: {key} is required")
     ready_count = 0
+    path_risk_count = 0
+    ready_with_path_risk = 0
+    ready_without_path_risk = 0
     for index, row in enumerate(candidates, start=1):
         prefix = f"repo_discovery: candidates row {index}"
         if not isinstance(row, dict):
@@ -136,9 +147,12 @@ def validate_discovery(payload: dict) -> list[str]:
         risk_flags = row.get("path_risk_flags", [])
         if not isinstance(risk_flags, list) or not all(isinstance(flag, str) for flag in risk_flags):
             errors.append(f"{prefix}: path_risk_flags must be a string list")
+            risk_flags = []
         elif int_flag(row, "path_risk_flag_count") != len(risk_flags):
             errors.append(f"{prefix}: path_risk_flag_count must match path_risk_flags length")
-        if int_flag(row, "human_real_repo_source_confirmation_required") != int(bool(risk_flags)):
+        has_path_risk = bool(risk_flags)
+        path_risk_count += int(has_path_risk)
+        if int_flag(row, "human_real_repo_source_confirmation_required") != int(has_path_risk):
             errors.append(
                 f"{prefix}: human_real_repo_source_confirmation_required must match path_risk_flags"
             )
@@ -148,8 +162,31 @@ def validate_discovery(payload: dict) -> list[str]:
             errors.append(f"{prefix}: suggested_namespace must be real_benchmark")
         if int_flag(row, "ready_for_intake_after_human_contact") == 1:
             ready_count += 1
+            if has_path_risk:
+                ready_with_path_risk += 1
+            else:
+                ready_without_path_risk += 1
     if int_flag(payload, "candidate_repos_with_clean_head", ready_count) != ready_count:
         errors.append("repo_discovery: candidate_repos_with_clean_head must match ready candidates")
+    if int_flag(payload, "candidate_repos_with_path_risk", path_risk_count) != path_risk_count:
+        errors.append("repo_discovery: candidate_repos_with_path_risk must match candidates")
+    if (
+        int_flag(payload, "candidate_repos_with_clean_head_and_path_risk", ready_with_path_risk)
+        != ready_with_path_risk
+    ):
+        errors.append("repo_discovery: candidate_repos_with_clean_head_and_path_risk must match ready candidates")
+    if (
+        int_flag(payload, "candidate_repos_with_clean_head_and_no_path_risk", ready_without_path_risk)
+        != ready_without_path_risk
+    ):
+        errors.append("repo_discovery: candidate_repos_with_clean_head_and_no_path_risk must match ready candidates")
+    expected_shortfall = max(
+        0,
+        int_flag(payload, "min_real_repos_required", repo_intake.MIN_REAL_REPOS_FOR_BETA)
+        - ready_without_path_risk,
+    )
+    if int_flag(payload, "clean_risk_free_candidate_shortfall_to_minimum", expected_shortfall) != expected_shortfall:
+        errors.append("repo_discovery: clean_risk_free_candidate_shortfall_to_minimum must match ready risk-free candidates")
     return errors
 
 
@@ -212,17 +249,31 @@ def build_payload(
     request_rows = build_request_rows([row for row in candidates if isinstance(row, dict)])
     min_repos = int_flag(discovery, "min_real_repos_required", repo_intake.MIN_REAL_REPOS_FOR_BETA)
     clean_count = int_flag(discovery, "candidate_repos_with_clean_head")
+    path_risk_count = sum(int(bool(row.get("path_risk_flags"))) for row in request_rows)
     response_template_rows = [
         row
         for row in request_rows
         if not response_template_recommended_only or int(row["recommended_for_contact_request"]) == 1
     ]
+    recommended_rows_with_path_risk = sum(
+        int(row["recommended_for_contact_request"] and bool(row.get("path_risk_flags")))
+        for row in request_rows
+    )
+    recommended_rows_without_path_risk = sum(
+        int(row["recommended_for_contact_request"] and not bool(row.get("path_risk_flags")))
+        for row in request_rows
+    )
+    clean_risk_free_count = recommended_rows_without_path_risk
+    clean_path_risk_count = recommended_rows_with_path_risk
     return {
         "schema": SCHEMA,
         "repo_discovery": str(discovery_path),
         "repo_discovery_sha256": sha256_file(discovery_path) if discovery_path.exists() else "",
         "candidate_repo_count": int_flag(discovery, "candidate_repo_count", len(request_rows)),
         "candidate_repos_with_clean_head": clean_count,
+        "candidate_repos_with_path_risk": path_risk_count,
+        "candidate_repos_with_clean_head_and_path_risk": clean_path_risk_count,
+        "candidate_repos_with_clean_head_and_no_path_risk": clean_risk_free_count,
         "request_row_count": len(request_rows),
         "response_template_csv": str(response_template_csv) if response_template_csv else "",
         "response_template_recommended_only": int(response_template_recommended_only),
@@ -231,8 +282,11 @@ def build_payload(
         "recommended_contact_request_rows": sum(
             int(row["recommended_for_contact_request"]) for row in request_rows
         ),
+        "recommended_contact_request_rows_with_path_risk": recommended_rows_with_path_risk,
+        "recommended_contact_request_rows_without_path_risk": recommended_rows_without_path_risk,
         "min_real_repos_required": min_repos,
         "clean_candidate_shortfall_to_minimum": max(0, min_repos - clean_count),
+        "clean_risk_free_candidate_shortfall_to_minimum": max(0, min_repos - clean_risk_free_count),
         "human_fields_required": [
             "include_for_real_benchmark_intake",
             "owner_or_maintainer_contact",
@@ -276,7 +330,11 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         f"- ready_for_repo_intake: {payload['ready_for_repo_intake']}",
         f"- candidate_repo_count: {payload['candidate_repo_count']}",
         f"- candidate_repos_with_clean_head: {payload['candidate_repos_with_clean_head']}",
+        f"- candidate_repos_with_clean_head_and_no_path_risk: {payload['candidate_repos_with_clean_head_and_no_path_risk']}",
+        f"- candidate_repos_with_clean_head_and_path_risk: {payload['candidate_repos_with_clean_head_and_path_risk']}",
+        f"- candidate_repos_with_path_risk: {payload['candidate_repos_with_path_risk']}",
         f"- clean_candidate_shortfall_to_minimum: {payload['clean_candidate_shortfall_to_minimum']}",
+        f"- clean_risk_free_candidate_shortfall_to_minimum: {payload['clean_risk_free_candidate_shortfall_to_minimum']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         "",
         "## Human Review Fields",
