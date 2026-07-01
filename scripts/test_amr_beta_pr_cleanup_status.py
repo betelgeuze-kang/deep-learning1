@@ -206,6 +206,20 @@ def main() -> int:
         assert f"claim freeze violation: {promoted_key}=1" in proc.stderr
         assert load_json_prefix(proc.stdout)["claim_scan_blocked_promotions"] == 1
 
+        promoted_upper_claim = tmp / "promoted_upper_claim.md"
+        promoted_upper_claim.write_text("design_partner_beta_candidate_ready = TRUE\n", encoding="utf-8")
+        proc = run_tool(
+            "--pr-state",
+            str(pr_state),
+            "--claim-file",
+            str(promoted_upper_claim),
+            "--require-claim-scan",
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "claim freeze violation: design_partner_beta_candidate_ready=1" in proc.stderr
+        assert load_json_prefix(proc.stdout)["claim_scan_blocked_promotions"] == 1
+
         collision_before = pr_state.read_text(encoding="utf-8")
         proc = run_tool(
             "--pr-state",

@@ -27,6 +27,7 @@ BLOCKED_FLAGS = {
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
+    "pr_cleanup_status": "amr_beta_pr_cleanup_status.v1",
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
     "maintainer_feedback_packet": "amr_beta_maintainer_feedback_packet.v1",
@@ -311,6 +312,128 @@ def require_sha_list_field(*, errors: list[str], name: str, payload: dict, field
         if not SHA256_RE.fullmatch(text):
             errors.append(f"{name}: {field} must contain only sha256 bindings")
             return
+
+
+def require_pr_cleanup_status(*, errors: list[str], payload: dict) -> None:
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="stage_0_claim_freeze_verified",
+        expected=1,
+    )
+    require_flag(errors=errors, name="pr_cleanup_status", payload=payload, key="checklist_pr_merged", expected=1)
+    require_flag(errors=errors, name="pr_cleanup_status", payload=payload, key="stale_prs_closed", expected=1)
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="claim_freeze_scan_passed",
+        expected=1,
+    )
+    require_flag(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="output_path_guard_passed",
+        expected=1,
+    )
+    for key in ["runs_github_query", "runs_github_mutation", "runs_git_push", "creates_benchmark_evidence"]:
+        require_flag(errors=errors, name="pr_cleanup_status", payload=payload, key=key, expected=0)
+    require_flag(errors=errors, name="pr_cleanup_status", payload=payload, key="reads_pr_state_export", expected=1)
+    require_sha_field(errors=errors, name="pr_cleanup_status", payload=payload, field="input_pr_state_sha256")
+
+    checklist_pr = require_exact_int(errors=errors, name="pr_cleanup_status", payload=payload, key="checklist_pr_number")
+    if checklist_pr != 46:
+        errors.append("pr_cleanup_status: checklist_pr_number must be 46")
+    if str(payload.get("checklist_pr_state") or "").upper() != "MERGED":
+        errors.append("pr_cleanup_status: checklist_pr_state must be MERGED")
+    if not str(payload.get("checklist_pr_merged_at") or "").strip():
+        errors.append("pr_cleanup_status: checklist_pr_merged_at must be present")
+
+    expected_stale_numbers = {39, 40, 10, 5}
+    stale_numbers = payload.get("stale_pr_numbers")
+    if not isinstance(stale_numbers, list) or sorted(stale_numbers) != sorted(expected_stale_numbers):
+        errors.append("pr_cleanup_status: stale_pr_numbers must be [39, 40, 10, 5]")
+    stale_statuses = payload.get("stale_pr_statuses")
+    if not isinstance(stale_statuses, list):
+        errors.append("pr_cleanup_status: stale_pr_statuses must be a list")
+        stale_statuses = []
+    stale_closed_count = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="stale_pr_closed_count",
+    )
+    if stale_closed_count >= 0 and stale_closed_count != 4:
+        errors.append("pr_cleanup_status: stale_pr_closed_count must be 4")
+    if len(stale_statuses) != 4:
+        errors.append("pr_cleanup_status: stale_pr_statuses must include exactly 4 rows")
+    stale_status_numbers: list[int] = []
+    for row in stale_statuses:
+        if not isinstance(row, dict):
+            errors.append("pr_cleanup_status: stale_pr_statuses rows must be objects")
+            continue
+        raw_number = row.get("number")
+        try:
+            number = int(raw_number)
+        except (TypeError, ValueError):
+            number = -1
+        if number not in expected_stale_numbers:
+            errors.append("pr_cleanup_status: stale_pr_statuses number must be one of [39, 40, 10, 5]")
+        else:
+            stale_status_numbers.append(number)
+        if str(row.get("state") or "").upper() != "CLOSED":
+            errors.append(f"pr_cleanup_status: stale PR #{number} must be CLOSED")
+        if int(row.get("closed_without_merge", 0)) != 1:
+            errors.append(f"pr_cleanup_status: stale PR #{number} must be closed without merge")
+        if str(row.get("merged_at") or ""):
+            errors.append(f"pr_cleanup_status: stale PR #{number} must not have merged_at")
+    if sorted(stale_status_numbers) != sorted(expected_stale_numbers):
+        errors.append("pr_cleanup_status: stale_pr_statuses must include each stale PR exactly once")
+
+    claim_count = require_int_at_least(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="claim_scan_file_count",
+        minimum=1,
+    )
+    blocked_promotions = require_exact_int(
+        errors=errors,
+        name="pr_cleanup_status",
+        payload=payload,
+        key="claim_scan_blocked_promotions",
+    )
+    if blocked_promotions != 0:
+        errors.append("pr_cleanup_status: claim_scan_blocked_promotions must be 0")
+    claim_hits = payload.get("claim_scan_hits")
+    if not isinstance(claim_hits, list):
+        errors.append("pr_cleanup_status: claim_scan_hits must be a list")
+        claim_hits = []
+    if blocked_promotions >= 0 and blocked_promotions != len(claim_hits):
+        errors.append("pr_cleanup_status: claim_scan_blocked_promotions must match claim_scan_hits length")
+    if claim_hits:
+        errors.append("pr_cleanup_status: claim_scan_hits must be empty")
+    claim_files = payload.get("claim_scan_files")
+    if not isinstance(claim_files, list):
+        errors.append("pr_cleanup_status: claim_scan_files must be a list")
+        claim_files = []
+    if claim_count > 0 and len(claim_files) != claim_count:
+        errors.append("pr_cleanup_status: claim_scan_file_count must match claim_scan_files length")
+    seen_claim_paths: set[str] = set()
+    for index, row in enumerate(claim_files, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"pr_cleanup_status: claim_scan_files row {index} must be an object")
+            continue
+        claim_path = str(row.get("path") or "").strip()
+        if not claim_path:
+            errors.append(f"pr_cleanup_status: claim_scan_files row {index} path must be present")
+        elif claim_path in seen_claim_paths:
+            errors.append(f"pr_cleanup_status: duplicate claim_scan_files path: {claim_path}")
+        seen_claim_paths.add(claim_path)
+        if not SHA256_RE.fullmatch(str(row.get("sha256") or "")):
+            errors.append(f"pr_cleanup_status: claim_scan_files row {index} sha256 must be a sha256 binding")
 
 
 def require_matching_field(
@@ -883,6 +1006,7 @@ def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
+    pr_cleanup = artifacts.get("pr_cleanup_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -890,6 +1014,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     request = artifacts.get("runtime_approval_request")
     status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
+
+    if pr_cleanup:
+        require_pr_cleanup_status(errors=errors, payload=pr_cleanup)
 
     if repo:
         require_flag(
@@ -1514,6 +1641,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
 def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple[str, list[str]]:
     if errors:
         return "stage_0_claim_freeze", ["Resolve artifact validation errors before advancing."]
+    pr_cleanup = artifacts.get("pr_cleanup_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -1522,6 +1650,10 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     approval_status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
 
+    if not pr_cleanup or truthy_int(pr_cleanup, "stage_0_claim_freeze_verified") != 1:
+        return "stage_0_claim_freeze", [
+            "Validate stage-0 PR cleanup and claim freeze from exported GitHub PR state."
+        ]
     if not repo or truthy_int(repo, "ready_for_real_benchmark_audit_plan") != 1:
         return "stage_0_claim_freeze", ["Generate a clean repo audit plan from >=10 validated real repos."]
     if not label or truthy_int(label, "ready_for_label_intake_plan") != 1:
@@ -1584,6 +1716,7 @@ def progress_summary(current: int, required: int) -> dict[str, int | float]:
 
 
 def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
+    pr_cleanup = artifacts.get("pr_cleanup_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -1628,6 +1761,15 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
     gate_rows = count_int(benchmark, "gate_rows", count_int(backlog, "gate_rows"))
 
     return {
+        "claim_freeze": {
+            "pr_cleanup_status_supplied": int(bool(pr_cleanup)),
+            "stage_0_claim_freeze_verified": count_int(pr_cleanup, "stage_0_claim_freeze_verified"),
+            "checklist_pr_merged": count_int(pr_cleanup, "checklist_pr_merged"),
+            "stale_prs_closed": count_int(pr_cleanup, "stale_prs_closed"),
+            "claim_freeze_scan_passed": count_int(pr_cleanup, "claim_freeze_scan_passed"),
+            "claim_scan_file_count": count_int(pr_cleanup, "claim_scan_file_count"),
+            "claim_scan_blocked_promotions": count_int(pr_cleanup, "claim_scan_blocked_promotions"),
+        },
         "repo_intake": progress_summary(repo_current, repo_required),
         "human_labels": progress_summary(label_current, label_required),
         "maintainer_feedback": progress_summary(maintainer_current, maintainer_required),
@@ -1684,6 +1826,10 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "",
         "## Stage Progress",
         "",
+        "- claim_freeze_verified: "
+        f"{payload['stage_progress']['claim_freeze']['stage_0_claim_freeze_verified']}",
+        "- pr_cleanup_status_supplied: "
+        f"{payload['stage_progress']['claim_freeze']['pr_cleanup_status_supplied']}",
         "- repo_intake: {current}/{required} "
         "(remaining {remaining}, met {met}, {progress_percent}%)".format(
             **payload["stage_progress"]["repo_intake"],
@@ -1725,6 +1871,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pr-cleanup-status", default="")
     parser.add_argument("--repo-audit-plan", default="")
     parser.add_argument("--label-intake-plan", default="")
     parser.add_argument("--maintainer-feedback-packet", default="")
@@ -1743,6 +1890,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     artifact_args = {
+        "pr_cleanup_status": args.pr_cleanup_status,
         "repo_audit_plan": args.repo_audit_plan,
         "label_intake_plan": args.label_intake_plan,
         "maintainer_feedback_packet": args.maintainer_feedback_packet,
