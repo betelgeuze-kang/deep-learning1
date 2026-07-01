@@ -89,6 +89,12 @@ blocked.
   the read-only status board with `--repo-discovery-status`; the board reports
   candidate counts while keeping repo-intake progress at the validated filled
   intake-sheet count.
+- [ ] If discovery found candidates, generate a human review packet for owner
+  contact and namespace confirmation:
+  `python3 scripts/amr_beta_repo_discovery_request.py --repo-discovery /tmp/amr_beta_repo_candidates.json --out-json /tmp/amr_beta_repo_discovery_request.json --out-md /tmp/amr_beta_repo_discovery_request.md`.
+  This packet keeps `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`,
+  and `writes_repo_intake_sheet=0`; it is only a request for human selection,
+  contact, and real_benchmark namespace confirmation.
 - [ ] For each repository, record `case_id`, `repo_path`,
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in
