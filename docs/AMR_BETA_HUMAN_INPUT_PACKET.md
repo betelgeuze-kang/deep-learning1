@@ -91,13 +91,15 @@ blocked.
   intake-sheet count.
 - [ ] If discovery found candidates, generate a human review packet for owner
   contact and namespace confirmation:
-  `python3 scripts/amr_beta_repo_discovery_request.py --repo-discovery /tmp/amr_beta_repo_candidates.json --out-json /tmp/amr_beta_repo_discovery_request.json --out-md /tmp/amr_beta_repo_discovery_request.md`.
+  `python3 scripts/amr_beta_repo_discovery_request.py --repo-discovery /tmp/amr_beta_repo_candidates.json --out-json /tmp/amr_beta_repo_discovery_request.json --out-md /tmp/amr_beta_repo_discovery_request.md --out-response-csv /tmp/amr_beta_repo_discovery_response_template.csv`.
   This packet keeps `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`,
   and `writes_repo_intake_sheet=0`; it is only a request for human selection,
-  contact, and real_benchmark namespace confirmation.
+  contact, and real_benchmark namespace confirmation. The optional response
+  CSV leaves selection, contact, and namespace-confirmation cells blank for the
+  human owner to fill explicitly.
 - [ ] After the human owner fills the discovery request response, validate it
   and produce a redacted collector command plan:
-  `python3 scripts/amr_beta_repo_discovery_response.py --request-json /tmp/amr_beta_repo_discovery_request.json --response <human-filled-response.md-or-csv> --collector-out /tmp/amr_beta_repo_intake.md --out-json /tmp/amr_beta_repo_discovery_response.json --out-md /tmp/amr_beta_repo_discovery_response.md`.
+  `python3 scripts/amr_beta_repo_discovery_response.py --request-json /tmp/amr_beta_repo_discovery_request.json --response /tmp/amr_beta_repo_discovery_response_template.csv --collector-out /tmp/amr_beta_repo_intake.md --out-json /tmp/amr_beta_repo_discovery_response.json --out-md /tmp/amr_beta_repo_discovery_response.md`.
   The response status does not print raw contact values and still keeps
   `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`, and
   `writes_repo_intake_sheet=0`; rows count only after the existing collector

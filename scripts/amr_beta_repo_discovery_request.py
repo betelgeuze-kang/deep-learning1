@@ -12,6 +12,7 @@ does not run audits, and does not create benchmark evidence.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import sys
@@ -34,6 +35,15 @@ READ_ONLY_FLAGS = [
     "creates_benchmark_evidence",
     "repo_intake_rows_counted",
     "ready_for_repo_intake",
+]
+RESPONSE_TEMPLATE_COLUMNS = [
+    "suggested_case_id",
+    "include_for_real_benchmark_intake",
+    "owner_or_maintainer_contact",
+    "real_benchmark_namespace_confirmed",
+    "repo_path",
+    "audit_mode",
+    "notes",
 ]
 
 
@@ -166,7 +176,13 @@ def build_request_rows(candidates: list[dict]) -> list[dict[str, object]]:
     return rows
 
 
-def build_payload(discovery_path: Path, discovery: dict, errors: list[str]) -> dict[str, object]:
+def build_payload(
+    discovery_path: Path,
+    discovery: dict,
+    errors: list[str],
+    *,
+    response_template_csv: Path | None = None,
+) -> dict[str, object]:
     candidates = discovery.get("candidates", [])
     if not isinstance(candidates, list):
         candidates = []
@@ -180,6 +196,8 @@ def build_payload(discovery_path: Path, discovery: dict, errors: list[str]) -> d
         "candidate_repo_count": int_flag(discovery, "candidate_repo_count", len(request_rows)),
         "candidate_repos_with_clean_head": clean_count,
         "request_row_count": len(request_rows),
+        "response_template_csv": str(response_template_csv) if response_template_csv else "",
+        "writes_response_template_csv": int(bool(response_template_csv) and not errors),
         "recommended_contact_request_rows": sum(
             int(row["recommended_for_contact_request"]) for row in request_rows
         ),
@@ -272,11 +290,39 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
     tmp_path.replace(path)
 
 
+def write_response_csv(path: Path, payload: dict[str, object], overwrite: bool) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {path}")
+    tmp_path = path.with_name(path.name + ".tmp")
+    with tmp_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=RESPONSE_TEMPLATE_COLUMNS)
+        writer.writeheader()
+        for row in payload["request_rows"]:
+            writer.writerow(
+                {
+                    "suggested_case_id": str(row.get("suggested_case_id", "")),
+                    "include_for_real_benchmark_intake": "",
+                    "owner_or_maintainer_contact": "",
+                    "real_benchmark_namespace_confirmed": "",
+                    "repo_path": str(row.get("repo_path", "")),
+                    "audit_mode": str(row.get("suggested_audit_mode", "quick")),
+                    "notes": (
+                        "recommended_for_contact_request=1"
+                        if int(row.get("recommended_for_contact_request", 0)) == 1
+                        else "clean_or_fix_repo_before_intake"
+                    ),
+                }
+            )
+    tmp_path.replace(path)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-discovery", required=True, help="JSON from amr_beta_repo_intake_discover.py.")
     parser.add_argument("--out-json", required=True)
     parser.add_argument("--out-md", default="")
+    parser.add_argument("--out-response-csv", default="", help="Optional human-fillable response CSV template.")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser
@@ -288,6 +334,9 @@ def main(argv: list[str]) -> int:
     out_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
     if args.out_md:
         out_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+    response_template_path = Path(args.out_response_csv).expanduser().resolve() if args.out_response_csv else None
+    if response_template_path:
+        out_paths["out_response_csv"] = response_template_path
 
     discovery: dict[str, object] = {}
     errors: list[str] = []
@@ -300,15 +349,23 @@ def main(argv: list[str]) -> int:
         errors.extend(repo_intake.validate_output_paths(out_paths, candidate_repo_paths(discovery)))
     errors.extend(output_exists_errors(out_paths, args.overwrite))
 
-    payload = build_payload(discovery_path, discovery, errors)
+    payload = build_payload(
+        discovery_path,
+        discovery,
+        errors,
+        response_template_csv=response_template_path,
+    )
     if not errors:
         try:
+            if response_template_path:
+                write_response_csv(response_template_path, payload, args.overwrite)
             write_json(out_paths["out_json"], payload, args.overwrite)
             if args.out_md:
                 write_markdown(out_paths["out_md"], payload, args.overwrite)
         except Exception as exc:
             errors.append(str(exc))
             payload["errors"] = errors
+            payload["writes_response_template_csv"] = 0
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     if errors:
