@@ -39,6 +39,23 @@ Use this checklist when handing the packet to a human operator. Do not check any
 item using fabricated repositories, generated labels, placeholder examples, or
 agent-written maintainer feedback.
 
+### Stage 0 PR cleanup and claim freeze
+
+- [ ] Confirm the checklist PR merged and stale PRs #39, #40, #10, and #5 are
+  closed from exported GitHub state. The status validator is offline/read-only:
+  it consumes a PR-state export and does not call GitHub, close PRs, push,
+  merge, or create benchmark evidence.
+- [ ] Export the current PR state with `gh pr view` JSON/JSONL outside target
+  repositories, for example:
+  `gh pr view 46 --json number,state,title,url,closed,mergedAt,closedAt,headRefName,baseRefName > results/amr_beta_pr_cleanup_state.jsonl`
+  and append the same fields for PRs `39`, `40`, `10`, and `5`.
+- [ ] Validate the exported state and claim freeze:
+  `python3 scripts/amr_beta_pr_cleanup_status.py --pr-state results/amr_beta_pr_cleanup_state.jsonl --claim-file README.md --claim-file README.ko.md --claim-file docs/AMR_BETA_HUMAN_INPUT_PACKET.md --require-claim-scan --out-json results/amr_beta_pr_cleanup_status.json --out-md results/amr_beta_pr_cleanup_status.md --overwrite`.
+  The output keeps `design_partner_beta_candidate_ready=0`,
+  `release_ready=0`, `public_comparison_claim_ready=0`, and
+  `real_model_execution_ready=0`; it only proves the PR cleanup snapshot and
+  scanned-file claim freeze.
+
 At any point, summarize the current local operator stage from existing AMR beta
 artifacts without creating evidence. Pass only artifact arguments whose files
 already exist; this full example is for the point after all listed artifacts have
