@@ -530,6 +530,7 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
             "selected_not_recommended_rows": 0,
             "selected_missing_or_invalid_contact_rows": 0,
             "selected_missing_namespace_confirmation_rows": 0,
+            "selected_missing_source_confirmation_rows": 0,
             "selected_repo_path_mismatch_rows": 0,
             "selected_response_rows_remaining_to_minimum": selected_remaining,
             "human_required_cells_remaining": unselected_count,
@@ -1006,6 +1007,7 @@ def main() -> int:
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_blank_include_rows"] == 3
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_contact_rows"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_namespace_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_source_confirmation_rows"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_selected_rows_remaining_to_minimum"] == 4
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
@@ -1013,7 +1015,8 @@ def main() -> int:
         assert "repo_discovery_response_template: rows 9 (recommended_only 0, recommended_request_rows 6)" in markdown
         assert (
             "repo_discovery_response_completion: human_required_cells 3 "
-            "(blank_include 3, missing_contact 0, missing_namespace 0, selected_remaining 4)"
+            "(blank_include 3, missing_contact 0, missing_namespace 0, "
+            "missing_source_confirmation 0, selected_remaining 4)"
             in markdown
         )
 
@@ -1036,6 +1039,37 @@ def main() -> int:
         legacy_payload = json.loads(legacy_out_json.read_text(encoding="utf-8"))
         assert legacy_payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_row_count"] == 0
         assert "repo_discovery_response_template: rows 0" in legacy_out_md.read_text(encoding="utf-8")
+
+        missing_completion = tmp / "missing_completion_response.json"
+        missing_completion_payload = repo_discovery_response_payload(selected_count=10)
+        del missing_completion_payload["response_completion"]
+        write_json(missing_completion, missing_completion_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(missing_completion),
+            "--out-json",
+            str(tmp / "missing_completion_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_discovery_response: response_completion is required" in proc.stderr
+
+        stale_source_completion = tmp / "stale_source_completion_response.json"
+        stale_source_completion_payload = repo_discovery_response_payload()
+        del stale_source_completion_payload["response_completion"]["selected_missing_source_confirmation_rows"]
+        write_json(stale_source_completion, stale_source_completion_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(stale_source_completion),
+            "--out-json",
+            str(tmp / "stale_source_completion_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert (
+            "repo_discovery_response.response_completion: selected_missing_source_confirmation_rows "
+            "must be an integer"
+        ) in proc.stderr
 
         proc = run_tool(
             "--pr-cleanup-status",
