@@ -304,6 +304,62 @@ def repo_discovery_status_payload(candidate_count: int = 9, clean_count: int = 6
     }
 
 
+def repo_discovery_response_payload(response_count: int = 9, selected_count: int = 6) -> dict:
+    selected_rows: list[dict[str, object]] = []
+    selected_case_ids: list[str] = []
+    for index in range(selected_count):
+        case_id = f"candidate-{index + 1:02d}-repo"
+        selected_case_ids.append(case_id)
+        selected_rows.append(
+            {
+                "row_index": index + 1,
+                "suggested_case_id": case_id,
+                "repo_path": f"/tmp/discovered-repo-{index + 1:02d}",
+                "actual_repo_git_head": fake_git_head(2000 + index),
+                "audit_mode": "quick",
+                "owner_or_maintainer_contact_sha256": fake_sha(3000 + index),
+                "real_benchmark_namespace_confirmed": 1,
+                "counts_for_repo_intake": 0,
+            }
+        )
+    command: list[str] = ["python3", "scripts/amr_beta_repo_intake_collect.py"]
+    for row in selected_rows:
+        case_id = str(row["suggested_case_id"])
+        command.extend(["--repo", str(row["repo_path"]), "--contact", f"<contact-for-{case_id}>"])
+        command.extend(["--case-id", case_id])
+    command.extend(["--confirm-real-benchmark-namespace", "--out", "/tmp/amr_beta_repo_intake.md"])
+    return {
+        "schema": "amr_beta_repo_discovery_response.v1",
+        "repo_discovery_request": "/tmp/amr_beta_repo_discovery_request.json",
+        "repo_discovery_request_sha256": fake_sha(4000),
+        "human_response": "/tmp/amr_beta_repo_discovery_response.csv",
+        "human_response_sha256": fake_sha(4001),
+        "response_row_count": response_count,
+        "selected_response_rows": selected_count,
+        "valid_selected_response_rows": selected_count,
+        "min_real_repos_required": 10,
+        "ready_for_repo_intake_collect_command": int(selected_count >= 10),
+        "selected_rows_cannot_count_until_collector_and_validator_pass": 1,
+        "collector_out": "/tmp/amr_beta_repo_intake.md",
+        "collector_format": "md",
+        "collector_command_redacted": command_line(command),
+        "collector_command_argv_redacted": command,
+        "selected_case_ids": selected_case_ids,
+        "selected_response_fingerprint_sha256": fake_sha(4002),
+        "selected_rows": selected_rows,
+        "repo_intake_rows_counted": 0,
+        "ready_for_repo_intake": 0,
+        "writes_repo_intake_sheet": 0,
+        "runs_audit": 0,
+        "runs_label_template_generation": 0,
+        "writes_reviewer_packets": 0,
+        "creates_benchmark_evidence": 0,
+        "next_blockers": ["Need 4 more selected clean repo response rows before collect."],
+        "errors": [],
+        **base_blocked(),
+    }
+
+
 def repo_audit_plan_payload() -> dict:
     binding = binding_payload()
     snapshot_rows = repo_snapshot_lock_rows()
@@ -560,6 +616,7 @@ def main() -> int:
         tmp = Path(tmp_name)
         pr_cleanup = tmp / "pr_cleanup_status.json"
         repo_discovery = tmp / "repo_discovery_status.json"
+        repo_discovery_response = tmp / "repo_discovery_response.json"
         repo_intake = tmp / "repo_intake_status.json"
         repo = tmp / "repo_plan.json"
         label = tmp / "label_plan.json"
@@ -579,6 +636,10 @@ def main() -> int:
         write_json(
             repo_discovery,
             repo_discovery_status_payload(),
+        )
+        write_json(
+            repo_discovery_response,
+            repo_discovery_response_payload(),
         )
         write_json(
             repo_intake,
@@ -664,6 +725,35 @@ def main() -> int:
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
         assert "repo_discovery_candidates: 9 (clean_head 6, supplied 1, rows_counted 0)" in markdown
+
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-discovery-status",
+            str(repo_discovery),
+            "--repo-discovery-response",
+            str(repo_discovery_response),
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert payload["stage_progress"]["repo_intake"]["current"] == 0
+        assert payload["stage_progress"]["repo_intake"]["remaining"] == 10
+        assert payload["stage_progress"]["repo_intake"]["met"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_supplied"] == 1
+        assert payload["stage_progress"]["repo_intake"]["selected_response_rows"] == 6
+        assert payload["stage_progress"]["repo_intake"]["valid_selected_response_rows"] == 6
+        assert payload["stage_progress"]["repo_intake"]["ready_for_repo_intake_collect_command"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_rows_counted"] == 0
+        assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
+        markdown = out_md.read_text(encoding="utf-8")
+        assert "repo_discovery_response: 6/10 (selected 6, ready_command 0, supplied 1, rows_counted 0)" in markdown
 
         proc = run_tool(
             "--pr-cleanup-status",
@@ -944,6 +1034,34 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "repo_discovery_status: candidates row 1: counts_for_repo_intake must be 0" in proc.stderr
+
+        counting_response = tmp / "counting_repo_discovery_response.json"
+        counting_response_payload = repo_discovery_response_payload()
+        counting_response_payload["selected_rows"][0]["counts_for_repo_intake"] = 1
+        write_json(counting_response, counting_response_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(counting_response),
+            "--out-json",
+            str(tmp / "counting_repo_discovery_response_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_discovery_response: selected_rows row 1: counts_for_repo_intake must be 0" in proc.stderr
+
+        leaking_response = tmp / "leaking_repo_discovery_response.json"
+        leaking_response_payload = repo_discovery_response_payload()
+        leaking_response_payload["selected_rows"][0]["owner_or_maintainer_contact"] = "maintainer-01-contact"
+        write_json(leaking_response, leaking_response_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(leaking_response),
+            "--out-json",
+            str(tmp / "leaking_repo_discovery_response_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "must not expose raw owner_or_maintainer_contact" in proc.stderr
 
         mismatched_repo_intake = tmp / "mismatched_repo_intake_status.json"
         mismatched_repo_intake_payload = repo_intake_status_payload()
