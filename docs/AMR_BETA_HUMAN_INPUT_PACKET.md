@@ -78,6 +78,14 @@ blocked.
 ### 9.1 Repository intake checklist
 
 - [ ] Collect at least 10 real local repository paths from the human owner.
+- [ ] If the human owner needs an inventory pass before choosing the 10 repos,
+  run the read-only discovery helper against one or more parent directories:
+  `python3 scripts/amr_beta_repo_intake_discover.py --root <parent-dir> --out-json /tmp/amr_beta_repo_candidates.json --out-md /tmp/amr_beta_repo_candidates.md --overwrite`.
+  Discovery output is candidate triage only: it records clean/head status and
+  keeps `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`,
+  `runs_audit=0`, and `creates_benchmark_evidence=0`. A discovered repo does
+  not count until a human supplies owner/maintainer contact and the filled
+  intake sheet passes validation.
 - [ ] For each repository, record `case_id`, `repo_path`,
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in
