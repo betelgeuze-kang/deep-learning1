@@ -68,6 +68,10 @@ def run_tool(path: Path, *extra: str) -> subprocess.CompletedProcess:
     return run([sys.executable, str(TOOL), str(path), *extra], cwd=ROOT)
 
 
+def run_verify_existing(path: Path, *extra: str) -> subprocess.CompletedProcess:
+    return run([sys.executable, str(TOOL), "--verify-existing", str(path), *extra], cwd=ROOT)
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
@@ -157,6 +161,85 @@ def main() -> int:
         assert "creates_benchmark_evidence: 0" in status_md_text
         assert "input_path_guard_passed: 1" in status_md_text
         assert "output_path_guard_passed: 1" in status_md_text
+
+        proc = run_verify_existing(status_json, "--json")
+        assert proc.returncode == 0, proc.stderr
+        verify_payload = json.loads(proc.stdout)
+        assert verify_payload["schema"] == "amr_beta_repo_intake_validate_verify_existing.v1"
+        assert verify_payload["verify_existing_passed"] == 1
+        assert verify_payload["status_sha256"].startswith("sha256:")
+        assert verify_payload["status_payload_sha256"].startswith("sha256:")
+        assert verify_payload["runs_audit"] == 0
+        assert verify_payload["creates_benchmark_evidence"] == 0
+        assert verify_payload["design_partner_beta_candidate_ready"] == 0
+
+        forbidden_env_status = tmp / ".env"
+        forbidden_env_status.write_text("repo_intake_status=secret-bearing-placeholder\n", encoding="utf-8")
+        proc = run_verify_existing(forbidden_env_status, "--json")
+        assert proc.returncode == 1
+        forbidden_env_verify = json.loads(proc.stdout)
+        assert forbidden_env_verify["verify_existing_passed"] == 0
+        assert forbidden_env_verify["status_sha256"] == ""
+        assert forbidden_env_verify["status_payload_sha256"] == ""
+        assert "refusing .env-like status path" in proc.stderr
+
+        bool_tampered_status_json = tmp / "bool_tampered_repo_intake_status.json"
+        bool_tampered_status = json.loads(status_json.read_text(encoding="utf-8"))
+        bool_tampered_status["ready_for_real_benchmark_audit"] = True
+        bool_tampered_status_json.write_text(
+            json.dumps(bool_tampered_status, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_verify_existing(bool_tampered_status_json, "--json")
+        assert proc.returncode == 1
+        bool_tampered_verify = json.loads(proc.stdout)
+        assert bool_tampered_verify["verify_existing_passed"] == 0
+        assert "ready_for_real_benchmark_audit must match current repo intake and git state" in proc.stderr
+
+        zero_flag_tampered_status_json = tmp / "zero_flag_tampered_repo_intake_status.json"
+        zero_flag_tampered_status = json.loads(status_json.read_text(encoding="utf-8"))
+        zero_flag_tampered_status["runs_audit"] = False
+        zero_flag_tampered_status_json.write_text(
+            json.dumps(zero_flag_tampered_status, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_verify_existing(zero_flag_tampered_status_json, "--json")
+        assert proc.returncode == 1
+        zero_flag_tampered_verify = json.loads(proc.stdout)
+        assert zero_flag_tampered_verify["verify_existing_passed"] == 0
+        assert "must keep runs_audit=0" in proc.stderr
+
+        nine_repo_intake = tmp / "nine_repo_intake.md"
+        nine_repo_status_json = tmp / "nine_repo_intake_status.json"
+        write_intake(nine_repo_intake, repos[:9])
+        proc = run_tool(nine_repo_intake, "--min-repos", "9", "--out-json", str(nine_repo_status_json), "--json")
+        assert proc.returncode == 0, proc.stderr
+        nine_repo_status = json.loads(nine_repo_status_json.read_text(encoding="utf-8"))
+        assert nine_repo_status["ready_for_real_benchmark_audit"] == 1
+        assert nine_repo_status["min_real_repos_required"] == 9
+        proc = run_verify_existing(nine_repo_status_json, "--json")
+        assert proc.returncode == 1
+        nine_repo_verify = json.loads(proc.stdout)
+        assert nine_repo_verify["verify_existing_passed"] == 0
+        assert "min_real_repos_required must be at least 10" in proc.stderr
+
+        tampered_status_json = tmp / "tampered_repo_intake_status.json"
+        tampered_status = json.loads(status_json.read_text(encoding="utf-8"))
+        tampered_status["valid_repo_rows"] = 99
+        tampered_status_json.write_text(json.dumps(tampered_status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        proc = run_verify_existing(tampered_status_json, "--json")
+        assert proc.returncode == 1
+        tampered_verify = json.loads(proc.stdout)
+        assert tampered_verify["verify_existing_passed"] == 0
+        assert "valid_repo_rows must match current repo intake and git state" in proc.stderr
+
+        (repos[0][0] / "DRIFT.txt").write_text("dirty after status\n", encoding="utf-8")
+        proc = run_verify_existing(status_json, "--json")
+        assert proc.returncode == 1
+        drift_verify = json.loads(proc.stdout)
+        assert drift_verify["verify_existing_passed"] == 0
+        assert "row_statuses must match current repo intake and git state" in proc.stderr
+        (repos[0][0] / "DRIFT.txt").unlink()
 
         unsafe_out_json = repos[0][0] / "repo_intake_status.json"
         unsafe_out_md = repos[0][0] / "repo_intake_status.md"
