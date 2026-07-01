@@ -108,7 +108,8 @@ blocked.
   missing contact, and selected rows missing namespace confirmation.
   If this response status exists, also pass it to the read-only status board
   with `--repo-discovery-response`; the board reports selected response rows
-  while keeping repo-intake progress at the validated filled intake-sheet count.
+  and response-completion counts while keeping repo-intake progress at the
+  validated filled intake-sheet count.
 - [ ] For each repository, record `case_id`, `repo_path`,
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in

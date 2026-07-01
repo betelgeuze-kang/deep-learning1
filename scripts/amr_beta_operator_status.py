@@ -1088,6 +1088,58 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
     if ready == 0 and valid_selected_rows >= max(10, min_repos):
         errors.append("repo_discovery_response: ready_for_repo_intake_collect_command must be 1 when threshold is met")
 
+    completion = payload.get("response_completion")
+    if completion is not None:
+        if not isinstance(completion, dict):
+            errors.append("repo_discovery_response: response_completion must be an object")
+        else:
+            completion_name = "repo_discovery_response.response_completion"
+            completion_ints = {
+                key: require_int_at_least(
+                    errors=errors,
+                    name=completion_name,
+                    payload=completion,
+                    key=key,
+                    minimum=0,
+                )
+                for key in [
+                    "request_row_count",
+                    "response_row_count",
+                    "recommended_request_rows",
+                    "selected_truthy_response_rows",
+                    "unselected_response_rows",
+                    "blank_include_response_rows",
+                    "invalid_include_response_rows",
+                    "duplicate_case_id_response_rows",
+                    "selected_unknown_case_id_rows",
+                    "selected_not_recommended_rows",
+                    "selected_missing_or_invalid_contact_rows",
+                    "selected_missing_namespace_confirmation_rows",
+                    "selected_repo_path_mismatch_rows",
+                    "selected_response_rows_remaining_to_minimum",
+                    "human_required_cells_remaining",
+                ]
+            }
+            if completion_ints["response_row_count"] != response_rows:
+                errors.append("repo_discovery_response: response_completion response_row_count must match response_row_count")
+            if completion_ints["selected_truthy_response_rows"] < selected_rows_count:
+                errors.append(
+                    "repo_discovery_response: response_completion selected_truthy_response_rows "
+                    "must be >= selected_response_rows"
+                )
+            if "human_required_cells_remaining" in payload:
+                top_level_remaining = require_int_at_least(
+                    errors=errors,
+                    name="repo_discovery_response",
+                    payload=payload,
+                    key="human_required_cells_remaining",
+                    minimum=0,
+                )
+                if top_level_remaining != completion_ints["human_required_cells_remaining"]:
+                    errors.append(
+                        "repo_discovery_response: human_required_cells_remaining must match response_completion"
+                    )
+
     require_sha_field(
         errors=errors,
         name="repo_discovery_response",
@@ -2173,6 +2225,15 @@ def count_int(payload: dict | None, key: str, default: int = 0) -> int:
         return default
 
 
+def nested_count_int(payload: dict | None, parent: str, key: str, default: int = 0) -> int:
+    if not payload:
+        return default
+    nested = payload.get(parent)
+    if not isinstance(nested, dict):
+        return default
+    return count_int(nested, key, default)
+
+
 def progress_summary(current: int, required: int) -> dict[str, int | float]:
     remaining = max(0, required - current)
     percent = 0.0 if required <= 0 else round(min(current, required) * 100.0 / required, 2)
@@ -2264,6 +2325,31 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
                 "ready_for_repo_intake_collect_command",
             ),
             "repo_discovery_response_rows_counted": count_int(discovery_response, "repo_intake_rows_counted"),
+            "repo_discovery_response_human_required_cells_remaining": count_int(
+                discovery_response,
+                "human_required_cells_remaining",
+                nested_count_int(discovery_response, "response_completion", "human_required_cells_remaining"),
+            ),
+            "repo_discovery_response_blank_include_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "blank_include_response_rows",
+            ),
+            "repo_discovery_response_missing_contact_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_missing_or_invalid_contact_rows",
+            ),
+            "repo_discovery_response_missing_namespace_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_missing_namespace_confirmation_rows",
+            ),
+            "repo_discovery_response_selected_rows_remaining_to_minimum": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_response_rows_remaining_to_minimum",
+            ),
             "repo_intake_status_supplied": int(bool(intake)),
             "ready_for_real_benchmark_audit": count_int(intake, "ready_for_real_benchmark_audit"),
             "repo_snapshot_lock_row_count": count_int(intake, "repo_snapshot_lock_row_count"),
@@ -2341,6 +2427,14 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "- repo_discovery_response: {valid_selected_response_rows}/{required} "
         "(selected {selected_response_rows}, ready_command {ready_for_repo_intake_collect_command}, "
         "supplied {repo_discovery_response_supplied}, rows_counted {repo_discovery_response_rows_counted})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
+        "- repo_discovery_response_completion: human_required_cells "
+        "{repo_discovery_response_human_required_cells_remaining} "
+        "(blank_include {repo_discovery_response_blank_include_rows}, "
+        "missing_contact {repo_discovery_response_missing_contact_rows}, "
+        "missing_namespace {repo_discovery_response_missing_namespace_rows}, "
+        "selected_remaining {repo_discovery_response_selected_rows_remaining_to_minimum})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
         "- human_labels: {current}/{required} "
