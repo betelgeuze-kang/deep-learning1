@@ -101,6 +101,7 @@ def main() -> int:
         assert json.loads(out_json.read_text(encoding="utf-8")) == payload
         markdown = out_md.read_text(encoding="utf-8")
         assert "AMR Beta Repo Discovery Request" in markdown
+        assert "include_for_real_benchmark_intake" in markdown
         assert "owner_or_maintainer_contact" in markdown
         assert "amr_beta_repo_intake_collect.py" in markdown
 

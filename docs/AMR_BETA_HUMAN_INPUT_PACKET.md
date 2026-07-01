@@ -95,6 +95,13 @@ blocked.
   This packet keeps `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`,
   and `writes_repo_intake_sheet=0`; it is only a request for human selection,
   contact, and real_benchmark namespace confirmation.
+- [ ] After the human owner fills the discovery request response, validate it
+  and produce a redacted collector command plan:
+  `python3 scripts/amr_beta_repo_discovery_response.py --request-json /tmp/amr_beta_repo_discovery_request.json --response <human-filled-response.md-or-csv> --collector-out /tmp/amr_beta_repo_intake.md --out-json /tmp/amr_beta_repo_discovery_response.json --out-md /tmp/amr_beta_repo_discovery_response.md`.
+  The response status does not print raw contact values and still keeps
+  `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`, and
+  `writes_repo_intake_sheet=0`; rows count only after the existing collector
+  writes a filled intake sheet and the intake validator passes.
 - [ ] For each repository, record `case_id`, `repo_path`,
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in
