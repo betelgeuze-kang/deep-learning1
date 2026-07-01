@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_label_packet.py"
+AUDIT_TOOL = ROOT / "scripts" / "audit_my_repo.py"
+TEMPLATE_TOOL = ROOT / "scripts" / "audit_my_repo_label_template.py"
 
 
 def sha256_file(path: Path) -> str:
@@ -101,6 +103,105 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
         stderr=subprocess.PIPE,
         text=True,
     )
+
+
+def run_checked(args: list[str]) -> subprocess.CompletedProcess:
+    proc = subprocess.run(
+        args,
+        cwd=str(ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return proc
+
+
+def make_audit_target_repo(path: Path, package_name: str) -> None:
+    (path / "docs").mkdir(parents=True)
+    (path / "README.md").write_text(
+        "# Audit Target\n\nThis local audit target is not production ready without evidence.\n",
+        encoding="utf-8",
+    )
+    (path / "module.py").write_text(
+        "def answer():\n    return \"ok\"\n",
+        encoding="utf-8",
+    )
+    (path / "docs" / "evidence.md").write_text(
+        "# Evidence Notes\n\nThis local evidence note is a citation target, not release proof.\n",
+        encoding="utf-8",
+    )
+    (path / "pyproject.toml").write_text(
+        f"[project]\nname = \"{package_name}\"\nrequires-python = \">=3.10\"\n",
+        encoding="utf-8",
+    )
+    run_checked(["git", "-C", str(path), "init", "-q"])
+    run_checked(["git", "-C", str(path), "add", "."])
+    run_checked(
+        [
+            "git",
+            "-C",
+            str(path),
+            "-c",
+            "user.email=audit@example.invalid",
+            "-c",
+            "user.name=Audit Commit",
+            "commit",
+            "-q",
+            "-m",
+            "init",
+        ]
+    )
+
+
+def make_verified_template(tmp: Path, case_id: str) -> tuple[Path, list[str]]:
+    repo = tmp / f"{case_id}_repo"
+    audit_out = tmp / f"{case_id}_audit"
+    template_out = tmp / f"{case_id}_template"
+    repo.mkdir()
+    make_audit_target_repo(repo, case_id.replace("_", "-"))
+    run_checked(
+        [
+            sys.executable,
+            str(AUDIT_TOOL),
+            str(repo),
+            "--mode",
+            "quick",
+            "--max-files",
+            "20",
+            "--max-total-bytes",
+            "200000",
+            "--max-file-bytes",
+            "50000",
+            "--max-findings",
+            "20",
+            "--out",
+            str(audit_out),
+            "--namespace",
+            "synthetic",
+            "--generator",
+            "routehint-tiny",
+            "--question",
+            "Does this repo prove production readiness?",
+        ]
+    )
+    run_checked(
+        [
+            sys.executable,
+            str(TEMPLATE_TOOL),
+            "--audit-output",
+            str(audit_out),
+            "--out",
+            str(template_out),
+            "--case-id",
+            case_id,
+        ]
+    )
+    run_checked([sys.executable, str(TEMPLATE_TOOL), "--verify-existing", str(template_out)])
+    payload = json.loads((template_out / "label_template.json").read_text(encoding="utf-8"))
+    candidate_ids = [str(row["candidate_label_id"]) for row in payload["rows"]]
+    assert candidate_ids
+    return template_out, candidate_ids
 
 
 def main() -> int:
@@ -223,6 +324,115 @@ def main() -> int:
         assert summary["output_path_guard_passed"] == 1
         assert (out_dir / "reviewer_candidate_packet.jsonl").is_file()
         assert (out_dir / "reviewer_progress_summary.json").is_file()
+        proc = run_tool("--verify-existing", str(out_dir), "--json")
+        assert proc.returncode == 1
+        skipped_verify = json.loads(proc.stdout)
+        assert skipped_verify["verify_existing_passed"] == 0
+        assert "label_template_verify_existing_required must be 1" in proc.stderr
+
+        verified_template_a, verified_ids_a = make_verified_template(tmp, "verified_case_a")
+        verified_template_b, verified_ids_b = make_verified_template(tmp, "verified_case_b")
+        verified_decisions = tmp / "verified_decisions.jsonl"
+        write_jsonl(
+            verified_decisions,
+            [
+                {
+                    "candidate_label_id": verified_ids_a[0],
+                    "human_labeled": True,
+                    "expected": "present",
+                    "priority": "P1",
+                    "reviewer_id": "reviewer-a",
+                },
+                {
+                    "candidate_label_id": verified_ids_b[0],
+                    "human_labeled": True,
+                    "expected": "absent",
+                    "priority": "P2",
+                    "reviewer_id": "reviewer-b",
+                },
+            ],
+        )
+        verified_out = tmp / "verified_packet"
+        proc = run_tool(
+            "--template-dir",
+            str(verified_template_a),
+            "--template-dir",
+            str(verified_template_b),
+            "--decisions",
+            str(verified_decisions),
+            "--out",
+            str(verified_out),
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        verified_summary_payload = json.loads(proc.stdout)
+        assert verified_summary_payload["label_template_verify_existing_required"] == 1
+        assert verified_summary_payload["label_template_verify_existing_failed_dirs"] == 0
+        assert verified_summary_payload["label_template_verify_existing_passed_dirs"] == 2
+        assert verified_summary_payload["valid_human_label_rows"] == 2
+        assert verified_summary_payload["missing_candidate_label_count"] >= 1
+
+        proc = run_tool("--verify-existing", str(verified_out), "--json")
+        assert proc.returncode == 0, proc.stderr
+        verify_summary = json.loads(proc.stdout)
+        assert verify_summary["schema"] == "amr_beta_label_packet_verify_existing.v1"
+        assert verify_summary["verify_existing_passed"] == 1
+        assert verify_summary["creates_benchmark_evidence"] == 0
+        assert verify_summary["design_partner_beta_candidate_ready"] == 0
+        assert verify_summary["packet_summary_sha256"].startswith("sha256:")
+
+        tampered_out = tmp / "tampered_packet"
+        tampered_out.mkdir()
+        for child in verified_out.iterdir():
+            (tampered_out / child.name).write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
+        tampered_summary_path = tampered_out / "reviewer_progress_summary.json"
+        tampered_summary = json.loads(tampered_summary_path.read_text(encoding="utf-8"))
+        tampered_summary["candidate_label_rows"] = 99
+        tampered_summary_path.write_text(
+            json.dumps(tampered_summary, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_tool("--verify-existing", str(tampered_out), "--json")
+        assert proc.returncode == 1
+        tampered_verify = json.loads(proc.stdout)
+        assert tampered_verify["verify_existing_passed"] == 0
+        assert "candidate_label_rows must match reviewer packet artifacts" in proc.stderr
+
+        tampered_missing_out = tmp / "tampered_missing_packet"
+        tampered_missing_out.mkdir()
+        for child in verified_out.iterdir():
+            (tampered_missing_out / child.name).write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
+        (tampered_missing_out / "reviewer_missing_candidates.jsonl").write_text("", encoding="utf-8")
+        proc = run_tool("--verify-existing", str(tampered_missing_out), "--json")
+        assert proc.returncode == 1
+        assert "reviewer_missing_candidates must match current decision files" in proc.stderr
+
+        tampered_rows_out = tmp / "tampered_rows_packet"
+        tampered_rows_out.mkdir()
+        for child in verified_out.iterdir():
+            (tampered_rows_out / child.name).write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
+        packet_rows = [
+            json.loads(line)
+            for line in (tampered_rows_out / "reviewer_candidate_packet.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        packet_rows[0]["candidate_label_id"] = "tampered-candidate-0001"
+        write_jsonl(tampered_rows_out / "reviewer_candidate_packet.jsonl", packet_rows)
+        proc = run_tool("--verify-existing", str(tampered_rows_out), "--json")
+        assert proc.returncode == 1
+        assert "reviewer_candidate_packet must match recorded label templates" in proc.stderr
+
+        original_template_text = (verified_template_a / "label_template.json").read_text(encoding="utf-8")
+        tampered_template_payload = json.loads(original_template_text)
+        tampered_template_payload["rows"][0]["finding_answer"] = "tampered answer"
+        (verified_template_a / "label_template.json").write_text(
+            json.dumps(tampered_template_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_tool("--verify-existing", str(verified_out), "--json")
+        assert proc.returncode == 1
+        assert "label_template --verify-existing failed" in proc.stderr
+        (verified_template_a / "label_template.json").write_text(original_template_text, encoding="utf-8")
 
         per_case_root = tmp / "per_case_packets"
         proc = run_tool(
@@ -268,6 +478,38 @@ def main() -> int:
         assert case_b_summary["decisions_bundle_sha256"] == summary["decisions_bundle_sha256"]
         missing_a = (per_case_root / "case-a" / "reviewer_missing_candidates.jsonl").read_text(encoding="utf-8")
         assert "case-a-0002" in missing_a
+        proc = run_tool("--verify-existing", str(per_case_root), "--json")
+        assert proc.returncode == 1
+        skipped_per_case_verify = json.loads(proc.stdout)
+        assert skipped_per_case_verify["verify_existing_passed"] == 0
+        assert "label_template_verify_existing_required must be 1" in proc.stderr
+
+        verified_per_case_root = tmp / "verified_per_case_packets"
+        proc = run_tool(
+            "--template-dir",
+            str(verified_template_a),
+            "--template-dir",
+            str(verified_template_b),
+            "--decisions",
+            str(verified_decisions),
+            "--per-case-out-root",
+            str(verified_per_case_root),
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        proc = run_tool("--verify-existing", str(verified_per_case_root), "--json")
+        assert proc.returncode == 0, proc.stderr
+        per_case_verify = json.loads(proc.stdout)
+        assert per_case_verify["verify_existing_passed"] == 1
+        assert per_case_verify["creates_benchmark_evidence"] == 0
+
+        index_path = verified_per_case_root / "reviewer_packet_index.json"
+        bad_index = json.loads(index_path.read_text(encoding="utf-8"))
+        bad_index["candidate_label_rows"] = 99
+        index_path.write_text(json.dumps(bad_index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        proc = run_tool("--verify-existing", str(verified_per_case_root), "--json")
+        assert proc.returncode == 1
+        assert "candidate_label_rows must match reviewer packet artifacts" in proc.stderr
 
         synthetic_template = tmp / "synthetic_template"
         make_template(synthetic_template, "case-synthetic", ["case-synthetic-0001"], synthetic="1")

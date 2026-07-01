@@ -193,6 +193,12 @@ human-input artifact that marks itself ready without meeting the 300-label and
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo1-template-dir> --template-dir <repo2-template-dir> --per-case-out-root results/reviewer_packets`.
   Keep `--out` and `--per-case-out-root` outside all target repositories so
   human-review packet generation cannot dirty repos that must remain clean.
+  Before handing packets to reviewers or using saved packet summaries in later
+  planning, recheck the managed packet artifacts with
+  `python3 scripts/amr_beta_label_packet.py --verify-existing <reviewer-packet-dir-or-per-case-root>`.
+  This read-only check recomputes packet counts, missing-candidate rows,
+  progress rows, and template/decision bundle hashes without creating labels or
+  benchmark evidence.
 - [ ] Send only candidate ids from the generated templates to human reviewers.
 - [ ] Collect at least 300 human decision rows with `human_labeled=true` and
   `expected=present|absent`.
