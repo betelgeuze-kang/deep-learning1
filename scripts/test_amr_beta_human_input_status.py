@@ -29,6 +29,10 @@ def make_template(path: Path, rows: list[dict]) -> None:
     )
 
 
+def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
 def run_tool(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(TOOL), *args],
@@ -219,6 +223,111 @@ def main() -> int:
         assert "out_md must not be inside target repo" in proc.stderr
         assert not unsafe_status_json.exists()
         assert not unsafe_status_md.exists()
+
+        unsafe_decisions_path = repo_001 / "decisions.jsonl"
+        unsafe_feedback_path = repo_002 / "feedback.jsonl"
+        write_jsonl(
+            unsafe_decisions_path,
+            [
+                {
+                    "candidate_label_id": "case-001-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+            ],
+        )
+        write_jsonl(
+            unsafe_feedback_path,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-unsafe",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed unsafe in-repo feedback.",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(unsafe_decisions_path),
+            "--feedback",
+            str(unsafe_feedback_path),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "1",
+            "--min-maintainers",
+            "1",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_input_payload = json.loads(proc.stdout)
+        assert unsafe_input_payload["input_path_guard_passed"] == 0
+        assert unsafe_input_payload["output_path_guard_passed"] == 1
+        assert unsafe_input_payload["total_decision_rows"] == 0
+        assert unsafe_input_payload["total_feedback_rows"] == 0
+        assert "decisions must not be inside target repo" in proc.stderr
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed unsafe in-repo feedback." not in proc.stdout
+        assert "Reviewed unsafe in-repo feedback." not in proc.stderr
+
+        git_root = tmp / "repo-root"
+        git_root.mkdir()
+        assert run(["git", "init", "-q"], cwd=git_root).returncode == 0
+        nested_repo_path = git_root / "nested"
+        nested_repo_path.mkdir()
+        nested_repo_intake = tmp / "nested_repo_intake.md"
+        nested_repo_intake.write_text(
+            "| case_id | repo_path |\n"
+            "|---|---|\n"
+            f"| case-root | {nested_repo_path} |\n",
+            encoding="utf-8",
+        )
+        nested_decisions = git_root / "nested_decisions.jsonl"
+        nested_feedback = git_root / "nested_feedback.jsonl"
+        write_jsonl(
+            nested_decisions,
+            [
+                {
+                    "candidate_label_id": "case-root-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+            ],
+        )
+        write_jsonl(
+            nested_feedback,
+            [
+                {
+                    "case_id": "case-root",
+                    "maintainer_id": "maintainer-root",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed nested-root unsafe feedback.",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(nested_decisions),
+            "--feedback",
+            str(nested_feedback),
+            "--repo-intake",
+            str(nested_repo_intake),
+            "--min-labels",
+            "1",
+            "--min-maintainers",
+            "1",
+            "--json",
+        )
+        assert proc.returncode == 1
+        nested_payload = json.loads(proc.stdout)
+        assert nested_payload["input_path_guard_passed"] == 0
+        assert nested_payload["total_decision_rows"] == 0
+        assert nested_payload["total_feedback_rows"] == 0
+        assert "decisions must not be inside target repo" in proc.stderr
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed nested-root unsafe feedback." not in proc.stdout
+        assert "Reviewed nested-root unsafe feedback." not in proc.stderr
 
         label_intake = tmp / "label_intake"
         make_label_intake(

@@ -178,9 +178,9 @@ status while keeping all release/public/model readiness flags blocked.
   to catch duplicate, missing, placeholder, and below-threshold human inputs.
   Write the read-only progress summary while collecting inputs:
   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv> --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
-  Keep `--out-json` and `--out-md` outside all target repositories listed in
-  the repo intake sheet; the status guard refuses output paths inside those
-  repos.
+  Keep `--decisions`, `--feedback`, `--out-json`, and `--out-md` outside all
+  target repositories listed in the repo intake sheet; the status guard refuses
+  input or output paths inside those repos.
 - [ ] After label intake outputs exist, run the final read-only runtime preflight
   before requesting approval for the long benchmark:
   `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir <repo-label-intake-dir> --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
