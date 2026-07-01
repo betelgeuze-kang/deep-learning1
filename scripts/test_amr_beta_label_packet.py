@@ -392,6 +392,34 @@ def main() -> int:
         assert proc.returncode == 1
         assert "duplicate candidate_label_id" in proc.stderr
 
+        duplicate_label_id_decisions = tmp / "duplicate_label_id_decisions.jsonl"
+        write_jsonl(
+            duplicate_label_id_decisions,
+            [
+                {
+                    "candidate_label_id": "case-a-0001",
+                    "label_id": "case-a-shared-label",
+                    "human_labeled": True,
+                    "expected": "present",
+                },
+                {
+                    "candidate_label_id": "case-a-0002",
+                    "label_id": "case-a-shared-label",
+                    "human_labeled": True,
+                    "expected": "absent",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(duplicate_label_id_decisions),
+            "--skip-verify-existing",
+        )
+        assert proc.returncode == 1
+        assert "duplicate label_id" in proc.stderr
+
         unknown_decisions = tmp / "unknown_decisions.jsonl"
         write_jsonl(
             unknown_decisions,

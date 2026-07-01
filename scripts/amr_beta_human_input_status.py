@@ -221,6 +221,7 @@ def validate_decisions(
 ) -> tuple[list[str], dict[str, int]]:
     errors: list[str] = []
     seen: set[str] = set()
+    seen_label_ids: set[str] = set()
     valid_rows = 0
     non_synthetic_valid_rows = 0
     synthetic_or_unverified_valid_rows = 0
@@ -238,13 +239,20 @@ def validate_decisions(
         elif known_candidate_ids and candidate_id not in known_candidate_ids:
             row_errors.append(f"decision row {index}: unknown candidate_label_id")
         seen.add(candidate_id)
+        label_id = str(row.get("label_id") or candidate_id).strip()
+        label_error_count = len(row_errors)
         validate_optional_safe_id(
             errors=row_errors,
             row_prefix=f"decision row {index}",
             field="label_id",
-            value=row.get("label_id"),
+            value=label_id,
             pattern=SAFE_LABEL_ID_RE,
         )
+        if label_id and len(row_errors) == label_error_count:
+            if label_id in seen_label_ids:
+                row_errors.append(f"decision row {index}: duplicate label_id")
+            else:
+                seen_label_ids.add(label_id)
         validate_optional_safe_id(
             errors=row_errors,
             row_prefix=f"decision row {index}",
