@@ -107,7 +107,8 @@ blocked.
   `writes_repo_intake_sheet=0`; rows count only after the existing collector
   writes a filled intake sheet and the intake validator passes. The status also
   reports response-completion counts such as blank include cells, selected rows
-  missing contact, and selected rows missing namespace confirmation.
+  missing contact, selected rows missing namespace confirmation, and the
+  request packet's response-template metadata.
   If this response status exists, also pass it to the read-only status board
   with `--repo-discovery-response`; the board reports selected response rows
   and response-completion counts while keeping repo-intake progress at the

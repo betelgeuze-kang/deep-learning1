@@ -156,6 +156,8 @@ def main() -> int:
         assert payload["runs_audit"] == 0
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["human_required_cells_remaining"] == 0
+        assert payload["request_response_template_recommended_only"] == 0
+        assert payload["request_response_template_row_count"] == 0
         completion = payload["response_completion"]
         assert completion["recommended_request_rows"] == 2
         assert completion["selected_truthy_response_rows"] == 2
@@ -220,6 +222,8 @@ def main() -> int:
         blank_payload = json.loads(proc.stdout)
         assert blank_payload["ready_for_repo_intake_collect_command"] == 0
         assert blank_payload["selected_response_rows"] == 0
+        assert blank_payload["request_response_template_recommended_only"] == 0
+        assert blank_payload["request_response_template_row_count"] == 0
         assert blank_payload["human_required_cells_remaining"] == 3
         blank_completion = blank_payload["response_completion"]
         assert blank_completion["response_row_count"] == 3
@@ -228,6 +232,85 @@ def main() -> int:
         assert blank_completion["blank_include_response_rows"] == 3
         assert blank_completion["selected_response_rows_remaining_to_minimum"] == 2
         assert "human_required_cells_remaining" in blank_out_md.read_text(encoding="utf-8")
+        assert "request_response_template_row_count: 0" in blank_out_md.read_text(encoding="utf-8")
+
+        recommended_request_json = tmp / "recommended_request.json"
+        recommended_response_template = tmp / "recommended_response_template.csv"
+        recommended_request = run(
+            [
+                sys.executable,
+                str(REQUEST),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(recommended_request_json),
+                "--out-response-csv",
+                str(recommended_response_template),
+                "--response-template-recommended-only",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert recommended_request.returncode == 0, recommended_request.stderr
+        recommended_proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(recommended_request_json),
+                "--response",
+                str(recommended_response_template),
+                "--min-repos",
+                "2",
+                "--out-json",
+                str(tmp / "recommended_blank_response_status.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert recommended_proc.returncode == 0, recommended_proc.stderr
+        recommended_payload = json.loads(recommended_proc.stdout)
+        assert recommended_payload["request_response_template_recommended_only"] == 1
+        assert recommended_payload["request_response_template_row_count"] == 2
+        assert recommended_payload["response_row_count"] == 2
+        recommended_completion = recommended_payload["response_completion"]
+        assert recommended_completion["request_row_count"] == 3
+        assert recommended_completion["recommended_request_rows"] == 2
+        assert recommended_completion["blank_include_response_rows"] == 2
+        assert recommended_completion["human_required_cells_remaining"] == 2
+
+        malformed_request_json = tmp / "malformed_request.json"
+        malformed_payload = json.loads(recommended_request_json.read_text(encoding="utf-8"))
+        malformed_payload["response_template_row_count"] = "two"
+        malformed_request_json.write_text(
+            json.dumps(malformed_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        malformed_proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(malformed_request_json),
+                "--response",
+                str(recommended_response_template),
+                "--min-repos",
+                "2",
+                "--out-json",
+                str(tmp / "malformed_response_status.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert malformed_proc.returncode == 1
+        assert "repo_discovery_request: response_template_row_count must be an integer >= 0" in malformed_proc.stderr
+        assert "Traceback" not in malformed_proc.stderr
+        malformed_status = json.loads(malformed_proc.stdout)
+        assert (
+            "repo_discovery_request: response_template_row_count must be an integer >= 0"
+            in malformed_status["errors"]
+        )
+        assert not (tmp / "malformed_response_status.json").exists()
 
         dirty_response = tmp / "dirty_response.csv"
         write_response(

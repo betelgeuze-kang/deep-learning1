@@ -1139,6 +1139,43 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
                     errors.append(
                         "repo_discovery_response: human_required_cells_remaining must match response_completion"
                     )
+            if "request_response_template_row_count" in payload:
+                template_rows = require_int_at_least(
+                    errors=errors,
+                    name="repo_discovery_response",
+                    payload=payload,
+                    key="request_response_template_row_count",
+                    minimum=0,
+                )
+                if template_rows > completion_ints["request_row_count"]:
+                    errors.append(
+                        "repo_discovery_response: request_response_template_row_count "
+                        "must be <= response_completion request_row_count"
+                    )
+            if "request_response_template_recommended_only" in payload:
+                recommended_only = require_exact_int(
+                    errors=errors,
+                    name="repo_discovery_response",
+                    payload=payload,
+                    key="request_response_template_recommended_only",
+                )
+                if recommended_only not in {0, 1}:
+                    errors.append(
+                        "repo_discovery_response: request_response_template_recommended_only must be one of [0, 1]"
+                    )
+                elif recommended_only == 1 and "request_response_template_row_count" in payload:
+                    template_rows = require_int_at_least(
+                        errors=errors,
+                        name="repo_discovery_response",
+                        payload=payload,
+                        key="request_response_template_row_count",
+                        minimum=0,
+                    )
+                    if template_rows > completion_ints["recommended_request_rows"]:
+                        errors.append(
+                            "repo_discovery_response: recommended-only template row count "
+                            "must be <= response_completion recommended_request_rows"
+                        )
 
     require_sha_field(
         errors=errors,
@@ -2325,6 +2362,19 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
                 "ready_for_repo_intake_collect_command",
             ),
             "repo_discovery_response_rows_counted": count_int(discovery_response, "repo_intake_rows_counted"),
+            "repo_discovery_response_template_recommended_only": count_int(
+                discovery_response,
+                "request_response_template_recommended_only",
+            ),
+            "repo_discovery_response_template_row_count": count_int(
+                discovery_response,
+                "request_response_template_row_count",
+            ),
+            "repo_discovery_response_recommended_request_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "recommended_request_rows",
+            ),
             "repo_discovery_response_human_required_cells_remaining": count_int(
                 discovery_response,
                 "human_required_cells_remaining",
@@ -2427,6 +2477,11 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "- repo_discovery_response: {valid_selected_response_rows}/{required} "
         "(selected {selected_response_rows}, ready_command {ready_for_repo_intake_collect_command}, "
         "supplied {repo_discovery_response_supplied}, rows_counted {repo_discovery_response_rows_counted})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
+        "- repo_discovery_response_template: rows {repo_discovery_response_template_row_count} "
+        "(recommended_only {repo_discovery_response_template_recommended_only}, "
+        "recommended_request_rows {repo_discovery_response_recommended_request_rows})".format(
             **payload["stage_progress"]["repo_intake"],
         ),
         "- repo_discovery_response_completion: human_required_cells "

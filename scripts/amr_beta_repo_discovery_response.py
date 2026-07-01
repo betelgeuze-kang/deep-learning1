@@ -109,6 +109,33 @@ def int_flag(payload: dict, key: str, default: int = 0) -> int:
     return default
 
 
+def optional_int_flag(payload: dict, key: str, *, errors: list[str], name: str) -> int:
+    if key not in payload:
+        return 0
+    raw = payload.get(key)
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw not in {0, 1}:
+        errors.append(f"{name}: {key} must be one of [0, 1]")
+        return 0
+    return raw
+
+
+def optional_nonnegative_int(
+    payload: dict,
+    key: str,
+    *,
+    default: int,
+    errors: list[str],
+    name: str,
+) -> int:
+    if key not in payload:
+        return default
+    raw = payload.get(key)
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 0:
+        errors.append(f"{name}: {key} must be an integer >= 0")
+        return default
+    return raw
+
+
 def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
@@ -401,6 +428,19 @@ def build_payload(
         response_rows=response_rows,
         min_repos=min_repos,
     )
+    request_response_template_recommended_only = optional_int_flag(
+        request,
+        "response_template_recommended_only",
+        errors=errors,
+        name="repo_discovery_request",
+    )
+    request_response_template_row_count = optional_nonnegative_int(
+        request,
+        "response_template_row_count",
+        default=0,
+        errors=errors,
+        name="repo_discovery_request",
+    )
     selected_fingerprint = sha256_json(
         [
             {
@@ -418,6 +458,8 @@ def build_payload(
         "repo_discovery_request_sha256": sha256_file(request_path) if request_path.exists() else "",
         "human_response": str(response_path),
         "human_response_sha256": sha256_file(response_path) if response_path.exists() else "",
+        "request_response_template_recommended_only": request_response_template_recommended_only,
+        "request_response_template_row_count": request_response_template_row_count,
         "response_row_count": len(response_rows),
         "response_completion": response_completion,
         "human_required_cells_remaining": response_completion["human_required_cells_remaining"],
@@ -468,6 +510,8 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "",
         f"- ready_for_repo_intake_collect_command: {payload['ready_for_repo_intake_collect_command']}",
         f"- repo_intake_rows_counted: {payload['repo_intake_rows_counted']}",
+        f"- request_response_template_recommended_only: {payload['request_response_template_recommended_only']}",
+        f"- request_response_template_row_count: {payload['request_response_template_row_count']}",
         f"- selected_response_rows: {payload['selected_response_rows']}",
         f"- min_real_repos_required: {payload['min_real_repos_required']}",
         f"- human_required_cells_remaining: {payload['human_required_cells_remaining']}",
