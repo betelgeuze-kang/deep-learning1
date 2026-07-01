@@ -1566,6 +1566,13 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
         key="min_human_label_rows_required",
         minimum=300,
     )
+    total_decisions = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="total_decision_rows",
+        minimum=0,
+    )
     valid_labels = require_int_at_least(
         errors=errors,
         name=name,
@@ -1593,6 +1600,8 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
                 "human_input_status: valid_human_label_rows must equal "
                 "non_synthetic_valid_human_label_rows + synthetic_or_unverified_human_label_rows"
             )
+    if total_decisions >= 0 and valid_labels >= 0 and total_decisions < valid_labels:
+        errors.append("human_input_status: total_decision_rows must be >= valid_human_label_rows")
     label_remaining = require_exact_int(
         errors=errors,
         name=name,
@@ -1623,6 +1632,34 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
         key="min_maintainer_feedback_required",
         minimum=3,
     )
+    total_feedback_rows = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="total_feedback_rows",
+        minimum=0,
+    )
+    valid_feedback_rows = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="valid_feedback_rows",
+        minimum=0,
+    )
+    distinct_maintainers = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="distinct_maintainer_id_count",
+        minimum=0,
+    )
+    distinct_countable_maintainers = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="distinct_countable_maintainer_id_count",
+        minimum=0,
+    )
     effective_maintainers = require_int_at_least(
         errors=errors,
         name=name,
@@ -1630,6 +1667,15 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
         key="effective_maintainer_id_count",
         minimum=0,
     )
+    if total_feedback_rows >= 0 and valid_feedback_rows >= 0 and total_feedback_rows < valid_feedback_rows:
+        errors.append("human_input_status: total_feedback_rows must be >= valid_feedback_rows")
+    if (
+        effective_maintainers >= 0
+        and distinct_maintainers >= 0
+        and distinct_countable_maintainers >= 0
+        and effective_maintainers > max(distinct_maintainers, distinct_countable_maintainers)
+    ):
+        errors.append("human_input_status: effective_maintainer_id_count must be backed by distinct maintainer counts")
     maintainer_remaining = require_exact_int(
         errors=errors,
         name=name,
@@ -1660,6 +1706,13 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
         key="template_candidate_rows",
         minimum=0,
     )
+    template_dir_count = require_int_at_least(
+        errors=errors,
+        name=name,
+        payload=payload,
+        key="template_dir_count",
+        minimum=0,
+    )
     template_non_synthetic = require_int_at_least(
         errors=errors,
         name=name,
@@ -1680,6 +1733,18 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
                 "human_input_status: template_candidate_rows must equal "
                 "template_non_synthetic_candidate_rows + template_synthetic_or_unverified_candidate_rows"
             )
+    if template_candidates >= 0 and valid_labels >= 0 and template_candidates and valid_labels > template_candidates:
+        errors.append("human_input_status: valid_human_label_rows must be <= template_candidate_rows")
+    if (
+        template_non_synthetic >= 0
+        and non_synthetic_labels >= 0
+        and template_non_synthetic
+        and non_synthetic_labels > template_non_synthetic
+    ):
+        errors.append(
+            "human_input_status: non_synthetic_valid_human_label_rows must be <= "
+            "template_non_synthetic_candidate_rows"
+        )
 
     for key in ["compiles_labels", "creates_benchmark_evidence", "runs_benchmark"]:
         require_flag(errors=errors, name=name, payload=payload, key=key, expected=0)
@@ -1697,10 +1762,47 @@ def require_human_input_status(*, errors: list[str], payload: dict) -> None:
     if ready not in {0, 1}:
         errors.append("human_input_status: ready_for_real_benchmark_inputs must be one of [0, 1]")
     elif ready == 1:
+        raw_errors = payload.get("errors", [])
+        if raw_errors:
+            errors.append("human_input_status: errors must be empty when ready")
         if label_met != 1:
             errors.append("human_input_status: human_label_requirement_met must be 1 when ready")
         if maintainer_met != 1:
             errors.append("human_input_status: maintainer_feedback_requirement_met must be 1 when ready")
+        if total_decisions < min_labels:
+            errors.append("human_input_status: total_decision_rows must be >= min_human_label_rows_required when ready")
+        if valid_labels < min_labels:
+            errors.append("human_input_status: valid_human_label_rows must be >= min_human_label_rows_required when ready")
+        if non_synthetic_labels < min_labels:
+            errors.append(
+                "human_input_status: non_synthetic_valid_human_label_rows must be >= "
+                "min_human_label_rows_required when ready"
+            )
+        if template_dir_count < 1:
+            errors.append("human_input_status: template_dir_count must be >= 1 when ready")
+        if template_non_synthetic < min_labels:
+            errors.append(
+                "human_input_status: template_non_synthetic_candidate_rows must be >= "
+                "min_human_label_rows_required when ready"
+            )
+        if template_non_synthetic < non_synthetic_labels:
+            errors.append(
+                "human_input_status: template_non_synthetic_candidate_rows must cover "
+                "non_synthetic_valid_human_label_rows when ready"
+            )
+        if total_feedback_rows < min_maintainers:
+            errors.append(
+                "human_input_status: total_feedback_rows must be >= min_maintainer_feedback_required when ready"
+            )
+        if valid_feedback_rows < min_maintainers:
+            errors.append(
+                "human_input_status: valid_feedback_rows must be >= min_maintainer_feedback_required when ready"
+            )
+        if effective_maintainers < min_maintainers:
+            errors.append(
+                "human_input_status: effective_maintainer_id_count must be >= "
+                "min_maintainer_feedback_required when ready"
+            )
         for key in ["input_path_guard_passed", "output_path_guard_passed", "feedback_counts_for_beta_precheck"]:
             if truthy_int(payload, key) != 1:
                 errors.append(f"human_input_status: {key} must be 1 when ready")

@@ -1294,9 +1294,60 @@ def main() -> int:
             "--json",
         )
         assert proc.returncode == 1
+        assert "human_input_status: errors must be empty when ready" in proc.stderr
         assert "human_input_status: human_label_requirement_met must be 1 when ready" in proc.stderr
         assert "human_input_status: maintainer_feedback_requirement_met must be 1 when ready" in proc.stderr
         assert "human_input_status: feedback_counts_for_beta_precheck must be 1 when ready" in proc.stderr
+
+        no_template_ready = tmp / "no_template_human_input_status.json"
+        no_template_ready_payload = human_input_status_payload(
+            valid_labels=300,
+            non_synthetic_labels=300,
+            maintainers=3,
+            ready=1,
+        )
+        no_template_ready_payload["errors"] = []
+        no_template_ready_payload["template_dir_count"] = 0
+        no_template_ready_payload["template_candidate_rows"] = 0
+        no_template_ready_payload["template_non_synthetic_candidate_rows"] = 0
+        no_template_ready_payload["feedback_counts_for_beta_precheck"] = 1
+        write_json(no_template_ready, no_template_ready_payload)
+        proc = run_tool(
+            "--human-input-status",
+            str(no_template_ready),
+            "--out-json",
+            str(tmp / "no_template_human_input_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "human_input_status: template_dir_count must be >= 1 when ready" in proc.stderr
+        assert (
+            "human_input_status: template_non_synthetic_candidate_rows must be >= "
+            "min_human_label_rows_required when ready"
+        ) in proc.stderr
+
+        stale_row_count_ready = tmp / "stale_row_count_human_input_status.json"
+        stale_row_count_payload = human_input_status_payload(
+            valid_labels=300,
+            non_synthetic_labels=300,
+            maintainers=3,
+            ready=1,
+        )
+        stale_row_count_payload["errors"] = []
+        stale_row_count_payload["total_decision_rows"] = 0
+        stale_row_count_payload["total_feedback_rows"] = 0
+        stale_row_count_payload["feedback_counts_for_beta_precheck"] = 1
+        write_json(stale_row_count_ready, stale_row_count_payload)
+        proc = run_tool(
+            "--human-input-status",
+            str(stale_row_count_ready),
+            "--out-json",
+            str(tmp / "stale_row_count_human_input_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "human_input_status: total_decision_rows must be >= valid_human_label_rows" in proc.stderr
+        assert "human_input_status: total_feedback_rows must be >= valid_feedback_rows" in proc.stderr
 
         repo_script_plan = tmp / "repo_plan_with_script.json"
         repo_script = tmp / "repo_audit_commands.sh"
