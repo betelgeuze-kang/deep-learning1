@@ -275,6 +275,12 @@ def output_git_worktree_errors(paths: dict[str, Path]) -> list[str]:
 
 def build_payload(args: argparse.Namespace, candidates: list[dict[str, object]], errors: list[str]) -> dict[str, object]:
     ready_after_contact = sum(int(row["ready_for_intake_after_human_contact"]) for row in candidates)
+    path_risk_count = sum(int(bool(row.get("path_risk_flags"))) for row in candidates)
+    ready_with_path_risk = sum(
+        int(row["ready_for_intake_after_human_contact"] and bool(row.get("path_risk_flags")))
+        for row in candidates
+    )
+    ready_without_path_risk = ready_after_contact - ready_with_path_risk
     return {
         "schema": SCHEMA,
         "scan_roots": [str(Path(root).expanduser().resolve()) for root in args.root],
@@ -282,6 +288,13 @@ def build_payload(args: argparse.Namespace, candidates: list[dict[str, object]],
         "include_hidden": int(args.include_hidden),
         "candidate_repo_count": len(candidates),
         "candidate_repos_with_clean_head": ready_after_contact,
+        "candidate_repos_with_path_risk": path_risk_count,
+        "candidate_repos_with_clean_head_and_path_risk": ready_with_path_risk,
+        "candidate_repos_with_clean_head_and_no_path_risk": ready_without_path_risk,
+        "clean_risk_free_candidate_shortfall_to_minimum": max(
+            0,
+            MIN_REAL_REPOS_FOR_BETA - ready_without_path_risk,
+        ),
         "min_real_repos_required": MIN_REAL_REPOS_FOR_BETA,
         "repo_intake_rows_counted": 0,
         "ready_for_repo_intake": 0,
@@ -319,6 +332,10 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         f"- ready_for_repo_intake: {payload['ready_for_repo_intake']}",
         f"- candidate_repo_count: {payload['candidate_repo_count']}",
         f"- candidate_repos_with_clean_head: {payload['candidate_repos_with_clean_head']}",
+        f"- candidate_repos_with_clean_head_and_no_path_risk: {payload['candidate_repos_with_clean_head_and_no_path_risk']}",
+        f"- candidate_repos_with_clean_head_and_path_risk: {payload['candidate_repos_with_clean_head_and_path_risk']}",
+        f"- candidate_repos_with_path_risk: {payload['candidate_repos_with_path_risk']}",
+        f"- clean_risk_free_candidate_shortfall_to_minimum: {payload['clean_risk_free_candidate_shortfall_to_minimum']}",
         f"- repo_intake_rows_counted: {payload['repo_intake_rows_counted']}",
         f"- candidate_rows_cannot_count_without_human_contact: {payload['candidate_rows_cannot_count_without_human_contact']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
