@@ -43,6 +43,12 @@ def create_repo(root: Path, name: str) -> Path:
     return repo
 
 
+def git_head(repo: Path) -> str:
+    proc = run(["git", "rev-parse", "HEAD"], cwd=repo)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout.strip()
+
+
 def write_response(path: Path, rows: list[dict[str, str]]) -> None:
     fieldnames = [
         "suggested_case_id",
@@ -167,13 +173,27 @@ def main() -> int:
         assert completion["selected_missing_or_invalid_contact_rows"] == 0
         assert completion["selected_missing_namespace_confirmation_rows"] == 0
         assert completion["selected_missing_source_confirmation_rows"] == 0
+        assert completion["selected_current_repo_preflight_passed_rows"] == 2
+        assert completion["selected_current_repo_preflight_failed_rows"] == 0
+        assert completion["selected_current_repo_head_mismatch_rows"] == 0
+        assert completion["selected_current_repo_dirty_rows"] == 0
+        assert completion["selected_current_repo_missing_or_not_git_rows"] == 0
+        assert completion["selected_current_repo_root_mismatch_rows"] == 0
         assert completion["selected_response_rows_remaining_to_minimum"] == 0
         assert "<contact-for-candidate-01-repo-a>" in payload["collector_command_redacted"]
         assert "maintainer-01-contact" not in proc.stdout
         assert "maintainer-01-contact" not in out_json.read_text(encoding="utf-8")
         assert "maintainer-01-contact" not in out_md.read_text(encoding="utf-8")
         assert payload["selected_rows"][0]["owner_or_maintainer_contact_sha256"].startswith("sha256:")
+        first_selected = payload["selected_rows"][0]
+        assert first_selected["current_repo_git_preflight_passed"] == 1
+        assert first_selected["current_repo_git_worktree_confirmed"] == 1
+        assert first_selected["current_repo_git_root"] == str(repo_a.resolve())
+        assert first_selected["current_repo_git_head"] == git_head(repo_a)
+        assert first_selected["current_repo_head_matches_request"] == 1
+        assert first_selected["current_repo_clean_worktree"] == 1
         assert str(repo_a.resolve()) in payload["collector_command_redacted"]
+        assert "selected_current_repo_preflight_passed_rows" in out_md.read_text(encoding="utf-8")
         assert not (tmp / "repo_intake.md").exists()
 
         risk_request_json = tmp / "risk_request.json"
@@ -494,6 +514,50 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "response must not be inside target repo" in proc.stderr
+
+        drift_response = tmp / "drift_response.csv"
+        (repo_b / "DRIFT.txt").write_text("dirty after request\n", encoding="utf-8")
+        write_response(
+            drift_response,
+            [
+                {
+                    "suggested_case_id": "candidate-02-repo-b",
+                    "include_for_real_benchmark_intake": "true",
+                    "owner_or_maintainer_contact": "maintainer-02-contact",
+                    "real_benchmark_namespace_confirmed": "true",
+                }
+            ],
+        )
+        drift_out_json = tmp / "drift_response_status.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(request_json),
+                "--response",
+                str(drift_response),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(drift_out_json),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        drift_payload = json.loads(proc.stdout)
+        assert drift_payload["ready_for_repo_intake_collect_command"] == 0
+        assert drift_payload["valid_selected_response_rows"] == 0
+        assert (
+            drift_payload["response_completion"]["selected_current_repo_preflight_failed_rows"]
+            == 1
+        )
+        assert drift_payload["response_completion"]["selected_current_repo_dirty_rows"] == 1
+        assert drift_payload["selected_rows"][0]["current_repo_git_preflight_passed"] == 0
+        assert drift_payload["selected_rows"][0]["current_repo_clean_worktree"] == 0
+        assert "current git status must be clean" in proc.stderr
+        assert not drift_out_json.exists()
 
     print("AMR beta repo discovery response smoke OK")
     return 0

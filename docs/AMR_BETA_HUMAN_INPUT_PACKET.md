@@ -118,7 +118,12 @@ human-input artifact that marks itself ready without meeting the 300-label and
   writes a filled intake sheet and the intake validator passes. The status also
   reports response-completion counts such as blank include cells, selected rows
   missing contact, selected rows missing namespace confirmation, and the
-  request packet's response-template metadata.
+  request packet's response-template metadata. It also reruns a read-only
+  current repo git preflight for selected rows and reports
+  `selected_current_repo_preflight_failed_rows`,
+  `selected_current_repo_head_mismatch_rows`, and
+  `selected_current_repo_dirty_rows` so stale HEAD or dirty-worktree drift is
+  caught before a collector command is treated as ready.
   If this response status exists, also pass it to the read-only status board
   with `--repo-discovery-response`; the board reports selected response rows
   and response-completion counts while keeping repo-intake progress at the

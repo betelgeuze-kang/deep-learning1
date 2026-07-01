@@ -496,17 +496,27 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
     selected_remaining = max(0, 10 - selected_count)
     for index in range(selected_count):
         case_id = f"candidate-{index + 1:02d}-repo"
+        repo_path = f"/tmp/discovered-repo-{index + 1:02d}"
+        head = fake_git_head(2000 + index)
         selected_case_ids.append(case_id)
         selected_rows.append(
             {
                 "row_index": index + 1,
                 "suggested_case_id": case_id,
-                "repo_path": f"/tmp/discovered-repo-{index + 1:02d}",
-                "actual_repo_git_head": fake_git_head(2000 + index),
+                "repo_path": repo_path,
+                "actual_repo_git_head": head,
                 "audit_mode": "quick",
                 "owner_or_maintainer_contact_sha256": fake_sha(3000 + index),
                 "real_benchmark_namespace_confirmed": 1,
                 "counts_for_repo_intake": 0,
+                "current_repo_git_preflight_passed": 1,
+                "current_repo_git_worktree_confirmed": 1,
+                "current_repo_git_root": repo_path,
+                "current_repo_head_readable": 1,
+                "current_repo_git_head": head,
+                "current_repo_head_matches_request": 1,
+                "current_repo_status_readable": 1,
+                "current_repo_clean_worktree": 1,
             }
         )
     command: list[str] = ["python3", "scripts/amr_beta_repo_intake_collect.py"]
@@ -539,6 +549,12 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
             "selected_missing_namespace_confirmation_rows": 0,
             "selected_missing_source_confirmation_rows": 0,
             "selected_repo_path_mismatch_rows": 0,
+            "selected_current_repo_preflight_passed_rows": selected_count,
+            "selected_current_repo_preflight_failed_rows": 0,
+            "selected_current_repo_head_mismatch_rows": 0,
+            "selected_current_repo_dirty_rows": 0,
+            "selected_current_repo_missing_or_not_git_rows": 0,
+            "selected_current_repo_root_mismatch_rows": 0,
             "selected_response_rows_remaining_to_minimum": selected_remaining,
             "human_required_cells_remaining": unselected_count,
         },
@@ -1084,6 +1100,12 @@ def main() -> int:
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_namespace_rows"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_missing_source_confirmation_rows"] == 0
         assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_selected_rows_remaining_to_minimum"] == 4
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_preflight_passed_rows"] == 6
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_preflight_failed_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_head_mismatch_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_dirty_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_missing_or_not_git_rows"] == 0
+        assert payload["stage_progress"]["repo_intake"]["repo_discovery_response_current_root_mismatch_rows"] == 0
         assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
         markdown = out_md.read_text(encoding="utf-8")
         assert "repo_discovery_response: 6/10 (selected 6, ready_command 0, supplied 1, rows_counted 0)" in markdown
@@ -1092,6 +1114,11 @@ def main() -> int:
             "repo_discovery_response_completion: human_required_cells 3 "
             "(blank_include 3, missing_contact 0, missing_namespace 0, "
             "missing_source_confirmation 0, selected_remaining 4)"
+            in markdown
+        )
+        assert (
+            "repo_discovery_response_current_preflight: passed 6, failed 0, "
+            "head_mismatch 0, dirty 0, missing_or_not_git 0, root_mismatch 0"
             in markdown
         )
 
@@ -1114,6 +1141,80 @@ def main() -> int:
         legacy_payload = json.loads(legacy_out_json.read_text(encoding="utf-8"))
         assert legacy_payload["stage_progress"]["repo_intake"]["repo_discovery_response_template_row_count"] == 0
         assert "repo_discovery_response_template: rows 0" in legacy_out_md.read_text(encoding="utf-8")
+
+        legacy_current_preflight = tmp / "legacy_current_preflight_response.json"
+        legacy_current_preflight_payload = repo_discovery_response_payload()
+        for key in [
+            "selected_current_repo_preflight_passed_rows",
+            "selected_current_repo_preflight_failed_rows",
+            "selected_current_repo_head_mismatch_rows",
+            "selected_current_repo_dirty_rows",
+            "selected_current_repo_missing_or_not_git_rows",
+            "selected_current_repo_root_mismatch_rows",
+        ]:
+            del legacy_current_preflight_payload["response_completion"][key]
+        for row in legacy_current_preflight_payload["selected_rows"]:
+            for key in [
+                "current_repo_git_preflight_passed",
+                "current_repo_git_worktree_confirmed",
+                "current_repo_git_root",
+                "current_repo_head_readable",
+                "current_repo_git_head",
+                "current_repo_head_matches_request",
+                "current_repo_status_readable",
+                "current_repo_clean_worktree",
+            ]:
+                del row[key]
+        write_json(legacy_current_preflight, legacy_current_preflight_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(legacy_current_preflight),
+            "--out-json",
+            str(tmp / "legacy_current_preflight_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+
+        ready_missing_current_preflight = tmp / "ready_missing_current_preflight_response.json"
+        ready_missing_current_preflight_payload = repo_discovery_response_payload(response_count=10, selected_count=10)
+        for key in [
+            "selected_current_repo_preflight_passed_rows",
+            "selected_current_repo_preflight_failed_rows",
+            "selected_current_repo_head_mismatch_rows",
+            "selected_current_repo_dirty_rows",
+            "selected_current_repo_missing_or_not_git_rows",
+            "selected_current_repo_root_mismatch_rows",
+        ]:
+            del ready_missing_current_preflight_payload["response_completion"][key]
+        for row in ready_missing_current_preflight_payload["selected_rows"]:
+            for key in [
+                "current_repo_git_preflight_passed",
+                "current_repo_git_worktree_confirmed",
+                "current_repo_git_root",
+                "current_repo_head_readable",
+                "current_repo_git_head",
+                "current_repo_head_matches_request",
+                "current_repo_status_readable",
+                "current_repo_clean_worktree",
+            ]:
+                del row[key]
+        write_json(ready_missing_current_preflight, ready_missing_current_preflight_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(ready_missing_current_preflight),
+            "--out-json",
+            str(tmp / "ready_missing_current_preflight_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert (
+            "repo_discovery_response.response_completion: "
+            "selected_current_repo_preflight_passed_rows must be an integer"
+        ) in proc.stderr
+        assert (
+            "repo_discovery_response: selected_rows row 1: "
+            "current_repo_git_preflight_passed must be an integer"
+        ) in proc.stderr
 
         missing_completion = tmp / "missing_completion_response.json"
         missing_completion_payload = repo_discovery_response_payload(selected_count=10)
@@ -1786,6 +1887,86 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "must not expose raw owner_or_maintainer_contact" in proc.stderr
+
+        current_preflight_failed = tmp / "current_preflight_failed_repo_discovery_response.json"
+        current_preflight_failed_payload = repo_discovery_response_payload(response_count=10, selected_count=10)
+        current_preflight_failed_payload["response_completion"]["selected_current_repo_preflight_passed_rows"] = 9
+        current_preflight_failed_payload["response_completion"]["selected_current_repo_preflight_failed_rows"] = 1
+        current_preflight_failed_payload["response_completion"]["selected_current_repo_dirty_rows"] = 1
+        current_preflight_failed_payload["selected_rows"][0]["current_repo_git_preflight_passed"] = 0
+        current_preflight_failed_payload["selected_rows"][0]["current_repo_clean_worktree"] = 0
+        write_json(current_preflight_failed, current_preflight_failed_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(current_preflight_failed),
+            "--out-json",
+            str(tmp / "current_preflight_failed_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "ready command requires zero selected current repo preflight failures" in proc.stderr
+        assert "current_repo_git_preflight_passed must be 1 when ready" in proc.stderr
+
+        inconsistent_current_preflight_detail = tmp / "inconsistent_current_preflight_detail.json"
+        inconsistent_current_preflight_detail_payload = repo_discovery_response_payload(
+            response_count=10,
+            selected_count=10,
+        )
+        inconsistent_current_preflight_detail_payload["response_completion"][
+            "selected_current_repo_dirty_rows"
+        ] = 1
+        write_json(inconsistent_current_preflight_detail, inconsistent_current_preflight_detail_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(inconsistent_current_preflight_detail),
+            "--out-json",
+            str(tmp / "inconsistent_current_preflight_detail_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert (
+            "selected_current_repo_dirty_rows must be <= "
+            "selected_current_repo_preflight_failed_rows"
+        ) in proc.stderr
+        assert "ready command requires selected_current_repo_dirty_rows=0" in proc.stderr
+
+        inconsistent_current_preflight_row = tmp / "inconsistent_current_preflight_row.json"
+        inconsistent_current_preflight_row_payload = repo_discovery_response_payload(
+            response_count=10,
+            selected_count=10,
+        )
+        inconsistent_current_preflight_row_payload["selected_rows"][0]["current_repo_clean_worktree"] = 0
+        inconsistent_current_preflight_row_payload["selected_rows"][1]["current_repo_git_head"] = fake_git_head(9999)
+        write_json(inconsistent_current_preflight_row, inconsistent_current_preflight_row_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(inconsistent_current_preflight_row),
+            "--out-json",
+            str(tmp / "inconsistent_current_preflight_row_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert (
+            "current_repo_clean_worktree must be 1 when current_repo_git_preflight_passed is 1"
+            in proc.stderr
+        )
+        assert "current_repo_git_head must match actual_repo_git_head" in proc.stderr
+
+        mismatched_current_preflight_counts = tmp / "mismatched_current_preflight_counts.json"
+        mismatched_current_preflight_counts_payload = repo_discovery_response_payload()
+        mismatched_current_preflight_counts_payload["response_completion"][
+            "selected_current_repo_preflight_passed_rows"
+        ] = 99
+        write_json(mismatched_current_preflight_counts, mismatched_current_preflight_counts_payload)
+        proc = run_tool(
+            "--repo-discovery-response",
+            str(mismatched_current_preflight_counts),
+            "--out-json",
+            str(tmp / "mismatched_current_preflight_counts_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "selected current repo preflight pass/fail rows must match selected_response_rows" in proc.stderr
 
         mismatched_response_completion = tmp / "mismatched_repo_discovery_response_completion.json"
         mismatched_response_completion_payload = repo_discovery_response_payload()

@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 
@@ -243,6 +244,78 @@ def read_response_rows(path: Path) -> list[dict[str, str]]:
     return read_csv_rows(path)
 
 
+def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def current_repo_preflight(request_row: dict, repo_path: str, row_index: int) -> tuple[dict[str, object], list[str]]:
+    errors: list[str] = []
+    repo = Path(repo_path).expanduser().resolve()
+    request_head = str(request_row.get("actual_repo_git_head") or "").strip().lower()
+    status = {
+        "current_repo_git_preflight_passed": 0,
+        "current_repo_git_worktree_confirmed": 0,
+        "current_repo_git_root": "",
+        "current_repo_head_readable": 0,
+        "current_repo_git_head": "",
+        "current_repo_head_matches_request": 0,
+        "current_repo_status_readable": 0,
+        "current_repo_clean_worktree": 0,
+    }
+    if is_forbidden_env_path(repo):
+        errors.append(f"response row {row_index}: current repo path must not be .env-like")
+        return status, errors
+    if not repo.is_dir():
+        errors.append(f"response row {row_index}: current repo_path is not a directory: {repo}")
+        return status, errors
+
+    code, inside, _ = git_text(repo, ["rev-parse", "--is-inside-work-tree"])
+    if code != 0 or inside.strip() != "true":
+        errors.append(f"response row {row_index}: current repo_path is not a git worktree")
+        return status, errors
+    status["current_repo_git_worktree_confirmed"] = 1
+
+    root_code, root, _ = git_text(repo, ["rev-parse", "--show-toplevel"])
+    if root_code != 0 or not root.strip():
+        errors.append(f"response row {row_index}: unable to read current git worktree root")
+    else:
+        git_root = str(Path(root.strip()).expanduser().resolve())
+        status["current_repo_git_root"] = git_root
+        if git_root != str(repo):
+            errors.append(f"response row {row_index}: current repo_path must be git worktree root")
+
+    head_code, head, _ = git_text(repo, ["rev-parse", "HEAD"])
+    current_head = head.strip().lower()
+    if head_code != 0 or not current_head:
+        errors.append(f"response row {row_index}: unable to read current git HEAD")
+    else:
+        status["current_repo_head_readable"] = 1
+        status["current_repo_git_head"] = current_head
+        if current_head == request_head:
+            status["current_repo_head_matches_request"] = 1
+        else:
+            errors.append(f"response row {row_index}: current git HEAD changed since request packet")
+
+    status_code, porcelain, _ = git_text(repo, ["status", "--porcelain=v1", "--untracked-files=all"])
+    if status_code != 0:
+        errors.append(f"response row {row_index}: unable to read current git status")
+    else:
+        status["current_repo_status_readable"] = 1
+        if porcelain.strip():
+            errors.append(f"response row {row_index}: current git status must be clean")
+        else:
+            status["current_repo_clean_worktree"] = 1
+
+    status["current_repo_git_preflight_passed"] = int(not errors)
+    return status, errors
+
+
 def validate_response_rows(
     *,
     request: dict,
@@ -308,6 +381,9 @@ def validate_response_rows(
         if audit_mode not in {"quick", "full"}:
             errors.append(f"response row {index}: audit_mode must be quick or full")
 
+        current_status, current_errors = current_repo_preflight(request_row, request_repo, index)
+        errors.extend(current_errors)
+
         selected.append(
             {
                 "row_index": index,
@@ -319,12 +395,47 @@ def validate_response_rows(
                 "real_benchmark_namespace_confirmed": 1,
                 "human_real_repo_source_confirmed": int(source_confirmed),
                 "counts_for_repo_intake": 0,
+                **current_status,
             }
         )
 
     if len(selected) < min_repos:
         blockers.append(f"Need {min_repos - len(selected)} more selected clean repo response rows before collect.")
     return selected, errors, blockers
+
+
+def current_preflight_completion(selected_rows: list[dict[str, object]]) -> dict[str, int]:
+    failed_rows = [
+        row
+        for row in selected_rows
+        if int_flag(row, "current_repo_git_preflight_passed") != 1
+    ]
+    return {
+        "selected_current_repo_preflight_passed_rows": sum(
+            1 for row in selected_rows if int_flag(row, "current_repo_git_preflight_passed") == 1
+        ),
+        "selected_current_repo_preflight_failed_rows": len(failed_rows),
+        "selected_current_repo_head_mismatch_rows": sum(
+            1 for row in failed_rows if int_flag(row, "current_repo_head_matches_request") != 1
+        ),
+        "selected_current_repo_dirty_rows": sum(
+            1 for row in failed_rows if int_flag(row, "current_repo_clean_worktree") != 1
+        ),
+        "selected_current_repo_missing_or_not_git_rows": sum(
+            1
+            for row in failed_rows
+            if int_flag(row, "current_repo_git_worktree_confirmed") != 1
+            or int_flag(row, "current_repo_head_readable") != 1
+            or int_flag(row, "current_repo_status_readable") != 1
+        ),
+        "selected_current_repo_root_mismatch_rows": sum(
+            1
+            for row in failed_rows
+            if str(row.get("current_repo_git_root") or "").strip()
+            and str(Path(str(row.get("current_repo_git_root"))).expanduser().resolve())
+            != str(Path(str(row.get("repo_path") or "")).expanduser().resolve())
+        ),
+    }
 
 
 def summarize_response_completion(
@@ -451,6 +562,7 @@ def build_payload(
         response_rows=response_rows,
         min_repos=min_repos,
     )
+    response_completion.update(current_preflight_completion(selected_rows))
     request_response_template_recommended_only = optional_int_flag(
         request,
         "response_template_recommended_only",
@@ -555,6 +667,12 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         "selected_missing_or_invalid_contact_rows",
         "selected_missing_namespace_confirmation_rows",
         "selected_missing_source_confirmation_rows",
+        "selected_current_repo_preflight_passed_rows",
+        "selected_current_repo_preflight_failed_rows",
+        "selected_current_repo_head_mismatch_rows",
+        "selected_current_repo_dirty_rows",
+        "selected_current_repo_missing_or_not_git_rows",
+        "selected_current_repo_root_mismatch_rows",
         "selected_response_rows_remaining_to_minimum",
         "human_required_cells_remaining",
     ]:

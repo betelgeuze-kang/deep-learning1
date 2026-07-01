@@ -2139,6 +2139,55 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
                 "repo_discovery_response: response_completion selected_truthy_response_rows "
                 "must be >= selected_response_rows"
             )
+        current_preflight_keys = [
+            "selected_current_repo_preflight_passed_rows",
+            "selected_current_repo_preflight_failed_rows",
+            "selected_current_repo_head_mismatch_rows",
+            "selected_current_repo_dirty_rows",
+            "selected_current_repo_missing_or_not_git_rows",
+            "selected_current_repo_root_mismatch_rows",
+        ]
+        if ready == 1 or any(key in completion for key in current_preflight_keys):
+            current_preflight_ints = {
+                key: require_int_at_least(
+                    errors=errors,
+                    name=completion_name,
+                    payload=completion,
+                    key=key,
+                    minimum=0,
+                )
+                for key in current_preflight_keys
+            }
+            passed_current = current_preflight_ints["selected_current_repo_preflight_passed_rows"]
+            failed_current = current_preflight_ints["selected_current_repo_preflight_failed_rows"]
+            detail_current = {
+                key: current_preflight_ints[key]
+                for key in [
+                    "selected_current_repo_head_mismatch_rows",
+                    "selected_current_repo_dirty_rows",
+                    "selected_current_repo_missing_or_not_git_rows",
+                    "selected_current_repo_root_mismatch_rows",
+                ]
+            }
+            if passed_current + failed_current != selected_rows_count:
+                errors.append(
+                    "repo_discovery_response: selected current repo preflight pass/fail rows "
+                    "must match selected_response_rows"
+                )
+            for key, value in detail_current.items():
+                if value > failed_current:
+                    errors.append(
+                        f"repo_discovery_response: {key} must be <= "
+                        "selected_current_repo_preflight_failed_rows"
+                    )
+            if ready == 1 and failed_current != 0:
+                errors.append(
+                    "repo_discovery_response: ready command requires zero selected current repo preflight failures"
+                )
+            if ready == 1:
+                for key, value in detail_current.items():
+                    if value != 0:
+                        errors.append(f"repo_discovery_response: ready command requires {key}=0")
         if "human_required_cells_remaining" in payload:
             top_level_remaining = require_int_at_least(
                 errors=errors,
@@ -2245,6 +2294,49 @@ def require_repo_discovery_response(*, errors: list[str], payload: dict) -> None
         counts = require_discovery_row_flag(errors=errors, prefix=prefix, row=row, key="counts_for_repo_intake")
         if counts != 0:
             errors.append(f"{prefix}: counts_for_repo_intake must be 0")
+        current_row_keys = [
+            "current_repo_git_preflight_passed",
+            "current_repo_git_worktree_confirmed",
+            "current_repo_git_root",
+            "current_repo_head_readable",
+            "current_repo_git_head",
+            "current_repo_head_matches_request",
+            "current_repo_status_readable",
+            "current_repo_clean_worktree",
+        ]
+        if ready == 1 or any(key in row for key in current_row_keys):
+            current_passed = require_discovery_row_flag(
+                errors=errors,
+                prefix=prefix,
+                row=row,
+                key="current_repo_git_preflight_passed",
+            )
+            current_subchecks = {
+                key: require_discovery_row_flag(errors=errors, prefix=prefix, row=row, key=key)
+                for key in [
+                    "current_repo_git_worktree_confirmed",
+                    "current_repo_head_readable",
+                    "current_repo_head_matches_request",
+                    "current_repo_status_readable",
+                    "current_repo_clean_worktree",
+                ]
+            }
+            current_head = str(row.get("current_repo_git_head") or "").strip().lower()
+            if not GIT_OBJECT_RE.fullmatch(current_head):
+                errors.append(f"{prefix}: current_repo_git_head must be a full git object id")
+            elif current_head != head:
+                errors.append(f"{prefix}: current_repo_git_head must match actual_repo_git_head")
+            current_root = str(row.get("current_repo_git_root") or "").strip()
+            if not current_root:
+                errors.append(f"{prefix}: current_repo_git_root must be present")
+            elif row.get("repo_path") and not same_path(current_root, str(row.get("repo_path") or "")):
+                errors.append(f"{prefix}: current_repo_git_root must match repo_path")
+            if current_passed == 1:
+                for key, value in current_subchecks.items():
+                    if value != 1:
+                        errors.append(f"{prefix}: {key} must be 1 when current_repo_git_preflight_passed is 1")
+            if ready == 1 and current_passed != 1:
+                errors.append(f"{prefix}: current_repo_git_preflight_passed must be 1 when ready")
 
     command = str(payload.get("collector_command_redacted") or "")
     command_argv = payload.get("collector_command_argv_redacted")
@@ -3556,6 +3648,36 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
                 "response_completion",
                 "selected_response_rows_remaining_to_minimum",
             ),
+            "repo_discovery_response_current_preflight_passed_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_preflight_passed_rows",
+            ),
+            "repo_discovery_response_current_preflight_failed_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_preflight_failed_rows",
+            ),
+            "repo_discovery_response_current_head_mismatch_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_head_mismatch_rows",
+            ),
+            "repo_discovery_response_current_dirty_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_dirty_rows",
+            ),
+            "repo_discovery_response_current_missing_or_not_git_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_missing_or_not_git_rows",
+            ),
+            "repo_discovery_response_current_root_mismatch_rows": nested_count_int(
+                discovery_response,
+                "response_completion",
+                "selected_current_repo_root_mismatch_rows",
+            ),
             "repo_intake_status_supplied": int(bool(intake)),
             "ready_for_real_benchmark_audit": count_int(intake, "ready_for_real_benchmark_audit"),
             "repo_snapshot_lock_row_count": count_int(intake, "repo_snapshot_lock_row_count"),
@@ -3672,6 +3794,15 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "missing_namespace {repo_discovery_response_missing_namespace_rows}, "
         "missing_source_confirmation {repo_discovery_response_missing_source_confirmation_rows}, "
         "selected_remaining {repo_discovery_response_selected_rows_remaining_to_minimum})".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
+        "- repo_discovery_response_current_preflight: passed "
+        "{repo_discovery_response_current_preflight_passed_rows}, "
+        "failed {repo_discovery_response_current_preflight_failed_rows}, "
+        "head_mismatch {repo_discovery_response_current_head_mismatch_rows}, "
+        "dirty {repo_discovery_response_current_dirty_rows}, "
+        "missing_or_not_git {repo_discovery_response_current_missing_or_not_git_rows}, "
+        "root_mismatch {repo_discovery_response_current_root_mismatch_rows}".format(
             **payload["stage_progress"]["repo_intake"],
         ),
         "- repo_audit_plan_commands: {repo_audit_plan_operator_command_count} "
