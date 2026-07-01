@@ -22,6 +22,10 @@ def sha256_json(payload: object) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def create_repo(root: Path, index: int) -> tuple[Path, str]:
     repo = root / f"repo-{index:02d}"
     repo.mkdir()
@@ -82,6 +86,7 @@ def main() -> int:
         assert '"owner_or_maintainer_contact_present": 1' in proc.stdout
         assert '"input_intake_sha256": "sha256:' in proc.stdout
         assert '"repo_snapshot_lock_sha256": "sha256:' in proc.stdout
+        assert '"repo_intake_local_fingerprint_sha256": "sha256:' in proc.stdout
         assert '"runs_audit": 0' in proc.stdout
         assert '"creates_benchmark_evidence": 0' in proc.stdout
         assert "maintainer-01-contact" not in proc.stdout
@@ -103,6 +108,11 @@ def main() -> int:
         assert status["repo_snapshot_lock_row_count"] == 10
         assert len(status["repo_snapshot_lock_rows"]) == 10
         assert status["repo_snapshot_lock_sha256"] == sha256_json(status["repo_snapshot_lock_rows"])
+        assert status["repo_intake_local_fingerprint_sha256"].startswith("sha256:")
+        assert len(status["repo_intake_local_fingerprint_rows"]) == 10
+        assert status["repo_intake_local_fingerprint_sha256"] == sha256_json(
+            status["repo_intake_local_fingerprint_rows"]
+        )
         first_lock = status["repo_snapshot_lock_rows"][0]
         assert first_lock["case_id"] == "case-01"
         assert first_lock["repo_git_root"] == str(repos[0][0].resolve())
@@ -117,6 +127,18 @@ def main() -> int:
         assert first_lock["namespace"] == "real_benchmark"
         assert first_lock["real_benchmark_namespace_confirmed"] == 1
         assert first_lock["valid"] == 1
+        first_fingerprint = status["repo_intake_local_fingerprint_rows"][0]
+        assert first_fingerprint["case_id"] == "case-01"
+        assert first_fingerprint["repo_path_sha256"] == sha256_text(str(repos[0][0].resolve()))
+        assert first_fingerprint["repo_git_root_sha256"] == sha256_text(str(repos[0][0].resolve()))
+        assert first_fingerprint["expected_repo_git_head"] == repos[0][1].lower()
+        assert first_fingerprint["actual_repo_git_head"] == repos[0][1].lower()
+        assert first_fingerprint["repo_head_pinned"] == 1
+        assert first_fingerprint["clean_worktree_actual"] == 1
+        assert first_fingerprint["owner_or_maintainer_contact_present"] == 1
+        assert first_fingerprint["namespace"] == "real_benchmark"
+        assert first_fingerprint["real_benchmark_namespace_confirmed"] == 1
+        assert first_fingerprint["valid"] == 1
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["repo_git_worktree_confirmed"] == 1
         assert status["row_statuses"][0]["repo_git_root"] == str(repos[0][0].resolve())
@@ -131,6 +153,7 @@ def main() -> int:
         assert "input_intake_sha256: sha256:" in status_md_text
         assert "repo_snapshot_lock_row_count: 10" in status_md_text
         assert "repo_snapshot_lock_sha256: sha256:" in status_md_text
+        assert "repo_intake_local_fingerprint_sha256: sha256:" in status_md_text
         assert "creates_benchmark_evidence: 0" in status_md_text
         assert "input_path_guard_passed: 1" in status_md_text
         assert "output_path_guard_passed: 1" in status_md_text
@@ -202,10 +225,15 @@ def main() -> int:
         assert dirty_status["ready_for_real_benchmark_audit"] == 0
         assert dirty_status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert dirty_status["repo_snapshot_lock_sha256"] == sha256_json(dirty_status["repo_snapshot_lock_rows"])
+        assert dirty_status["repo_intake_local_fingerprint_sha256"] == sha256_json(
+            dirty_status["repo_intake_local_fingerprint_rows"]
+        )
         assert dirty_status["row_statuses"][0]["valid"] == 0
         assert dirty_status["repo_snapshot_lock_rows"][0]["valid"] == 0
+        assert dirty_status["repo_intake_local_fingerprint_rows"][0]["valid"] == 0
         assert dirty_status["row_statuses"][0]["clean_worktree_actual"] == 0
         assert dirty_status["repo_snapshot_lock_rows"][0]["clean_worktree_actual"] == 0
+        assert dirty_status["repo_intake_local_fingerprint_rows"][0]["clean_worktree_actual"] == 0
         assert any("repo_dirty" in error for error in dirty_status["row_statuses"][0]["errors"])
         (repos[0][0] / "UNTRACKED.txt").unlink()
 

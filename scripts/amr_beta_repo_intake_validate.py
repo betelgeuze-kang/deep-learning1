@@ -148,6 +148,10 @@ def sha256_json(payload: object) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def read_markdown_table(path: Path) -> list[dict[str, str]]:
     lines = path.read_text(encoding="utf-8").splitlines()
     rows: list[dict[str, str]] = []
@@ -266,6 +270,34 @@ def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, 
             }
         )
     return lock_rows
+
+
+def local_fingerprint_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, object]]:
+    fingerprint_rows: list[dict[str, object]] = []
+    for status in row_statuses:
+        repo_path_resolved = str(status.get("repo_path_resolved") or "")
+        repo_git_root = str(status.get("repo_git_root") or "")
+        fingerprint_rows.append(
+            {
+                "row_index": status["row_index"],
+                "case_id": status["case_id"],
+                "repo_path_sha256": sha256_text(repo_path_resolved) if repo_path_resolved else "",
+                "repo_git_root_sha256": sha256_text(repo_git_root) if repo_git_root else "",
+                "expected_repo_git_head": status["expected_repo_git_head"],
+                "actual_repo_git_head": status["actual_repo_git_head"],
+                "repo_head_pinned": status["repo_head_pinned"],
+                "clean_worktree_actual": status["clean_worktree_actual"],
+                "owner_or_maintainer_contact_present": status[
+                    "owner_or_maintainer_contact_present"
+                ],
+                "namespace": status["namespace"],
+                "real_benchmark_namespace_confirmed": status[
+                    "real_benchmark_namespace_confirmed"
+                ],
+                "valid": status["valid"],
+            }
+        )
+    return fingerprint_rows
 
 
 def target_repo_paths_from_statuses(row_statuses: list[dict[str, object]]) -> list[str]:
@@ -415,6 +447,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
     if valid_rows < min_repos:
         errors.append(f"valid_repo_rows {valid_rows} below required minimum {min_repos}")
     lock_rows = snapshot_lock_rows(row_statuses)
+    fingerprint_rows = local_fingerprint_rows(row_statuses)
     summary = {
         "schema": "amr_beta_repo_intake_validate.v1",
         "total_rows": len(rows),
@@ -428,6 +461,8 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         "repo_snapshot_lock_row_count": len(lock_rows),
         "repo_snapshot_lock_rows": lock_rows,
         "repo_snapshot_lock_sha256": sha256_json(lock_rows),
+        "repo_intake_local_fingerprint_rows": fingerprint_rows,
+        "repo_intake_local_fingerprint_sha256": sha256_json(fingerprint_rows),
         "row_statuses": row_statuses,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
@@ -461,6 +496,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- min_real_repos_required: {payload['min_real_repos_required']}",
         f"- repo_snapshot_lock_row_count: {payload['repo_snapshot_lock_row_count']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"- repo_intake_local_fingerprint_sha256: {payload['repo_intake_local_fingerprint_sha256']}",
         f"- runs_audit: {payload['runs_audit']}",
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",

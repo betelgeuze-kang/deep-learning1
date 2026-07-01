@@ -45,6 +45,7 @@ def repo_command_script_text(plan: dict) -> str:
         "# This script runs the operator commands from a validated repo audit plan.",
         "# It does not prove beta readiness by itself; verify outputs before use.",
         f"# repo_snapshot_lock_sha256: {plan['repo_snapshot_lock_sha256']}",
+        f"# repo_intake_local_fingerprint_sha256: {plan['repo_intake_local_fingerprint_sha256']}",
         f"# operator_commands_sha256: {plan['operator_commands_sha256']}",
         f"# operator_command_count: {len(commands)}",
         "",
@@ -154,9 +155,45 @@ def repo_snapshot_lock_rows() -> list[dict[str, object]]:
     return rows
 
 
+def repo_intake_local_fingerprint_rows(snapshot_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for row in snapshot_rows:
+        repo_path = str(row.get("repo_path_resolved") or "")
+        repo_git_root = str(row.get("repo_git_root") or "")
+        rows.append(
+            {
+                "row_index": row["row_index"],
+                "case_id": row["case_id"],
+                "repo_path_sha256": sha256_text(repo_path) if repo_path else "",
+                "repo_git_root_sha256": sha256_text(repo_git_root) if repo_git_root else "",
+                "expected_repo_git_head": row["expected_repo_git_head"],
+                "actual_repo_git_head": row["actual_repo_git_head"],
+                "repo_head_pinned": row["repo_head_pinned"],
+                "clean_worktree_actual": row["clean_worktree_actual"],
+                "owner_or_maintainer_contact_present": row[
+                    "owner_or_maintainer_contact_present"
+                ],
+                "namespace": row["namespace"],
+                "real_benchmark_namespace_confirmed": row[
+                    "real_benchmark_namespace_confirmed"
+                ],
+                "valid": row["valid"],
+            }
+        )
+    return rows
+
+
+def refresh_repo_local_fingerprint(payload: dict) -> None:
+    fingerprint_rows = repo_intake_local_fingerprint_rows(payload["repo_snapshot_lock_rows"])
+    payload["repo_intake_local_fingerprint_rows"] = fingerprint_rows
+    payload["repo_intake_local_fingerprint_sha256"] = sha256_json(fingerprint_rows)
+
+
 def binding_payload() -> dict:
     snapshot_rows = repo_snapshot_lock_rows()
     repo_snapshot_lock_sha256 = sha256_json(snapshot_rows)
+    fingerprint_rows = repo_intake_local_fingerprint_rows(snapshot_rows)
+    repo_intake_local_fingerprint_sha256 = sha256_json(fingerprint_rows)
     template_fingerprints = [
         {
             "label_template_json_sha256": fake_sha(100 + index),
@@ -203,6 +240,8 @@ def binding_payload() -> dict:
         ],
         "repo_intake_sha256": fake_sha(1),
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
+        "repo_intake_local_fingerprint_rows": fingerprint_rows,
+        "repo_intake_local_fingerprint_sha256": repo_intake_local_fingerprint_sha256,
         "decisions": decisions,
         "decisions_sha256": fake_sha(3),
         "label_packet_summary_sha256": fake_sha(6),
@@ -410,6 +449,7 @@ def pr_cleanup_export_plan_payload(
 
 def repo_intake_status_payload() -> dict:
     snapshot_rows = repo_snapshot_lock_rows()
+    fingerprint_rows = repo_intake_local_fingerprint_rows(snapshot_rows)
     return {
         "schema": "amr_beta_repo_intake_validate.v1",
         "input_intake": "/tmp/amr_beta_repo_intake.md",
@@ -427,6 +467,8 @@ def repo_intake_status_payload() -> dict:
         "repo_snapshot_lock_row_count": len(snapshot_rows),
         "repo_snapshot_lock_rows": snapshot_rows,
         "repo_snapshot_lock_sha256": sha256_json(snapshot_rows),
+        "repo_intake_local_fingerprint_rows": fingerprint_rows,
+        "repo_intake_local_fingerprint_sha256": sha256_json(fingerprint_rows),
         "row_statuses": snapshot_rows,
         **base_blocked(),
     }
@@ -587,6 +629,7 @@ def repo_discovery_response_payload(response_count: int = 9, selected_count: int
 def repo_audit_plan_payload() -> dict:
     binding = binding_payload()
     snapshot_rows = repo_snapshot_lock_rows()
+    fingerprint_rows = repo_intake_local_fingerprint_rows(snapshot_rows)
     artifact_root = "/tmp/amr_beta_repo_audit_work"
     per_repo: list[dict[str, str]] = []
     commands: list[str] = []
@@ -677,6 +720,8 @@ def repo_audit_plan_payload() -> dict:
         "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
         "repo_snapshot_lock_row_count": len(snapshot_rows),
         "repo_snapshot_lock_rows": snapshot_rows,
+        "repo_intake_local_fingerprint_sha256": binding["repo_intake_local_fingerprint_sha256"],
+        "repo_intake_local_fingerprint_rows": fingerprint_rows,
         "artifact_root": artifact_root,
         "ready_for_real_benchmark_audit_plan": 1,
         "valid_repo_rows": 10,
@@ -1277,6 +1322,7 @@ def main() -> int:
         partial_repo_intake_payload["repo_snapshot_lock_sha256"] = sha256_json(
             partial_repo_intake_payload["repo_snapshot_lock_rows"]
         )
+        refresh_repo_local_fingerprint(partial_repo_intake_payload)
         partial_repo_intake_payload["errors"] = ["valid_repo_rows 5 below required minimum 10"]
         write_json(partial_repo_intake, partial_repo_intake_payload)
         proc = run_tool(
@@ -2003,6 +2049,7 @@ def main() -> int:
         mismatched_repo_intake_payload["repo_snapshot_lock_sha256"] = sha256_json(
             mismatched_repo_intake_payload["repo_snapshot_lock_rows"]
         )
+        refresh_repo_local_fingerprint(mismatched_repo_intake_payload)
         write_json(mismatched_repo_intake, mismatched_repo_intake_payload)
         proc = run_tool(
             "--repo-intake-status",
@@ -2017,6 +2064,8 @@ def main() -> int:
         assert "repo_intake_status: repo_snapshot_lock_rows row 1: expected_repo_git_head must match actual_repo_git_head" in proc.stderr
         assert "repo_audit_plan: repo_snapshot_lock_sha256 must match repo_intake_status" in proc.stderr
         assert "repo_audit_plan: repo_snapshot_lock_rows must match repo_intake_status" in proc.stderr
+        assert "repo_audit_plan: repo_intake_local_fingerprint_sha256 must match repo_intake_status" in proc.stderr
+        assert "repo_audit_plan: repo_intake_local_fingerprint_rows must match repo_intake_status" in proc.stderr
 
         missing_request_status = tmp / "missing_request_status.json"
         proc = run_tool(
@@ -2593,6 +2642,58 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "repo_audit_plan: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows" in proc.stderr
+
+        missing_repo_fingerprint = tmp / "missing_repo_fingerprint.json"
+        missing_repo_fingerprint_payload = repo_audit_plan_payload()
+        del missing_repo_fingerprint_payload["repo_intake_local_fingerprint_sha256"]
+        del missing_repo_fingerprint_payload["repo_intake_local_fingerprint_rows"]
+        write_json(missing_repo_fingerprint, missing_repo_fingerprint_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(missing_repo_fingerprint),
+            "--out-json",
+            str(tmp / "missing_repo_fingerprint_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "repo_audit_plan: repo_intake_local_fingerprint_sha256 must be a sha256 binding" in proc.stderr
+        assert "repo_audit_plan: repo_intake_local_fingerprint_rows must be a list" in proc.stderr
+
+        stale_repo_fingerprint_hash = tmp / "stale_repo_fingerprint_hash.json"
+        stale_repo_fingerprint_hash_payload = repo_audit_plan_payload()
+        stale_repo_fingerprint_hash_payload["repo_intake_local_fingerprint_sha256"] = fake_sha(996)
+        write_json(stale_repo_fingerprint_hash, stale_repo_fingerprint_hash_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(stale_repo_fingerprint_hash),
+            "--out-json",
+            str(tmp / "stale_repo_fingerprint_hash_status.json"),
+        )
+        assert proc.returncode == 1
+        assert (
+            "repo_audit_plan: repo_intake_local_fingerprint_sha256 "
+            "must match repo_intake_local_fingerprint_rows"
+        ) in proc.stderr
+
+        stale_repo_fingerprint_rows = tmp / "stale_repo_fingerprint_rows.json"
+        stale_repo_fingerprint_rows_payload = repo_audit_plan_payload()
+        stale_repo_fingerprint_rows_payload["repo_intake_local_fingerprint_rows"][0][
+            "repo_path_sha256"
+        ] = fake_sha(997)
+        stale_repo_fingerprint_rows_payload["repo_intake_local_fingerprint_sha256"] = sha256_json(
+            stale_repo_fingerprint_rows_payload["repo_intake_local_fingerprint_rows"]
+        )
+        write_json(stale_repo_fingerprint_rows, stale_repo_fingerprint_rows_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(stale_repo_fingerprint_rows),
+            "--out-json",
+            str(tmp / "stale_repo_fingerprint_rows_status.json"),
+        )
+        assert proc.returncode == 1
+        assert (
+            "repo_audit_plan: repo_intake_local_fingerprint_rows "
+            "must match repo_snapshot_lock_rows"
+        ) in proc.stderr
 
         duplicate_canonical_repo_path = tmp / "duplicate_canonical_repo_path.json"
         duplicate_canonical_repo_path_payload = repo_audit_plan_payload()

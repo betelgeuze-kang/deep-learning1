@@ -203,6 +203,12 @@ def build_payload(*, intake_path: Path, rows: list[dict[str, str]], summary: dic
         "repo_snapshot_lock_sha256": summary.get("repo_snapshot_lock_sha256", ""),
         "repo_snapshot_lock_row_count": len(snapshot_lock_rows),
         "repo_snapshot_lock_rows": snapshot_lock_rows,
+        "repo_intake_local_fingerprint_sha256": summary.get(
+            "repo_intake_local_fingerprint_sha256", ""
+        ),
+        "repo_intake_local_fingerprint_rows": summary.get(
+            "repo_intake_local_fingerprint_rows", []
+        ),
         "ready_for_real_benchmark_audit_plan": 1,
         "runs_audit": 0,
         "runs_label_template_generation": 0,
@@ -251,6 +257,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- ready_for_real_benchmark_audit_plan: {payload['ready_for_real_benchmark_audit_plan']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"- repo_intake_local_fingerprint_sha256: {payload['repo_intake_local_fingerprint_sha256']}",
         f"- runs_audit: {payload['runs_audit']}",
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
@@ -301,6 +308,7 @@ def command_script_text(payload: dict) -> str:
         "# This script runs the operator commands from a validated repo audit plan.",
         "# It does not prove beta readiness by itself; verify outputs before use.",
         f"# repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"# repo_intake_local_fingerprint_sha256: {payload['repo_intake_local_fingerprint_sha256']}",
         f"# operator_commands_sha256: {payload['operator_commands_sha256']}",
         f"# operator_command_count: {payload['operator_command_count']}",
         "",

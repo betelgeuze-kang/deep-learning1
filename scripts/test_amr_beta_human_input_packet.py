@@ -82,6 +82,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "selected_current_repo_preflight_failed_rows",
     "input_intake_sha256",
     "repo_snapshot_lock_sha256",
+    "repo_intake_local_fingerprint_sha256",
     "runs_audit=0",
     "python3 scripts/amr_beta_repo_audit_plan.py",
     "runs_audit=0",

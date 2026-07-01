@@ -792,6 +792,68 @@ def require_repo_snapshot_lock_rows(
     return lock_by_case
 
 
+def repo_intake_local_fingerprint_rows(snapshot_rows: list[dict]) -> list[dict[str, object]]:
+    fingerprint_rows: list[dict[str, object]] = []
+    for row in snapshot_rows:
+        if not isinstance(row, dict):
+            continue
+        repo_path_resolved = str(row.get("repo_path_resolved") or "")
+        repo_git_root = str(row.get("repo_git_root") or "")
+        fingerprint_rows.append(
+            {
+                "row_index": row.get("row_index"),
+                "case_id": row.get("case_id", ""),
+                "repo_path_sha256": sha256_text(repo_path_resolved) if repo_path_resolved else "",
+                "repo_git_root_sha256": sha256_text(repo_git_root) if repo_git_root else "",
+                "expected_repo_git_head": row.get("expected_repo_git_head", ""),
+                "actual_repo_git_head": row.get("actual_repo_git_head", ""),
+                "repo_head_pinned": row.get("repo_head_pinned"),
+                "clean_worktree_actual": row.get("clean_worktree_actual"),
+                "owner_or_maintainer_contact_present": row.get(
+                    "owner_or_maintainer_contact_present"
+                ),
+                "namespace": row.get("namespace", ""),
+                "real_benchmark_namespace_confirmed": row.get(
+                    "real_benchmark_namespace_confirmed"
+                ),
+                "valid": row.get("valid"),
+            }
+        )
+    return fingerprint_rows
+
+
+def require_repo_intake_local_fingerprints(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    snapshot_rows: list,
+) -> None:
+    require_sha_field(
+        errors=errors,
+        name=name,
+        payload=payload,
+        field="repo_intake_local_fingerprint_sha256",
+    )
+    rows = payload.get("repo_intake_local_fingerprint_rows")
+    if not isinstance(rows, list):
+        errors.append(f"{name}: repo_intake_local_fingerprint_rows must be a list")
+        return
+    if len(rows) != len(snapshot_rows):
+        errors.append(
+            f"{name}: repo_intake_local_fingerprint_rows length must match repo_snapshot_lock_rows"
+        )
+    if str(payload.get("repo_intake_local_fingerprint_sha256") or "") != sha256_json(rows):
+        errors.append(
+            f"{name}: repo_intake_local_fingerprint_sha256 must match repo_intake_local_fingerprint_rows"
+        )
+    expected_rows = repo_intake_local_fingerprint_rows(snapshot_rows)
+    if rows != expected_rows:
+        errors.append(
+            f"{name}: repo_intake_local_fingerprint_rows must match repo_snapshot_lock_rows"
+        )
+
+
 def require_repo_operator_commands(
     *,
     errors: list[str],
@@ -977,6 +1039,7 @@ def repo_operator_command_script_text(repo: dict, commands: list[str]) -> str:
         "# This script runs the operator commands from a validated repo audit plan.",
         "# It does not prove beta readiness by itself; verify outputs before use.",
         f"# repo_snapshot_lock_sha256: {repo.get('repo_snapshot_lock_sha256', '')}",
+        f"# repo_intake_local_fingerprint_sha256: {repo.get('repo_intake_local_fingerprint_sha256', '')}",
         f"# operator_commands_sha256: {repo.get('operator_commands_sha256', '')}",
         f"# operator_command_count: {len(commands)}",
         "",
@@ -1485,6 +1548,12 @@ def require_repo_intake_status(*, errors: list[str], payload: dict) -> None:
         errors.append("repo_intake_status: repo_snapshot_lock_rows length must match total_rows")
     if str(payload.get("repo_snapshot_lock_sha256") or "") != sha256_json(rows):
         errors.append("repo_intake_status: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows")
+    require_repo_intake_local_fingerprints(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        snapshot_rows=rows,
+    )
 
     seen_cases: set[str] = set()
     strict_valid_rows = 0
@@ -2701,6 +2770,12 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             repo=repo,
             valid_repo_rows=valid_repo_rows,
         )
+        require_repo_intake_local_fingerprints(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            snapshot_rows=repo.get("repo_snapshot_lock_rows") if isinstance(repo.get("repo_snapshot_lock_rows"), list) else [],
+        )
         require_repo_operator_commands(
             errors=errors,
             repo=repo,
@@ -3044,8 +3119,20 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             expected=intake.get("repo_snapshot_lock_sha256"),
             expected_name="repo_intake_status",
         )
+        require_matching_artifact_field(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            field="repo_intake_local_fingerprint_sha256",
+            expected=intake.get("repo_intake_local_fingerprint_sha256"),
+            expected_name="repo_intake_status",
+        )
         if repo.get("repo_snapshot_lock_rows") != intake.get("repo_snapshot_lock_rows"):
             errors.append("repo_audit_plan: repo_snapshot_lock_rows must match repo_intake_status")
+        if repo.get("repo_intake_local_fingerprint_rows") != intake.get("repo_intake_local_fingerprint_rows"):
+            errors.append(
+                "repo_audit_plan: repo_intake_local_fingerprint_rows must match repo_intake_status"
+            )
 
     if repo and label:
         repo_case_ids = case_id_set(errors=errors, name="repo_audit_plan", payload=repo, row_field="per_repo")
