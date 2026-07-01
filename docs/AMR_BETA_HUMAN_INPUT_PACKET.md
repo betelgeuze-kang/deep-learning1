@@ -103,7 +103,9 @@ blocked.
   The response status does not print raw contact values and still keeps
   `repo_intake_rows_counted=0`, `ready_for_repo_intake=0`, and
   `writes_repo_intake_sheet=0`; rows count only after the existing collector
-  writes a filled intake sheet and the intake validator passes.
+  writes a filled intake sheet and the intake validator passes. The status also
+  reports response-completion counts such as blank include cells, selected rows
+  missing contact, and selected rows missing namespace confirmation.
   If this response status exists, also pass it to the read-only status board
   with `--repo-discovery-response`; the board reports selected response rows
   while keeping repo-intake progress at the validated filled intake-sheet count.
