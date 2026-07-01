@@ -395,6 +395,37 @@ def main() -> int:
         assert "reviewer_id must be a safe identifier" in proc.stderr
         assert not (tmp / "bad_optional_plan.json").exists()
 
+        duplicate_label_id_decisions = tmp / "duplicate label id decisions.jsonl"
+        write_jsonl(
+            duplicate_label_id_decisions,
+            [
+                {
+                    "candidate_label_id": f"{case_id}-0001",
+                    "label_id": "shared-label" if index < 2 else f"{case_id}-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+                for index, (case_id, _repo, _head) in enumerate(repos)
+            ],
+        )
+        duplicate_label_id_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(duplicate_label_id_decisions),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "duplicate_label_id_plan.json"),
+            "--skip-verify-existing",
+        ]
+        for template_dir in template_dirs:
+            duplicate_label_id_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*duplicate_label_id_args)
+        assert proc.returncode == 1
+        assert "duplicate label_id" in proc.stderr
+        assert not (tmp / "duplicate_label_id_plan.json").exists()
+
         synthetic_template = tmp / "case-01 synthetic template"
         make_template(synthetic_template, "case-01", synthetic="1")
         synthetic_args = [
