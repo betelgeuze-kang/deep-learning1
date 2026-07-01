@@ -59,6 +59,18 @@ def is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
+def git_root_for_path(path: Path) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return ""
+    return str(Path(proc.stdout.strip()).expanduser().resolve())
+
+
 def repo_intake_rows(path: Path) -> list[dict[str, str]]:
     if is_forbidden_env_path(path):
         raise ValueError("refusing .env-like repo intake path")
@@ -104,8 +116,34 @@ def load_repo_intake_context(path_text: str) -> tuple[set[str], set[str]]:
             case_ids.add(case_id)
         raw_repo = str(row.get("repo_path") or "").strip()
         if raw_repo and good_operator_value(raw_repo):
-            repo_paths.add(str(Path(raw_repo).expanduser().resolve()))
+            repo_path = Path(raw_repo).expanduser().resolve()
+            repo_paths.add(str(repo_path))
+            repo_git_root = git_root_for_path(repo_path)
+            if repo_git_root:
+                repo_paths.add(repo_git_root)
     return case_ids, repo_paths
+
+
+def empty_decision_summary() -> dict[str, int]:
+    return {
+        "total_decision_rows": 0,
+        "valid_human_label_rows": 0,
+        "non_synthetic_valid_human_label_rows": 0,
+        "synthetic_or_unverified_human_label_rows": 0,
+    }
+
+
+def empty_feedback_summary() -> dict[str, int]:
+    return {
+        "total_feedback_rows": 0,
+        "valid_feedback_rows": 0,
+        "valid_feedback_text_input_rows": 0,
+        "valid_feedback_hash_only_rows": 0,
+        "valid_feedback_digest_rows": 0,
+        "distinct_maintainer_id_count": 0,
+        "feedback_countable_case_rows": 0,
+        "distinct_countable_maintainer_id_count": 0,
+    }
 
 
 def validate_output_paths(paths: dict[str, Path], target_repo_paths: set[str]) -> list[str]:
@@ -522,6 +560,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- runs_benchmark: {payload['runs_benchmark']}",
+        f"- input_path_guard_passed: {payload['input_path_guard_passed']}",
         f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
@@ -578,6 +617,15 @@ def main(argv: list[str]) -> int:
             verify_existing=not args.skip_verify_existing,
         )
         repo_intake_case_ids, target_repo_paths = load_repo_intake_context(args.repo_intake)
+        decision_path = Path(args.decisions).expanduser().resolve()
+        feedback_path = Path(args.feedback).expanduser().resolve()
+        input_path_errors = validate_output_paths(
+            {
+                "decisions": decision_path,
+                "feedback": feedback_path,
+            },
+            target_repo_paths,
+        )
         output_paths = {}
         if args.out_json:
             output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
@@ -585,27 +633,35 @@ def main(argv: list[str]) -> int:
             output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
         output_path_errors = validate_output_paths(output_paths, target_repo_paths)
         known_case_ids = template_case_ids | repo_intake_case_ids | label_intake_case_ids
-        decision_rows = read_json_or_jsonl(Path(args.decisions).expanduser().resolve(), "decisions")
-        feedback_rows = read_json_or_jsonl(Path(args.feedback).expanduser().resolve(), "feedback")
-        decision_errors, decision_summary = validate_decisions(
-            decision_rows,
-            known_candidate_ids=known_candidate_ids,
-            non_synthetic_candidate_ids=non_synthetic_candidate_ids,
-            template_context_supplied=bool(args.template_dir),
-            min_labels=args.min_labels,
-        )
-        feedback_errors, feedback_summary = validate_feedback(
-            feedback_rows,
-            known_case_ids=known_case_ids,
-            countable_case_ids=countable_case_ids,
-            require_countable_cases=bool(args.label_intake_dir),
-            min_maintainers=args.min_maintainers,
-        )
+        if input_path_errors:
+            decision_rows = []
+            feedback_rows = []
+            decision_errors = []
+            feedback_errors = []
+            decision_summary = empty_decision_summary()
+            feedback_summary = empty_feedback_summary()
+        else:
+            decision_rows = read_json_or_jsonl(decision_path, "decisions")
+            feedback_rows = read_json_or_jsonl(feedback_path, "feedback")
+            decision_errors, decision_summary = validate_decisions(
+                decision_rows,
+                known_candidate_ids=known_candidate_ids,
+                non_synthetic_candidate_ids=non_synthetic_candidate_ids,
+                template_context_supplied=bool(args.template_dir),
+                min_labels=args.min_labels,
+            )
+            feedback_errors, feedback_summary = validate_feedback(
+                feedback_rows,
+                known_case_ids=known_case_ids,
+                countable_case_ids=countable_case_ids,
+                require_countable_cases=bool(args.label_intake_dir),
+                min_maintainers=args.min_maintainers,
+            )
     except Exception as exc:
         print(f"human_input_status: error: {exc}", file=sys.stderr)
         return 1
 
-    errors = [*decision_errors, *feedback_errors, *output_path_errors]
+    errors = [*decision_errors, *feedback_errors, *input_path_errors, *output_path_errors]
     effective_maintainer_id_count = (
         feedback_summary["distinct_countable_maintainer_id_count"]
         if args.label_intake_dir
@@ -642,6 +698,7 @@ def main(argv: list[str]) -> int:
         "compiles_labels": 0,
         "creates_benchmark_evidence": 0,
         "runs_benchmark": 0,
+        "input_path_guard_passed": int(not input_path_errors),
         "output_path_guard_passed": int(not output_path_errors),
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
