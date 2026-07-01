@@ -204,6 +204,31 @@ def main() -> int:
         assert risk_response_rows[0]["human_real_repo_source_confirmed"] == ""
         assert risk_response_rows[0]["path_risk_flags"] == "runner_worktree_path"
 
+        stale_aggregate_discovery = tmp / "stale_aggregate_discovery.json"
+        stale_aggregate_payload = json.loads(discovery.read_text(encoding="utf-8"))
+        del stale_aggregate_payload["candidate_repos_with_path_risk"]
+        del stale_aggregate_payload["candidate_repos_with_clean_head_and_path_risk"]
+        del stale_aggregate_payload["candidate_repos_with_clean_head_and_no_path_risk"]
+        del stale_aggregate_payload["clean_risk_free_candidate_shortfall_to_minimum"]
+        stale_aggregate_discovery.write_text(
+            json.dumps(stale_aggregate_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(stale_aggregate_discovery),
+                "--out-json",
+                str(tmp / "stale_aggregate_request.json"),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        assert "candidate_repos_with_path_risk is required" in proc.stderr
+
         stale_discovery = tmp / "stale_discovery.json"
         stale_payload = json.loads(discovery.read_text(encoding="utf-8"))
         del stale_payload["candidates"][0]["path_risk_flags"]

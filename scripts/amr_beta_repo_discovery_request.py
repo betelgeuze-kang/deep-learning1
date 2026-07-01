@@ -111,6 +111,14 @@ def validate_discovery(payload: dict) -> list[str]:
         return errors
     if int_flag(payload, "candidate_repo_count", len(candidates)) != len(candidates):
         errors.append("repo_discovery: candidate_repo_count must match candidates length")
+    for key in [
+        "candidate_repos_with_path_risk",
+        "candidate_repos_with_clean_head_and_path_risk",
+        "candidate_repos_with_clean_head_and_no_path_risk",
+        "clean_risk_free_candidate_shortfall_to_minimum",
+    ]:
+        if key not in payload:
+            errors.append(f"repo_discovery: {key} is required")
     ready_count = 0
     path_risk_count = 0
     ready_with_path_risk = 0
