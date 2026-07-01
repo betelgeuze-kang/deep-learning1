@@ -182,6 +182,7 @@ def build_payload(
     errors: list[str],
     *,
     response_template_csv: Path | None = None,
+    response_template_recommended_only: bool = False,
 ) -> dict[str, object]:
     candidates = discovery.get("candidates", [])
     if not isinstance(candidates, list):
@@ -189,6 +190,11 @@ def build_payload(
     request_rows = build_request_rows([row for row in candidates if isinstance(row, dict)])
     min_repos = int_flag(discovery, "min_real_repos_required", repo_intake.MIN_REAL_REPOS_FOR_BETA)
     clean_count = int_flag(discovery, "candidate_repos_with_clean_head")
+    response_template_rows = [
+        row
+        for row in request_rows
+        if not response_template_recommended_only or int(row["recommended_for_contact_request"]) == 1
+    ]
     return {
         "schema": SCHEMA,
         "repo_discovery": str(discovery_path),
@@ -197,6 +203,8 @@ def build_payload(
         "candidate_repos_with_clean_head": clean_count,
         "request_row_count": len(request_rows),
         "response_template_csv": str(response_template_csv) if response_template_csv else "",
+        "response_template_recommended_only": int(response_template_recommended_only),
+        "response_template_row_count": len(response_template_rows) if response_template_csv else 0,
         "writes_response_template_csv": int(bool(response_template_csv) and not errors),
         "recommended_contact_request_rows": sum(
             int(row["recommended_for_contact_request"]) for row in request_rows
@@ -290,7 +298,13 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
     tmp_path.replace(path)
 
 
-def write_response_csv(path: Path, payload: dict[str, object], overwrite: bool) -> None:
+def write_response_csv(
+    path: Path,
+    payload: dict[str, object],
+    overwrite: bool,
+    *,
+    recommended_only: bool = False,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and not overwrite:
         raise ValueError(f"output already exists; use --overwrite: {path}")
@@ -299,6 +313,8 @@ def write_response_csv(path: Path, payload: dict[str, object], overwrite: bool) 
         writer = csv.DictWriter(handle, fieldnames=RESPONSE_TEMPLATE_COLUMNS)
         writer.writeheader()
         for row in payload["request_rows"]:
+            if recommended_only and int(row.get("recommended_for_contact_request", 0)) != 1:
+                continue
             writer.writerow(
                 {
                     "suggested_case_id": str(row.get("suggested_case_id", "")),
@@ -323,6 +339,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-json", required=True)
     parser.add_argument("--out-md", default="")
     parser.add_argument("--out-response-csv", default="", help="Optional human-fillable response CSV template.")
+    parser.add_argument(
+        "--response-template-recommended-only",
+        action="store_true",
+        help="Write only clean/head recommended candidates to the optional response CSV template.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser
@@ -332,14 +353,16 @@ def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     discovery_path = Path(args.repo_discovery).expanduser().resolve()
     out_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+    errors: list[str] = []
     if args.out_md:
         out_paths["out_md"] = Path(args.out_md).expanduser().resolve()
     response_template_path = Path(args.out_response_csv).expanduser().resolve() if args.out_response_csv else None
     if response_template_path:
         out_paths["out_response_csv"] = response_template_path
+    if args.response_template_recommended_only and not response_template_path:
+        errors.append("--response-template-recommended-only requires --out-response-csv")
 
     discovery: dict[str, object] = {}
-    errors: list[str] = []
     try:
         discovery = read_json(discovery_path)
     except Exception as exc:
@@ -354,11 +377,17 @@ def main(argv: list[str]) -> int:
         discovery,
         errors,
         response_template_csv=response_template_path,
+        response_template_recommended_only=args.response_template_recommended_only,
     )
     if not errors:
         try:
             if response_template_path:
-                write_response_csv(response_template_path, payload, args.overwrite)
+                write_response_csv(
+                    response_template_path,
+                    payload,
+                    args.overwrite,
+                    recommended_only=args.response_template_recommended_only,
+                )
             write_json(out_paths["out_json"], payload, args.overwrite)
             if args.out_md:
                 write_markdown(out_paths["out_md"], payload, args.overwrite)
