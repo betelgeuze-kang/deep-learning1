@@ -155,6 +155,15 @@ def main() -> int:
         assert payload["writes_repo_intake_sheet"] == 0
         assert payload["runs_audit"] == 0
         assert payload["creates_benchmark_evidence"] == 0
+        assert payload["human_required_cells_remaining"] == 0
+        completion = payload["response_completion"]
+        assert completion["recommended_request_rows"] == 2
+        assert completion["selected_truthy_response_rows"] == 2
+        assert completion["unselected_response_rows"] == 1
+        assert completion["blank_include_response_rows"] == 0
+        assert completion["selected_missing_or_invalid_contact_rows"] == 0
+        assert completion["selected_missing_namespace_confirmation_rows"] == 0
+        assert completion["selected_response_rows_remaining_to_minimum"] == 0
         assert "<contact-for-candidate-01-repo-a>" in payload["collector_command_redacted"]
         assert "maintainer-01-contact" not in proc.stdout
         assert "maintainer-01-contact" not in out_json.read_text(encoding="utf-8")
@@ -162,6 +171,63 @@ def main() -> int:
         assert payload["selected_rows"][0]["owner_or_maintainer_contact_sha256"].startswith("sha256:")
         assert str(repo_a.resolve()) in payload["collector_command_redacted"]
         assert not (tmp / "repo_intake.md").exists()
+
+        blank_response = tmp / "blank_response.csv"
+        write_response(
+            blank_response,
+            [
+                {
+                    "suggested_case_id": "candidate-01-repo-a",
+                    "include_for_real_benchmark_intake": "",
+                    "owner_or_maintainer_contact": "",
+                    "real_benchmark_namespace_confirmed": "",
+                },
+                {
+                    "suggested_case_id": "candidate-02-repo-b",
+                    "include_for_real_benchmark_intake": "",
+                    "owner_or_maintainer_contact": "",
+                    "real_benchmark_namespace_confirmed": "",
+                },
+                {
+                    "suggested_case_id": "candidate-03-repo-dirty",
+                    "include_for_real_benchmark_intake": "",
+                    "owner_or_maintainer_contact": "",
+                    "real_benchmark_namespace_confirmed": "",
+                },
+            ],
+        )
+        blank_out_json = tmp / "blank_response_status.json"
+        blank_out_md = tmp / "blank_response_status.md"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(request_json),
+                "--response",
+                str(blank_response),
+                "--min-repos",
+                "2",
+                "--out-json",
+                str(blank_out_json),
+                "--out-md",
+                str(blank_out_md),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 0, proc.stderr
+        blank_payload = json.loads(proc.stdout)
+        assert blank_payload["ready_for_repo_intake_collect_command"] == 0
+        assert blank_payload["selected_response_rows"] == 0
+        assert blank_payload["human_required_cells_remaining"] == 3
+        blank_completion = blank_payload["response_completion"]
+        assert blank_completion["response_row_count"] == 3
+        assert blank_completion["selected_truthy_response_rows"] == 0
+        assert blank_completion["unselected_response_rows"] == 3
+        assert blank_completion["blank_include_response_rows"] == 3
+        assert blank_completion["selected_response_rows_remaining_to_minimum"] == 2
+        assert "human_required_cells_remaining" in blank_out_md.read_text(encoding="utf-8")
 
         dirty_response = tmp / "dirty_response.csv"
         write_response(
@@ -223,6 +289,12 @@ def main() -> int:
             cwd=ROOT,
         )
         assert proc.returncode == 1
+        placeholder_payload = json.loads(proc.stdout)
+        assert placeholder_payload["human_required_cells_remaining"] == 1
+        assert (
+            placeholder_payload["response_completion"]["selected_missing_or_invalid_contact_rows"]
+            == 1
+        )
         assert "owner_or_maintainer_contact must be human-supplied" in proc.stderr
 
         unsafe_response = repo_a / "response.csv"

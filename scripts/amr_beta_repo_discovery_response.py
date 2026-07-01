@@ -287,6 +287,88 @@ def validate_response_rows(
     return selected, errors, blockers
 
 
+def summarize_response_completion(
+    *,
+    request: dict,
+    response_rows: list[dict[str, str]],
+    min_repos: int,
+) -> dict[str, int]:
+    by_case = request_rows_by_case(request)
+    recommended_cases = {
+        case_id
+        for case_id, request_row in by_case.items()
+        if int_flag(request_row, "recommended_for_contact_request") == 1
+    }
+    seen_cases: set[str] = set()
+    selected_truthy = 0
+    unselected = 0
+    blank_include = 0
+    invalid_include = 0
+    duplicate_case_id = 0
+    selected_unknown_case_id = 0
+    selected_not_recommended = 0
+    selected_missing_contact = 0
+    selected_missing_namespace = 0
+    selected_repo_path_mismatch = 0
+
+    for row in response_rows:
+        case_id = str(row.get("suggested_case_id") or "").strip()
+        include_raw = row.get("include_for_real_benchmark_intake", "")
+        include_text = str(include_raw or "").strip()
+        if case_id in seen_cases:
+            duplicate_case_id += 1
+        elif case_id:
+            seen_cases.add(case_id)
+
+        if falsey(include_raw):
+            unselected += 1
+            if not include_text:
+                blank_include += 1
+            continue
+        if not truthy(include_raw):
+            invalid_include += 1
+            continue
+
+        selected_truthy += 1
+        request_row = by_case.get(case_id)
+        if request_row is None:
+            selected_unknown_case_id += 1
+        elif case_id not in recommended_cases:
+            selected_not_recommended += 1
+
+        contact = str(row.get("owner_or_maintainer_contact") or "").strip()
+        if not repo_intake.good_operator_value(contact) or not repo_intake.good_contact_value(contact):
+            selected_missing_contact += 1
+        if not truthy(row.get("real_benchmark_namespace_confirmed", "")):
+            selected_missing_namespace += 1
+
+        response_repo = str(row.get("repo_path") or "").strip()
+        if request_row and response_repo:
+            request_repo = str(request_row.get("repo_path") or "").strip()
+            if str(Path(response_repo).expanduser().resolve()) != str(Path(request_repo).expanduser().resolve()):
+                selected_repo_path_mismatch += 1
+
+    return {
+        "request_row_count": len(by_case),
+        "response_row_count": len(response_rows),
+        "recommended_request_rows": len(recommended_cases),
+        "selected_truthy_response_rows": selected_truthy,
+        "unselected_response_rows": unselected,
+        "blank_include_response_rows": blank_include,
+        "invalid_include_response_rows": invalid_include,
+        "duplicate_case_id_response_rows": duplicate_case_id,
+        "selected_unknown_case_id_rows": selected_unknown_case_id,
+        "selected_not_recommended_rows": selected_not_recommended,
+        "selected_missing_or_invalid_contact_rows": selected_missing_contact,
+        "selected_missing_namespace_confirmation_rows": selected_missing_namespace,
+        "selected_repo_path_mismatch_rows": selected_repo_path_mismatch,
+        "selected_response_rows_remaining_to_minimum": max(0, min_repos - selected_truthy),
+        "human_required_cells_remaining": (
+            blank_include + selected_missing_contact + selected_missing_namespace + invalid_include
+        ),
+    }
+
+
 def collector_command(selected_rows: list[dict[str, object]], collector_out: Path, collector_format: str) -> list[str]:
     command = ["python3", "scripts/amr_beta_repo_intake_collect.py"]
     for row in selected_rows:
@@ -314,6 +396,11 @@ def build_payload(
     blockers: list[str],
 ) -> dict[str, object]:
     command = collector_command(selected_rows, collector_out, collector_format) if selected_rows else []
+    response_completion = summarize_response_completion(
+        request=request,
+        response_rows=response_rows,
+        min_repos=min_repos,
+    )
     selected_fingerprint = sha256_json(
         [
             {
@@ -332,6 +419,8 @@ def build_payload(
         "human_response": str(response_path),
         "human_response_sha256": sha256_file(response_path) if response_path.exists() else "",
         "response_row_count": len(response_rows),
+        "response_completion": response_completion,
+        "human_required_cells_remaining": response_completion["human_required_cells_remaining"],
         "selected_response_rows": len(selected_rows),
         "valid_selected_response_rows": 0 if errors else len(selected_rows),
         "min_real_repos_required": min_repos,
@@ -381,19 +470,42 @@ def write_markdown(path: Path, payload: dict[str, object], overwrite: bool) -> N
         f"- repo_intake_rows_counted: {payload['repo_intake_rows_counted']}",
         f"- selected_response_rows: {payload['selected_response_rows']}",
         f"- min_real_repos_required: {payload['min_real_repos_required']}",
+        f"- human_required_cells_remaining: {payload['human_required_cells_remaining']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         "",
-        "## Redacted Collector Command",
+        "## Response Completion",
         "",
-        "```bash",
-        str(payload["collector_command_redacted"]),
-        "```",
-        "",
-        "## Selected Rows",
-        "",
-        "| suggested_case_id | repo_path | audit_mode | contact_sha256 |",
-        "|---|---|---|---|",
+        "| metric | value |",
+        "|---|---:|",
     ]
+    completion = payload["response_completion"]
+    for key in [
+        "recommended_request_rows",
+        "selected_truthy_response_rows",
+        "unselected_response_rows",
+        "blank_include_response_rows",
+        "invalid_include_response_rows",
+        "selected_missing_or_invalid_contact_rows",
+        "selected_missing_namespace_confirmation_rows",
+        "selected_response_rows_remaining_to_minimum",
+        "human_required_cells_remaining",
+    ]:
+        lines.append(f"| {key} | {completion[key]} |")
+    lines.extend(
+        [
+            "",
+            "## Redacted Collector Command",
+            "",
+            "```bash",
+            str(payload["collector_command_redacted"]),
+            "```",
+            "",
+            "## Selected Rows",
+            "",
+            "| suggested_case_id | repo_path | audit_mode | contact_sha256 |",
+            "|---|---|---|---|",
+        ]
+    )
     for row in payload["selected_rows"]:
         lines.append(
             "| {case_id} | {repo} | {audit_mode} | {contact_sha} |".format(
