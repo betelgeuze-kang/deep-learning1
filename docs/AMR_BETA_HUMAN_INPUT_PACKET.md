@@ -138,12 +138,14 @@ blocked.
   It keeps `runs_audit=0` and `creates_benchmark_evidence=0`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:
-  `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
+  `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md --out-commands-sh results/amr_beta_repo_audit_commands.sh`.
   The plan carries the same `repo_snapshot_lock_rows` and
   `repo_snapshot_lock_sha256` so the operator can tie audit commands back to the
   validated 10-repository snapshot. It also refuses an `--artifact-root` inside
   any target repo, because audit outputs would dirty that repo before evidence
-  generation.
+  generation. The optional command script is a handoff artifact only; creating
+  it does not run audits, generate templates, write reviewer packets, or create
+  benchmark evidence.
 - [ ] Run each emitted audit verify command before its label-template command,
   and each emitted label-template verify command before reviewer-packet handoff.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
@@ -393,7 +395,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `audit_my_repo.sh <repo> --mode quick|full --namespace real_benchmark --confirm-real-benchmark-namespace --out results/<repo>_audit`.
    Before this step, run `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`
    and fix every blocker it reports. Then generate the operator handoff plan:
-   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
+   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md --out-commands-sh results/amr_beta_repo_audit_commands.sh`.
    The plan records `runs_audit=0`, `creates_benchmark_evidence=0`, and keeps
    beta/release/model/public comparison readiness blocked; it only lists the
    commands for the human/operator to run.
