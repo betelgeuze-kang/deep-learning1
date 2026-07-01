@@ -52,6 +52,10 @@ def repo_snapshot_lock_rows() -> list[dict[str, object]]:
                 "repo_git_root": f"/tmp/{case_id}",
                 "expected_repo_git_head": head,
                 "actual_repo_git_head": head,
+                "repo_git_worktree_confirmed": 1,
+                "repo_head_readable": 1,
+                "repo_status_readable": 1,
+                "repo_head_pinned": 1,
                 "clean_worktree_declared": 1,
                 "clean_worktree_actual": 1,
                 "owner_or_maintainer_contact_present": 1,
@@ -222,6 +226,30 @@ def pr_cleanup_status_payload() -> dict:
         "runs_github_mutation": 0,
         "runs_git_push": 0,
         "creates_benchmark_evidence": 0,
+        **base_blocked(),
+    }
+
+
+def repo_intake_status_payload() -> dict:
+    snapshot_rows = repo_snapshot_lock_rows()
+    return {
+        "schema": "amr_beta_repo_intake_validate.v1",
+        "input_intake": "/tmp/amr_beta_repo_intake.md",
+        "input_intake_sha256": fake_sha(1),
+        "total_rows": len(snapshot_rows),
+        "valid_repo_rows": len(snapshot_rows),
+        "min_real_repos_required": 10,
+        "ready_for_real_benchmark_audit": 1,
+        "runs_audit": 0,
+        "runs_label_template_generation": 0,
+        "writes_reviewer_packets": 0,
+        "creates_benchmark_evidence": 0,
+        "input_path_guard_passed": 1,
+        "output_path_guard_passed": 1,
+        "repo_snapshot_lock_row_count": len(snapshot_rows),
+        "repo_snapshot_lock_rows": snapshot_rows,
+        "repo_snapshot_lock_sha256": sha256_json(snapshot_rows),
+        "row_statuses": snapshot_rows,
         **base_blocked(),
     }
 
@@ -481,6 +509,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
         pr_cleanup = tmp / "pr_cleanup_status.json"
+        repo_intake = tmp / "repo_intake_status.json"
         repo = tmp / "repo_plan.json"
         label = tmp / "label_plan.json"
         feedback = tmp / "feedback_packet.json"
@@ -495,6 +524,10 @@ def main() -> int:
         write_json(
             pr_cleanup,
             pr_cleanup_status_payload(),
+        )
+        write_json(
+            repo_intake,
+            repo_intake_status_payload(),
         )
         write_json(
             repo,
@@ -553,6 +586,59 @@ def main() -> int:
         proc = run_tool(
             "--pr-cleanup-status",
             str(pr_cleanup),
+            "--repo-intake-status",
+            str(repo_intake),
+            "--out-json",
+            str(out_json),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert payload["stage_progress"]["repo_intake"]["current"] == 10
+        assert payload["stage_progress"]["repo_intake"]["met"] == 1
+        assert payload["stage_progress"]["repo_intake"]["repo_intake_status_supplied"] == 1
+        assert payload["stage_progress"]["repo_intake"]["ready_for_real_benchmark_audit"] == 1
+        assert payload["stage_progress"]["repo_intake"]["repo_audit_plan_supplied"] == 0
+        assert "validated >=10 real repo intake status" in payload["next_blockers"][0]
+
+        partial_repo_intake = tmp / "partial_repo_intake_status.json"
+        partial_repo_intake_payload = repo_intake_status_payload()
+        for row in partial_repo_intake_payload["repo_snapshot_lock_rows"][5:]:
+            row["valid"] = 0
+            row["repo_head_pinned"] = 0
+        partial_repo_intake_payload["ready_for_real_benchmark_audit"] = 0
+        partial_repo_intake_payload["valid_repo_rows"] = 5
+        partial_repo_intake_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            partial_repo_intake_payload["repo_snapshot_lock_rows"]
+        )
+        partial_repo_intake_payload["errors"] = ["valid_repo_rows 5 below required minimum 10"]
+        write_json(partial_repo_intake, partial_repo_intake_payload)
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-intake-status",
+            str(partial_repo_intake),
+            "--out-json",
+            str(out_json),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["current_stage"] == "stage_0_claim_freeze"
+        assert payload["stage_progress"]["repo_intake"]["current"] == 5
+        assert payload["stage_progress"]["repo_intake"]["remaining"] == 5
+        assert payload["stage_progress"]["repo_intake"]["met"] == 0
+        assert payload["stage_progress"]["repo_intake"]["ready_for_real_benchmark_audit"] == 0
+        assert "Generate a clean repo audit plan from >=10 validated real repos." in payload["next_blockers"]
+
+        proc = run_tool(
+            "--pr-cleanup-status",
+            str(pr_cleanup),
+            "--repo-intake-status",
+            str(repo_intake),
             "--repo-audit-plan",
             str(repo),
             "--out-json",
@@ -571,6 +657,8 @@ def main() -> int:
         assert payload["stage_progress"]["claim_freeze"]["claim_scan_file_count"] == 3
         assert payload["stage_progress"]["repo_intake"]["current"] == 10
         assert payload["stage_progress"]["repo_intake"]["met"] == 1
+        assert payload["stage_progress"]["repo_intake"]["repo_intake_status_supplied"] == 1
+        assert payload["stage_progress"]["repo_intake"]["repo_audit_plan_supplied"] == 1
         assert payload["stage_progress"]["human_labels"]["current"] == 0
         assert payload["stage_progress"]["human_labels"]["remaining"] == 300
         assert payload["stage_progress"]["maintainer_feedback"]["remaining"] == 3
@@ -580,6 +668,8 @@ def main() -> int:
         proc = run_tool(
             "--pr-cleanup-status",
             str(pr_cleanup),
+            "--repo-intake-status",
+            str(repo_intake),
             "--repo-audit-plan",
             str(repo),
             "--label-intake-plan",
@@ -645,6 +735,8 @@ def main() -> int:
         proc = run_tool(
             "--pr-cleanup-status",
             str(pr_cleanup),
+            "--repo-intake-status",
+            str(repo_intake),
             "--repo-audit-plan",
             str(repo),
             "--label-intake-plan",
@@ -739,6 +831,44 @@ def main() -> int:
         assert proc.returncode == 1
         assert "pr_cleanup_status: claim_scan_blocked_promotions must match claim_scan_hits length" in proc.stderr
         assert "pr_cleanup_status: claim_scan_hits must be empty" in proc.stderr
+
+        unpinned_repo_intake = tmp / "unpinned_repo_intake_status.json"
+        unpinned_repo_intake_payload = repo_intake_status_payload()
+        unpinned_repo_intake_payload["repo_snapshot_lock_rows"][0]["repo_head_pinned"] = 0
+        unpinned_repo_intake_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            unpinned_repo_intake_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(unpinned_repo_intake, unpinned_repo_intake_payload)
+        proc = run_tool(
+            "--repo-intake-status",
+            str(unpinned_repo_intake),
+            "--out-json",
+            str(tmp / "unpinned_repo_intake_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_intake_status: repo_snapshot_lock_rows row 1: repo_head_pinned must be 1" in proc.stderr
+
+        mismatched_repo_intake = tmp / "mismatched_repo_intake_status.json"
+        mismatched_repo_intake_payload = repo_intake_status_payload()
+        mismatched_repo_intake_payload["repo_snapshot_lock_rows"][0]["actual_repo_git_head"] = fake_git_head(777)
+        mismatched_repo_intake_payload["repo_snapshot_lock_sha256"] = sha256_json(
+            mismatched_repo_intake_payload["repo_snapshot_lock_rows"]
+        )
+        write_json(mismatched_repo_intake, mismatched_repo_intake_payload)
+        proc = run_tool(
+            "--repo-intake-status",
+            str(mismatched_repo_intake),
+            "--repo-audit-plan",
+            str(repo),
+            "--out-json",
+            str(tmp / "mismatched_repo_intake_operator_status.json"),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "repo_intake_status: repo_snapshot_lock_rows row 1: expected_repo_git_head must match actual_repo_git_head" in proc.stderr
+        assert "repo_audit_plan: repo_snapshot_lock_sha256 must match repo_intake_status" in proc.stderr
+        assert "repo_audit_plan: repo_snapshot_lock_rows must match repo_intake_status" in proc.stderr
 
         missing_request_status = tmp / "missing_request_status.json"
         proc = run_tool(

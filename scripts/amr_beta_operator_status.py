@@ -28,6 +28,7 @@ SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 KNOWN_ARTIFACTS = {
     "pr_cleanup_status": "amr_beta_pr_cleanup_status.v1",
+    "repo_intake_status": "amr_beta_repo_intake_validate.v1",
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
     "maintainer_feedback_packet": "amr_beta_maintainer_feedback_packet.v1",
@@ -66,6 +67,12 @@ PREFLIGHT_PATH_GUARD_KEYS = [
     "output_path_preflight_passed",
 ]
 REPO_AUDIT_PLAN_READ_ONLY_FLAGS = [
+    "runs_audit",
+    "runs_label_template_generation",
+    "writes_reviewer_packets",
+    "creates_benchmark_evidence",
+]
+REPO_INTAKE_STATUS_READ_ONLY_FLAGS = [
     "runs_audit",
     "runs_label_template_generation",
     "writes_reviewer_packets",
@@ -178,7 +185,7 @@ def load_optional(path_text: str, name: str) -> tuple[dict | None, dict | None, 
         errors.append(f"{name}: unexpected schema {meta['schema']!r}")
     errors.extend(artifact_claim_errors(name, payload))
     raw_errors = payload.get("errors", [])
-    if raw_errors:
+    if raw_errors and name != "repo_intake_status":
         errors.append(f"{name}: artifact contains errors")
     return payload, meta, errors
 
@@ -466,30 +473,32 @@ def require_repo_snapshot_lock_rows(
     errors: list[str],
     repo: dict,
     valid_repo_rows: int,
+    name: str = "repo_audit_plan",
+    require_git_read_flags: bool = False,
 ) -> dict[str, dict]:
     rows = repo.get("repo_snapshot_lock_rows")
     if not isinstance(rows, list):
-        errors.append("repo_audit_plan: repo_snapshot_lock_rows must be a list")
+        errors.append(f"{name}: repo_snapshot_lock_rows must be a list")
         return {}
 
     row_count = require_exact_int(
         errors=errors,
-        name="repo_audit_plan",
+        name=name,
         payload=repo,
         key="repo_snapshot_lock_row_count",
     )
     if row_count >= 0 and row_count != len(rows):
-        errors.append("repo_audit_plan: repo_snapshot_lock_row_count must match repo_snapshot_lock_rows length")
+        errors.append(f"{name}: repo_snapshot_lock_row_count must match repo_snapshot_lock_rows length")
     if valid_repo_rows > 0 and len(rows) != valid_repo_rows:
-        errors.append("repo_audit_plan: repo_snapshot_lock_rows length must match valid_repo_rows")
+        errors.append(f"{name}: repo_snapshot_lock_rows length must match valid_repo_rows")
     if str(repo.get("repo_snapshot_lock_sha256") or "") != sha256_json(rows):
-        errors.append("repo_audit_plan: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows")
+        errors.append(f"{name}: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows")
 
     lock_by_case: dict[str, dict] = {}
     seen_paths: set[str] = set()
     seen_git_roots: set[str] = set()
     for index, row in enumerate(rows, start=1):
-        prefix = f"repo_audit_plan: repo_snapshot_lock_rows row {index}"
+        prefix = f"{name}: repo_snapshot_lock_rows row {index}"
         if not isinstance(row, dict):
             errors.append(f"{prefix} must be an object")
             return {}
@@ -544,6 +553,18 @@ def require_repo_snapshot_lock_rows(
                 errors.append(f"{prefix}: {key} must be an integer")
             elif value != 1:
                 errors.append(f"{prefix}: {key} must be 1")
+        if require_git_read_flags:
+            for key in [
+                "repo_git_worktree_confirmed",
+                "repo_head_readable",
+                "repo_status_readable",
+                "repo_head_pinned",
+            ]:
+                value = row.get(key)
+                if isinstance(value, bool) or not isinstance(value, int):
+                    errors.append(f"{prefix}: {key} must be an integer")
+                elif value != 1:
+                    errors.append(f"{prefix}: {key} must be 1")
 
         audit_mode = str(row.get("audit_mode") or "").strip().lower()
         if audit_mode not in {"quick", "full"}:
@@ -722,6 +743,130 @@ def require_repo_operator_commands(
         expected_commands.append(expected_aggregate_command)
     if commands != expected_commands:
         errors.append("repo_audit_plan: operator_commands must exactly match per_repo commands plus aggregate reviewer packet command")
+
+
+def require_repo_intake_status(*, errors: list[str], payload: dict) -> None:
+    ready = require_exact_int(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        key="ready_for_real_benchmark_audit",
+    )
+    if ready not in {0, 1}:
+        errors.append("repo_intake_status: ready_for_real_benchmark_audit must be one of [0, 1]")
+    min_repos = require_int_at_least(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        key="min_real_repos_required",
+        minimum=10,
+    )
+    valid_repo_rows = require_int_at_least(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        key="valid_repo_rows",
+        minimum=0,
+    )
+    total_rows = require_int_at_least(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        key="total_rows",
+        minimum=valid_repo_rows,
+    )
+    if ready == 1 and valid_repo_rows < max(10, min_repos):
+        errors.append("repo_intake_status: valid_repo_rows must be >= min_real_repos_required when ready")
+    if ready == 1 and valid_repo_rows >= 0 and total_rows >= 0 and total_rows != valid_repo_rows:
+        errors.append("repo_intake_status: total_rows must match valid_repo_rows")
+    require_sha_field(errors=errors, name="repo_intake_status", payload=payload, field="input_intake_sha256")
+    require_sha_field(errors=errors, name="repo_intake_status", payload=payload, field="repo_snapshot_lock_sha256")
+    rows = payload.get("repo_snapshot_lock_rows")
+    if not isinstance(rows, list):
+        errors.append("repo_intake_status: repo_snapshot_lock_rows must be a list")
+        rows = []
+    row_count = require_exact_int(
+        errors=errors,
+        name="repo_intake_status",
+        payload=payload,
+        key="repo_snapshot_lock_row_count",
+    )
+    if row_count >= 0 and row_count != len(rows):
+        errors.append("repo_intake_status: repo_snapshot_lock_row_count must match repo_snapshot_lock_rows length")
+    if total_rows >= 0 and len(rows) != total_rows:
+        errors.append("repo_intake_status: repo_snapshot_lock_rows length must match total_rows")
+    if str(payload.get("repo_snapshot_lock_sha256") or "") != sha256_json(rows):
+        errors.append("repo_intake_status: repo_snapshot_lock_sha256 must match repo_snapshot_lock_rows")
+
+    seen_cases: set[str] = set()
+    strict_valid_rows = 0
+    for index, row in enumerate(rows, start=1):
+        prefix = f"repo_intake_status: repo_snapshot_lock_rows row {index}"
+        if not isinstance(row, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        case_id = str(row.get("case_id") or "").strip()
+        if not case_id:
+            errors.append(f"{prefix}: case_id must be present")
+        elif case_id in seen_cases:
+            errors.append(f"{prefix}: duplicate case_id")
+        seen_cases.add(case_id)
+
+        valid = row.get("valid")
+        if isinstance(valid, bool) or not isinstance(valid, int) or valid not in {0, 1}:
+            errors.append(f"{prefix}: valid must be one of [0, 1]")
+            valid = 0
+        if valid == 1:
+            strict_valid_rows += 1
+            repo_path = str(row.get("repo_path_resolved") or "").strip()
+            repo_git_root = str(row.get("repo_git_root") or "").strip()
+            if not repo_path:
+                errors.append(f"{prefix}: repo_path_resolved must be present")
+            if not repo_git_root:
+                errors.append(f"{prefix}: repo_git_root must be present")
+            if repo_path and repo_git_root and not same_path(repo_path, repo_git_root):
+                errors.append(f"{prefix}: repo_git_root must match repo_path_resolved")
+
+            expected_head = str(row.get("expected_repo_git_head") or "").strip().lower()
+            actual_head = str(row.get("actual_repo_git_head") or "").strip().lower()
+            if not GIT_OBJECT_RE.fullmatch(expected_head):
+                errors.append(f"{prefix}: expected_repo_git_head must be a full git object id")
+            if not GIT_OBJECT_RE.fullmatch(actual_head):
+                errors.append(f"{prefix}: actual_repo_git_head must be a full git object id")
+            if expected_head and actual_head and expected_head != actual_head:
+                errors.append(f"{prefix}: expected_repo_git_head must match actual_repo_git_head")
+
+            for key in [
+                "repo_git_worktree_confirmed",
+                "repo_head_readable",
+                "repo_status_readable",
+                "repo_head_pinned",
+                "clean_worktree_declared",
+                "clean_worktree_actual",
+                "owner_or_maintainer_contact_present",
+                "real_benchmark_namespace_confirmed",
+            ]:
+                value = row.get(key)
+                if isinstance(value, bool) or not isinstance(value, int):
+                    errors.append(f"{prefix}: {key} must be an integer")
+                elif value != 1:
+                    errors.append(f"{prefix}: {key} must be 1")
+
+            audit_mode = str(row.get("audit_mode") or "").strip().lower()
+            if audit_mode not in {"quick", "full"}:
+                errors.append(f"{prefix}: audit_mode must be quick or full")
+            if str(row.get("namespace") or "").strip() != "real_benchmark":
+                errors.append(f"{prefix}: namespace must be real_benchmark")
+    if valid_repo_rows >= 0 and strict_valid_rows != valid_repo_rows:
+        errors.append("repo_intake_status: valid_repo_rows must match valid repo_snapshot_lock_rows")
+    for key in REPO_INTAKE_STATUS_READ_ONLY_FLAGS:
+        require_flag(errors=errors, name="repo_intake_status", payload=payload, key=key, expected=0)
+    for key in ["input_path_guard_passed", "output_path_guard_passed"]:
+        value = require_exact_int(errors=errors, name="repo_intake_status", payload=payload, key=key)
+        if value not in {0, 1}:
+            errors.append(f"repo_intake_status: {key} must be one of [0, 1]")
+        if ready == 1 and value != 1:
+            errors.append(f"repo_intake_status: {key} must be 1 when ready")
 
 
 def require_label_operator_commands(
@@ -1007,6 +1152,7 @@ def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
     pr_cleanup = artifacts.get("pr_cleanup_status")
+    intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -1017,6 +1163,9 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
 
     if pr_cleanup:
         require_pr_cleanup_status(errors=errors, payload=pr_cleanup)
+
+    if intake:
+        require_repo_intake_status(errors=errors, payload=intake)
 
     if repo:
         require_flag(
@@ -1370,6 +1519,26 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             expected=1,
             )
 
+    if intake and repo:
+        require_matching_artifact_field(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            field="repo_intake_sha256",
+            expected=intake.get("input_intake_sha256"),
+            expected_name="repo_intake_status",
+        )
+        require_matching_artifact_field(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            field="repo_snapshot_lock_sha256",
+            expected=intake.get("repo_snapshot_lock_sha256"),
+            expected_name="repo_intake_status",
+        )
+        if repo.get("repo_snapshot_lock_rows") != intake.get("repo_snapshot_lock_rows"):
+            errors.append("repo_audit_plan: repo_snapshot_lock_rows must match repo_intake_status")
+
     if repo and label:
         repo_case_ids = case_id_set(errors=errors, name="repo_audit_plan", payload=repo, row_field="per_repo")
         label_case_ids = case_id_set(errors=errors, name="label_intake_plan", payload=label, row_field="per_case")
@@ -1642,6 +1811,7 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     if errors:
         return "stage_0_claim_freeze", ["Resolve artifact validation errors before advancing."]
     pr_cleanup = artifacts.get("pr_cleanup_status")
+    intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -1655,6 +1825,10 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
             "Validate stage-0 PR cleanup and claim freeze from exported GitHub PR state."
         ]
     if not repo or truthy_int(repo, "ready_for_real_benchmark_audit_plan") != 1:
+        if intake and truthy_int(intake, "ready_for_real_benchmark_audit") == 1:
+            return "stage_0_claim_freeze", [
+                "Generate a clean repo audit plan from the validated >=10 real repo intake status."
+            ]
         return "stage_0_claim_freeze", ["Generate a clean repo audit plan from >=10 validated real repos."]
     if not label or truthy_int(label, "ready_for_label_intake_plan") != 1:
         return "stage_1_repo_intake_plan_ready", [
@@ -1717,6 +1891,7 @@ def progress_summary(current: int, required: int) -> dict[str, int | float]:
 
 def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
     pr_cleanup = artifacts.get("pr_cleanup_status")
+    intake = artifacts.get("repo_intake_status")
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
@@ -1728,11 +1903,13 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
 
     repo_required = max(
         10,
+        count_int(intake, "min_real_repos_required", 10),
         count_int(repo, "min_real_repos_required", 10),
         count_int(label, "min_real_repos_required", 10),
         count_int(feedback, "min_real_repos_required", 10),
     )
     repo_current = max(
+        count_int(intake, "valid_repo_rows"),
         count_int(repo, "valid_repo_rows"),
         count_int(label, "case_count"),
         count_int(feedback, "valid_repo_rows"),
@@ -1770,7 +1947,14 @@ def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: 
             "claim_scan_file_count": count_int(pr_cleanup, "claim_scan_file_count"),
             "claim_scan_blocked_promotions": count_int(pr_cleanup, "claim_scan_blocked_promotions"),
         },
-        "repo_intake": progress_summary(repo_current, repo_required),
+        "repo_intake": {
+            **progress_summary(repo_current, repo_required),
+            "repo_intake_status_supplied": int(bool(intake)),
+            "ready_for_real_benchmark_audit": count_int(intake, "ready_for_real_benchmark_audit"),
+            "repo_snapshot_lock_row_count": count_int(intake, "repo_snapshot_lock_row_count"),
+            "repo_audit_plan_supplied": int(bool(repo)),
+            "ready_for_real_benchmark_audit_plan": count_int(repo, "ready_for_real_benchmark_audit_plan"),
+        },
         "human_labels": progress_summary(label_current, label_required),
         "maintainer_feedback": progress_summary(maintainer_current, maintainer_required),
         "runtime_preflight": {
@@ -1872,6 +2056,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pr-cleanup-status", default="")
+    parser.add_argument("--repo-intake-status", default="")
     parser.add_argument("--repo-audit-plan", default="")
     parser.add_argument("--label-intake-plan", default="")
     parser.add_argument("--maintainer-feedback-packet", default="")
@@ -1891,6 +2076,7 @@ def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     artifact_args = {
         "pr_cleanup_status": args.pr_cleanup_status,
+        "repo_intake_status": args.repo_intake_status,
         "repo_audit_plan": args.repo_audit_plan,
         "label_intake_plan": args.label_intake_plan,
         "maintainer_feedback_packet": args.maintainer_feedback_packet,
