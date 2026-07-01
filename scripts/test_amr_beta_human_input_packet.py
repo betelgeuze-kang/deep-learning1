@@ -78,6 +78,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "results/amr_beta_repo_intake_status.json",
+    "current repo git preflight",
+    "selected_current_repo_preflight_failed_rows",
     "input_intake_sha256",
     "repo_snapshot_lock_sha256",
     "runs_audit=0",
