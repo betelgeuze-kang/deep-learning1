@@ -34,7 +34,11 @@ become part of the source under review.
 - `synthetic` must be absent/false and the referenced case must be a real
   (non-synthetic) `real_benchmark` case, or the row will not count
   (`counts_for_beta`).
-- `feedback_id` (optional) — safe identifier (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`).
+- `feedback_id` (optional) — safe unique identifier
+  (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`); duplicate `feedback_id` values are
+  rejected before benchmark execution. Omitted IDs reserve the benchmark default
+  for that row (`feedback_0001`, `feedback_0002`, ...), so explicit IDs must not
+  collide with those defaults.
 
 At least 3 distinct `maintainer_id` values across rows are required
 (`MIN_MAINTAINER_FEEDBACK_FOR_BETA=3`).

@@ -388,6 +388,7 @@ def validate_feedback(
     maintainer_ids: set[str] = set()
     countable_maintainer_ids: set[str] = set()
     countable_case_ids_seen: set[str] = set()
+    seen_feedback_ids: set[str] = set()
     valid_rows = 0
     valid_feedback_text_input_rows = 0
     valid_feedback_hash_only_rows = 0
@@ -396,6 +397,7 @@ def validate_feedback(
         row_errors: list[str] = []
         case_id = str(row.get("case_id") or "").strip()
         maintainer_id = str(row.get("maintainer_id") or "").strip()
+        feedback_id = str(row.get("feedback_id") or f"feedback_{index:04d}").strip()
         feedback_text = str(row.get("feedback_text") or "")
         feedback_sha = str(row.get("feedback_text_sha256") or row.get("feedback_sha256") or "").strip()
         if not case_id:
@@ -417,13 +419,16 @@ def validate_feedback(
             row_errors.append(f"feedback row {index}: maintainer_id must not be example/placeholder")
         elif not SAFE_MAINTAINER_ID_RE.fullmatch(maintainer_id):
             row_errors.append(f"feedback row {index}: maintainer_id must be a safe identifier")
-        validate_optional_safe_id(
-            errors=row_errors,
-            row_prefix=f"feedback row {index}",
-            field="feedback_id",
-            value=row.get("feedback_id"),
-            pattern=SAFE_CASE_ID_RE,
-        )
+        if not feedback_id:
+            row_errors.append(f"feedback row {index}: feedback_id must be a safe identifier")
+        elif not good_operator_value(feedback_id):
+            row_errors.append(f"feedback row {index}: feedback_id must not be example/placeholder")
+        elif not SAFE_CASE_ID_RE.fullmatch(feedback_id):
+            row_errors.append(f"feedback row {index}: feedback_id must be a safe identifier")
+        if feedback_id:
+            if feedback_id in seen_feedback_ids:
+                row_errors.append(f"feedback row {index}: duplicate feedback_id")
+            seen_feedback_ids.add(feedback_id)
         if not truthy(row.get("human_feedback", row.get("maintainer_feedback", False))):
             row_errors.append(f"feedback row {index}: human_feedback must be true")
         if truthy(row.get("synthetic", False)):

@@ -286,7 +286,10 @@ Consumed by `scripts/audit_my_repo_benchmark.py --feedback <file>`. Each row:
 - `synthetic` must be absent/false, and the referenced case must be a real
   (non-synthetic) `real_benchmark` case, or the row will not count toward beta
   (`counts_for_beta`).
-- `feedback_id` (optional) — safe identifier.
+- `feedback_id` (optional) — safe unique identifier; duplicate `feedback_id`
+  values are rejected before benchmark execution. Omitted IDs reserve the
+  benchmark default for that row (`feedback_0001`, `feedback_0002`, ...), so
+  explicit IDs must not collide with those defaults.
 
 At least 3 distinct `maintainer_id` values are required
 (`MIN_MAINTAINER_FEEDBACK_FOR_BETA=3`).
