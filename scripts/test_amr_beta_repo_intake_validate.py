@@ -84,6 +84,19 @@ def main() -> int:
         assert TOOL_MODULE.is_forbidden_env_path(tmp / ".env.secrets" / "repo_intake.md")
         assert not TOOL_MODULE.is_forbidden_env_path(tmp / "repo_intake.md")
         repos = [create_repo(tmp, index) for index in range(10)]
+        resolved_env_errors = TOOL_MODULE.validate_output_paths(
+            {"out_json": tmp / "safe-status-link.json"},
+            [],
+            resolved_paths={"out_json": tmp / ".env.resolved_status_target.json"},
+        )
+        assert resolved_env_errors == ["out_json must not be .env-like"]
+        resolved_repo_errors = TOOL_MODULE.validate_input_path(
+            tmp / "safe-intake-link.md",
+            [str(repos[0][0].resolve())],
+            resolved_path=repos[0][0] / "repo_intake.md",
+        )
+        assert len(resolved_repo_errors) == 1
+        assert "input_intake must not be inside target repo" in resolved_repo_errors[0]
 
         intake = tmp / "repo_intake.md"
         write_intake(intake, repos)
