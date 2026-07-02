@@ -9,6 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_hardening_analyze as hardening_analyze
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_hardening_analyze.py"
 
@@ -120,6 +122,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert hardening_analyze.is_forbidden_env_path(Path(".env.secrets") / "hardening.json")
+        assert hardening_analyze.is_forbidden_env_path(tmp / ".env.secrets" / "hardening.json")
+        assert not hardening_analyze.is_forbidden_env_path(tmp / "hardening.json")
         benchmark = tmp / "benchmark"
         make_benchmark_out(benchmark)
         out_json = tmp / "hardening.json"

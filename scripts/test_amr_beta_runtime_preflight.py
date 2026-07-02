@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_runtime_preflight as runtime_preflight
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_runtime_preflight.py"
 
@@ -179,6 +181,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert runtime_preflight.is_forbidden_env_path(Path(".env.secrets") / "preflight.json")
+        assert runtime_preflight.is_forbidden_env_path(tmp / ".env.secrets" / "preflight.json")
+        assert not runtime_preflight.is_forbidden_env_path(tmp / "preflight.json")
         repos = [(f"case-{index:02d}", *create_repo(tmp, index)) for index in range(1, 11)]
         repo_intake = tmp / "repo_intake.md"
         write_repo_intake(repo_intake, repos)

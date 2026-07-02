@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_pr_cleanup_status as pr_cleanup_status
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_pr_cleanup_status.py"
 
@@ -75,6 +77,9 @@ def valid_pr_rows() -> list[dict]:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert pr_cleanup_status.is_forbidden_env_path(Path(".env.secrets") / "pr_cleanup.json")
+        assert pr_cleanup_status.is_forbidden_env_path(tmp / ".env.secrets" / "pr_cleanup.json")
+        assert not pr_cleanup_status.is_forbidden_env_path(tmp / "pr_cleanup.json")
         pr_state = tmp / "pr_state.json"
         claim_file = tmp / "claim_freeze.md"
         write_json(pr_state, valid_pr_rows())

@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_runtime_approval_status as approval_status
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_runtime_approval_status.py"
 
@@ -203,6 +205,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert approval_status.is_forbidden_env_path(Path(".env.secrets") / "approval_record.json")
+        assert approval_status.is_forbidden_env_path(tmp / ".env.secrets" / "approval_status.json")
+        assert not approval_status.is_forbidden_env_path(tmp / "approval_status.json")
         labels = tmp / "combined labels.jsonl"
         feedback = tmp / "feedback rows.jsonl"
         summary = tmp / "combined summary.json"

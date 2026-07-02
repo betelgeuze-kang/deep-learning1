@@ -174,8 +174,10 @@ RUNTIME_APPROVAL_STATUS_COMMAND_SCRIPT_FIELDS = [
 
 
 def is_forbidden_env_path(path: Path) -> bool:
-    name = path.name
-    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+    for part in path.parts:
+        if part == ".env" or part.startswith(".env.") or part.endswith(".env") or ".env." in part:
+            return True
+    return False
 
 
 def sha256_file(path: Path) -> str:
