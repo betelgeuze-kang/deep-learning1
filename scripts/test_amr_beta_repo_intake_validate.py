@@ -2,8 +2,9 @@
 """Smoke tests for scripts/amr_beta_repo_intake_validate.py."""
 from __future__ import annotations
 
-import json
 import hashlib
+import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
+TOOL_SPEC = importlib.util.spec_from_file_location("amr_beta_repo_intake_validate", TOOL)
+assert TOOL_SPEC and TOOL_SPEC.loader
+TOOL_MODULE = importlib.util.module_from_spec(TOOL_SPEC)
+TOOL_SPEC.loader.exec_module(TOOL_MODULE)
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -75,6 +80,9 @@ def run_verify_existing(path: Path, *extra: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert TOOL_MODULE.is_forbidden_env_path(Path(".env.secrets") / "repo_intake.md")
+        assert TOOL_MODULE.is_forbidden_env_path(tmp / ".env.secrets" / "repo_intake.md")
+        assert not TOOL_MODULE.is_forbidden_env_path(tmp / "repo_intake.md")
         repos = [create_repo(tmp, index) for index in range(10)]
 
         intake = tmp / "repo_intake.md"
