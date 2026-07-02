@@ -62,15 +62,24 @@ def read_json(path: Path, input_name: str) -> dict:
     return payload
 
 
-def is_relative_to(path: Path, parent: Path) -> bool:
+def is_resolved_relative_to(path: Path, parent: Path) -> bool:
     try:
-        path.resolve().relative_to(parent.resolve())
-        return True
+        path.relative_to(parent)
     except ValueError:
         return False
+    return True
 
 
-def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+def resolve_path_map(paths: dict[str, Path]) -> dict[str, Path]:
+    return {name: path.expanduser().resolve() for name, path in paths.items()}
+
+
+def validate_output_paths(
+    paths: dict[str, Path],
+    target_repo_paths: list[str],
+    *,
+    resolved_paths: dict[str, Path] | None = None,
+) -> list[str]:
     errors: list[str] = []
     seen_paths: dict[Path, str] = {}
     for name, path in paths.items():
@@ -78,7 +87,7 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
         if is_forbidden_env_path(raw_path):
             errors.append(f"{name} must not be .env-like")
             continue
-        resolved = raw_path.resolve()
+        resolved = resolved_paths[name] if resolved_paths and name in resolved_paths else raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
             continue
@@ -88,7 +97,7 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
             seen_paths[resolved] = name
         for raw_repo in target_repo_paths:
             repo_path = Path(raw_repo).expanduser().resolve()
-            if resolved == repo_path or is_relative_to(resolved, repo_path):
+            if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
                 errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
@@ -103,8 +112,13 @@ def output_exists_errors(paths: dict[str, Path], *, overwrite: bool) -> list[str
     return errors
 
 
-def validate_input_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
-    return validate_output_paths(paths, target_repo_paths)
+def validate_input_paths(
+    paths: dict[str, Path],
+    target_repo_paths: list[str],
+    *,
+    resolved_paths: dict[str, Path] | None = None,
+) -> list[str]:
+    return validate_output_paths(paths, target_repo_paths, resolved_paths=resolved_paths)
 
 
 def load_repo_context(path: Path, *, min_repos: int) -> tuple[dict[str, dict[str, str]], dict]:
@@ -315,23 +329,25 @@ def build_case_rows(
     return rows
 
 
-def write_json(path: Path, payload: dict, overwrite: bool) -> None:
+def write_json(path: Path, payload: dict, overwrite: bool, *, resolved_path: Path | None = None) -> None:
     raw_path = path.expanduser()
-    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
+    resolved = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved):
         raise ValueError("refusing .env-like output path")
-    raw_path.parent.mkdir(parents=True, exist_ok=True)
-    if raw_path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
-    raw_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    if resolved.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {resolved}")
+    resolved.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
+def write_markdown(path: Path, payload: dict, overwrite: bool, *, resolved_path: Path | None = None) -> None:
     raw_path = path.expanduser()
-    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
+    resolved = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved):
         raise ValueError("refusing .env-like Markdown output path")
-    raw_path.parent.mkdir(parents=True, exist_ok=True)
-    if raw_path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    if resolved.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {resolved}")
     lines = [
         "# AMR Beta Label Intake Plan",
         "",
@@ -377,7 +393,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
                 "",
             ]
         )
-    raw_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    resolved.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def command_script_text(payload: dict) -> str:
@@ -401,16 +417,17 @@ def command_script_text(payload: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_command_script(path: Path, payload: dict, overwrite: bool) -> str:
+def write_command_script(path: Path, payload: dict, overwrite: bool, *, resolved_path: Path | None = None) -> str:
     raw_path = path.expanduser()
-    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
+    resolved = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved):
         raise ValueError("refusing .env-like operator command script output path")
-    raw_path.parent.mkdir(parents=True, exist_ok=True)
-    if raw_path.exists() and not overwrite:
-        raise ValueError(f"operator command script already exists; use --overwrite: {raw_path}")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    if resolved.exists() and not overwrite:
+        raise ValueError(f"operator command script already exists; use --overwrite: {resolved}")
     text = command_script_text(payload)
-    raw_path.write_text(text, encoding="utf-8")
-    raw_path.chmod(0o755)
+    resolved.write_text(text, encoding="utf-8")
+    resolved.chmod(0o755)
     return sha256_text(text)
 
 
@@ -501,7 +518,12 @@ def main(argv: list[str]) -> int:
         input_paths = {"decisions": raw_decisions_path}
         if label_packet_summary_path:
             input_paths["label_packet_summary"] = raw_label_packet_summary_path
-        input_path_errors = validate_input_paths(input_paths, target_repo_paths)
+        resolved_input_paths = resolve_path_map(input_paths)
+        input_path_errors = validate_input_paths(
+            input_paths,
+            target_repo_paths,
+            resolved_paths=resolved_input_paths,
+        )
         raw_out_root = Path(args.out_root).expanduser()
         raw_out_json = Path(args.out_json).expanduser()
         output_paths = {
@@ -512,12 +534,11 @@ def main(argv: list[str]) -> int:
             output_paths["out_md"] = Path(args.out_md).expanduser()
         if args.out_commands_sh:
             output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser()
+        resolved_output_paths = resolve_path_map(output_paths)
         output_path_errors = validate_output_paths(
             output_paths,
             target_repo_paths,
-        )
-        resolved_output_paths = (
-            {name: path.resolve() for name, path in output_paths.items()} if not output_path_errors else {}
+            resolved_paths=resolved_output_paths,
         )
         if not output_path_errors:
             write_file_paths = {
@@ -696,13 +717,24 @@ def main(argv: list[str]) -> int:
             payload["operator_commands_script"] = str(command_script_path)
             payload["operator_commands_script_command_count"] = len(operator_commands)
             payload["operator_commands_script_sha256"] = write_command_script(
-                command_script_path,
+                output_paths["out_commands_sh"],
                 payload,
                 args.overwrite,
+                resolved_path=command_script_path,
             )
-        write_json(resolved_output_paths["out_json"], payload, args.overwrite)
+        write_json(
+            output_paths["out_json"],
+            payload,
+            args.overwrite,
+            resolved_path=resolved_output_paths["out_json"],
+        )
         if args.out_md:
-            write_markdown(resolved_output_paths["out_md"], payload, args.overwrite)
+            write_markdown(
+                output_paths["out_md"],
+                payload,
+                args.overwrite,
+                resolved_path=resolved_output_paths["out_md"],
+            )
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))
         else:
