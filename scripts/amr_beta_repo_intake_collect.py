@@ -248,7 +248,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    out_path = Path(args.out).expanduser().resolve()
+    raw_out_path = Path(args.out).expanduser()
+    out_path = raw_out_path.resolve()
     rows, build_errors = build_rows(args)
     validator_errors: list[str] = []
     summary: dict[str, object] = {
@@ -260,7 +261,7 @@ def main(argv: list[str]) -> int:
         validator_errors, summary = repo_intake.validate_rows(rows, min_repos=args.min_repos)
     target_repo_paths = repo_intake.target_repo_paths_from_statuses(summary.get("row_statuses", []))
     path_errors = repo_intake.validate_output_paths({"out": out_path}, target_repo_paths)
-    output_errors = output_exists_errors(out_path, args.overwrite)
+    output_errors = output_exists_errors(raw_out_path, args.overwrite)
     errors = [*build_errors, *validator_errors, *path_errors, *output_errors]
 
     wrote = False

@@ -184,6 +184,41 @@ def main() -> int:
         assert verify_payload["creates_benchmark_evidence"] == 0
         assert verify_payload["design_partner_beta_candidate_ready"] == 0
 
+        forbidden_raw_intake_symlink = tmp / ".env.repo_audit_intake"
+        forbidden_raw_intake_symlink.symlink_to(intake)
+        forbidden_raw_intake_plan = tmp / "forbidden_raw_intake_plan.json"
+        proc = run_tool(
+            "--repo-intake",
+            str(forbidden_raw_intake_symlink),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(forbidden_raw_intake_plan),
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "refusing .env-like repo intake path" in proc.stderr
+        assert not forbidden_raw_intake_plan.exists()
+
+        raw_env_plan_target = tmp / "raw_env_plan_target.json"
+        raw_env_plan_symlink = tmp / ".env.repo_audit_plan_out"
+        raw_env_plan_symlink.symlink_to(raw_env_plan_target)
+        proc = run_tool(
+            "--repo-intake",
+            str(intake),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(raw_env_plan_symlink),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_plan_payload = json.loads(proc.stdout)
+        assert "out_json must not be .env-like" in proc.stderr
+        assert "out_json must not be .env-like" in raw_env_plan_payload["errors"][0]
+        assert not raw_env_plan_target.exists()
+
         forbidden_env_plan = tmp / ".env"
         forbidden_env_plan.write_text("repo_audit_plan=secret-bearing-placeholder\n", encoding="utf-8")
         proc = run_tool("--verify-existing", str(forbidden_env_plan), "--json")
