@@ -53,12 +53,16 @@ def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
 
 
-def is_relative_to(path: Path, parent: Path) -> bool:
+def is_resolved_relative_to(path: Path, parent: Path) -> bool:
     try:
-        path.resolve().relative_to(parent.resolve())
+        path.relative_to(parent)
         return True
     except ValueError:
         return False
+
+
+def resolve_path_map(paths: dict[str, Path]) -> dict[str, Path]:
+    return {name: path.expanduser().resolve() for name, path in paths.items()}
 
 
 def read_json(path: Path, input_name: str) -> dict:
@@ -117,7 +121,12 @@ def load_template_target_repo(path: Path) -> tuple[str, list[str]]:
     return "", errors
 
 
-def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+def validate_output_paths(
+    paths: dict[str, Path],
+    target_repo_paths: list[str],
+    *,
+    resolved_paths: dict[str, Path] | None = None,
+) -> list[str]:
     errors: list[str] = []
     seen_paths: dict[Path, str] = {}
     for name, path in paths.items():
@@ -125,7 +134,7 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
         if is_forbidden_env_path(raw_path):
             errors.append(f"{name} must not be .env-like")
             continue
-        resolved = raw_path.resolve()
+        resolved = resolved_paths[name] if resolved_paths and name in resolved_paths else raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
             continue
@@ -135,13 +144,18 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
             seen_paths[resolved] = name
         for raw_repo in target_repo_paths:
             repo_path = Path(raw_repo).expanduser().resolve()
-            if resolved == repo_path or is_relative_to(resolved, repo_path):
+            if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
                 errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
 
-def validate_decision_input_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
-    return validate_output_paths(paths, target_repo_paths)
+def validate_decision_input_paths(
+    paths: dict[str, Path],
+    target_repo_paths: list[str],
+    *,
+    resolved_paths: dict[str, Path] | None = None,
+) -> list[str]:
+    return validate_output_paths(paths, target_repo_paths, resolved_paths=resolved_paths)
 
 
 def validate_optional_safe_id(
@@ -1177,21 +1191,28 @@ def main(argv: list[str]) -> int:
             output_paths["out"] = Path(args.out)
         if args.per_case_out_root:
             output_paths["per_case_out_root"] = Path(args.per_case_out_root)
-        output_path_errors = validate_output_paths(output_paths, sorted(set(target_repo_paths)))
+        resolved_output_paths = resolve_path_map(output_paths)
+        output_path_errors = validate_output_paths(
+            output_paths,
+            sorted(set(target_repo_paths)),
+            resolved_paths=resolved_output_paths,
+        )
 
         decision_input_paths = {
             f"decisions_{index}": Path(raw_decisions)
             for index, raw_decisions in enumerate(args.decisions, start=1)
         }
+        resolved_decision_input_paths = resolve_path_map(decision_input_paths)
         decision_input_errors = validate_decision_input_paths(
             decision_input_paths,
             sorted(set(target_repo_paths)),
+            resolved_paths=resolved_decision_input_paths,
         )
         decision_rows: list[dict] = []
         decision_fingerprints: list[dict[str, str]] = []
         if not template_path_errors and not decision_input_errors and not output_path_errors:
-            for raw_decisions in args.decisions:
-                decision_path = Path(raw_decisions).expanduser().resolve()
+            for index, _raw_decisions in enumerate(args.decisions, start=1):
+                decision_path = resolved_decision_input_paths[f"decisions_{index}"]
                 decision_fingerprints.append(
                     {
                         "decisions": str(decision_path),
@@ -1308,10 +1329,10 @@ def main(argv: list[str]) -> int:
                 print(error, file=sys.stderr)
             return 1
         if args.out:
-            write_outputs(Path(args.out).expanduser().resolve(), packet_rows, missing_ids, summary, args.overwrite)
+            write_outputs(resolved_output_paths["out"], packet_rows, missing_ids, summary, args.overwrite)
         if args.per_case_out_root:
             write_case_outputs(
-                Path(args.per_case_out_root).expanduser().resolve(),
+                resolved_output_paths["per_case_out_root"],
                 packet_rows,
                 valid_decision_ids,
                 summary,
