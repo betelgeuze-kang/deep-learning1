@@ -61,9 +61,11 @@ def sha256_file(path: Path) -> str:
 
 
 def read_json(path: Path) -> dict:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    resolved_path = raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved_path):
         raise ValueError("refusing .env-like discovery path")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(resolved_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("repo discovery must contain an object")
     return payload
@@ -78,10 +80,16 @@ def int_flag(payload: dict, key: str, default: int = 0) -> int:
     return default
 
 
-def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
+def output_exists_errors(
+    raw_paths: dict[str, Path],
+    resolved_paths: dict[str, Path],
+    overwrite: bool,
+) -> list[str]:
     errors: list[str] = []
-    for name, path in paths.items():
-        resolved = path.resolve()
+    for name, raw_path in raw_paths.items():
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+        resolved = resolved_paths[name]
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved.exists() and not overwrite:
@@ -242,6 +250,7 @@ def build_payload(
     discovery: dict,
     errors: list[str],
     *,
+    include_discovery_hash: bool = True,
     response_template_csv: Path | None = None,
     response_template_recommended_only: bool = False,
 ) -> dict[str, object]:
@@ -270,7 +279,9 @@ def build_payload(
     return {
         "schema": SCHEMA,
         "repo_discovery": str(discovery_path),
-        "repo_discovery_sha256": sha256_file(discovery_path) if discovery_path.exists() else "",
+        "repo_discovery_sha256": (
+            sha256_file(discovery_path) if include_discovery_hash and discovery_path.exists() else ""
+        ),
         "candidate_repo_count": int_flag(discovery, "candidate_repo_count", len(request_rows)),
         "candidate_repos_with_clean_head": clean_count,
         "candidate_repos_with_path_risk": path_risk_count,
@@ -438,31 +449,39 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    discovery_path = Path(args.repo_discovery).expanduser().resolve()
-    out_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+    raw_discovery_path = Path(args.repo_discovery).expanduser()
+    discovery_path = raw_discovery_path.resolve()
+    discovery_path_allowed = not is_forbidden_env_path(raw_discovery_path) and not is_forbidden_env_path(
+        discovery_path
+    )
+    raw_out_paths = {"out_json": Path(args.out_json).expanduser()}
     errors: list[str] = []
     if args.out_md:
-        out_paths["out_md"] = Path(args.out_md).expanduser().resolve()
-    response_template_path = Path(args.out_response_csv).expanduser().resolve() if args.out_response_csv else None
-    if response_template_path:
-        out_paths["out_response_csv"] = response_template_path
+        raw_out_paths["out_md"] = Path(args.out_md).expanduser()
+    raw_response_template_path = Path(args.out_response_csv).expanduser() if args.out_response_csv else None
+    response_template_path = raw_response_template_path.resolve() if raw_response_template_path else None
+    if raw_response_template_path:
+        raw_out_paths["out_response_csv"] = raw_response_template_path
     if args.response_template_recommended_only and not response_template_path:
         errors.append("--response-template-recommended-only requires --out-response-csv")
 
     discovery: dict[str, object] = {}
     try:
-        discovery = read_json(discovery_path)
+        discovery = read_json(raw_discovery_path)
     except Exception as exc:
         errors.append(str(exc))
     if discovery:
         errors.extend(validate_discovery(discovery))
+    out_paths = {name: path.resolve() for name, path in raw_out_paths.items()}
+    if discovery:
         errors.extend(repo_intake.validate_output_paths(out_paths, candidate_repo_paths(discovery)))
-    errors.extend(output_exists_errors(out_paths, args.overwrite))
+    errors.extend(output_exists_errors(raw_out_paths, out_paths, args.overwrite))
 
     payload = build_payload(
         discovery_path,
         discovery,
         errors,
+        include_discovery_hash=discovery_path_allowed,
         response_template_csv=response_template_path,
         response_template_recommended_only=args.response_template_recommended_only,
     )
