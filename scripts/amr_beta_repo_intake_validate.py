@@ -567,7 +567,12 @@ def recompute_status_payload(status_path: Path, saved_status: dict) -> tuple[dic
     raw_input = str(saved_status.get("input_intake") or "").strip()
     if not raw_input:
         return {}, ["status: input_intake must be present"]
-    input_path = Path(raw_input).expanduser().resolve()
+    raw_input_path = Path(raw_input).expanduser()
+    if is_forbidden_env_path(raw_input_path):
+        return {}, ["status: refusing .env-like input_intake path"]
+    input_path = raw_input_path.resolve()
+    if is_forbidden_env_path(input_path):
+        return {}, ["status: refusing .env-like input_intake path"]
     min_repos = saved_status.get("min_real_repos_required", MIN_REAL_REPOS_FOR_BETA)
     if not is_exact_int(min_repos):
         errors.append("status: min_real_repos_required must be an integer")
@@ -673,8 +678,13 @@ def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.verify_existing:
-            verify_path = Path(args.verify_existing).expanduser().resolve()
-            status, verify_errors = verify_existing_status(verify_path)
+            raw_verify_path = Path(args.verify_existing).expanduser()
+            if is_forbidden_env_path(raw_verify_path):
+                verify_path = raw_verify_path.absolute()
+                status, verify_errors = {}, ["status: refusing .env-like status path"]
+            else:
+                verify_path = raw_verify_path.resolve()
+                status, verify_errors = verify_existing_status(verify_path)
             status_sha256 = ""
             status_payload_sha256 = ""
             if status and not is_forbidden_env_path(verify_path):

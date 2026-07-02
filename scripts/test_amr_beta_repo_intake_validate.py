@@ -183,6 +183,31 @@ def main() -> int:
         assert forbidden_env_verify["status_payload_sha256"] == ""
         assert "refusing .env-like status path" in proc.stderr
 
+        forbidden_env_symlink = tmp / ".env.repo_intake_status"
+        forbidden_env_symlink.symlink_to(status_json)
+        proc = run_verify_existing(forbidden_env_symlink, "--json")
+        assert proc.returncode == 1
+        forbidden_env_symlink_verify = json.loads(proc.stdout)
+        assert forbidden_env_symlink_verify["verify_existing_passed"] == 0
+        assert forbidden_env_symlink_verify["status_sha256"] == ""
+        assert forbidden_env_symlink_verify["status_payload_sha256"] == ""
+        assert "refusing .env-like status path" in proc.stderr
+
+        forbidden_input_symlink = tmp / ".env.repo_intake"
+        forbidden_input_symlink.symlink_to(intake)
+        forbidden_input_status_json = tmp / "forbidden_input_repo_intake_status.json"
+        forbidden_input_status = json.loads(status_json.read_text(encoding="utf-8"))
+        forbidden_input_status["input_intake"] = str(forbidden_input_symlink)
+        forbidden_input_status_json.write_text(
+            json.dumps(forbidden_input_status, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        proc = run_verify_existing(forbidden_input_status_json, "--json")
+        assert proc.returncode == 1
+        forbidden_input_verify = json.loads(proc.stdout)
+        assert forbidden_input_verify["verify_existing_passed"] == 0
+        assert "refusing .env-like input_intake path" in proc.stderr
+
         bool_tampered_status_json = tmp / "bool_tampered_repo_intake_status.json"
         bool_tampered_status = json.loads(status_json.read_text(encoding="utf-8"))
         bool_tampered_status["ready_for_real_benchmark_audit"] = True
