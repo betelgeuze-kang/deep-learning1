@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -103,6 +104,15 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
         stderr=subprocess.PIPE,
         text=True,
     )
+
+
+def load_tool_module():
+    spec = importlib.util.spec_from_file_location("amr_beta_label_packet", TOOL)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def run_checked(args: list[str]) -> subprocess.CompletedProcess:
@@ -207,6 +217,24 @@ def make_verified_template(tmp: Path, case_id: str) -> tuple[Path, list[str]]:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        tool_module = load_tool_module()
+        resolved_env_target = tmp / ".env.resolved_packet_target" / "packet"
+        resolved_env_errors = tool_module.validate_output_paths(
+            {"out": tmp / "safe-output-link"},
+            [],
+            resolved_paths={"out": resolved_env_target},
+        )
+        assert resolved_env_errors == ["out must not be .env-like"]
+        resolved_target_repo = tmp / "resolved_target_repo"
+        resolved_target_repo.mkdir()
+        resolved_repo_errors = tool_module.validate_decision_input_paths(
+            {"decisions_1": tmp / "safe-decisions-link"},
+            [str(resolved_target_repo)],
+            resolved_paths={"decisions_1": resolved_target_repo / "decisions.jsonl"},
+        )
+        assert len(resolved_repo_errors) == 1
+        assert "decisions_1 must not be inside target repo" in resolved_repo_errors[0]
+
         template_a = tmp / "template_a"
         template_b = tmp / "template_b"
         make_template(template_a, "case-a", ["case-a-0001", "case-a-0002"])
