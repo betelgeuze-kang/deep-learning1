@@ -64,10 +64,14 @@ def is_relative_to(path: Path, parent: Path) -> bool:
 
 def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    if is_forbidden_env_path(out_dir):
+    raw_out_dir = out_dir.expanduser()
+    if is_forbidden_env_path(raw_out_dir):
         errors.append("out must not be .env-like")
         return errors
-    resolved = out_dir.resolve()
+    resolved = raw_out_dir.resolve()
+    if is_forbidden_env_path(resolved):
+        errors.append("out must not be .env-like")
+        return errors
     for raw_repo in target_repo_paths:
         repo_text = str(raw_repo or "").strip()
         if not repo_text:
@@ -80,9 +84,14 @@ def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[st
 
 def validate_output_file_path(name: str, path: Path, target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    resolved = path.resolve()
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path):
+        errors.append(f"{name} must not be .env-like")
+        return errors
+    resolved = raw_path.resolve()
     if is_forbidden_env_path(resolved):
         errors.append(f"{name} must not be .env-like")
+        return errors
     for raw_repo in target_repo_paths:
         repo_text = str(raw_repo or "").strip()
         if not repo_text:
@@ -105,9 +114,14 @@ def output_file_exists_errors(paths: dict[str, Path], *, overwrite: bool) -> lis
 
 def validate_input_path(name: str, path: Path, target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    resolved = path.resolve()
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path):
+        errors.append(f"{name} must not be .env-like")
+        return errors
+    resolved = raw_path.resolve()
     if is_forbidden_env_path(resolved):
         errors.append(f"{name} must not be .env-like")
+        return errors
     for raw_repo in target_repo_paths:
         repo_text = str(raw_repo or "").strip()
         if not repo_text:
@@ -510,7 +524,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
-        repo_path = Path(args.repo_intake).expanduser().resolve()
+        raw_repo_path = Path(args.repo_intake).expanduser()
+        if is_forbidden_env_path(raw_repo_path):
+            raise ValueError("refusing .env-like repo intake path")
+        repo_path = raw_repo_path.resolve()
+        if is_forbidden_env_path(repo_path):
+            raise ValueError("refusing .env-like repo intake path")
         repo_rows, repo_errors, repo_summary = load_repo_intake(repo_path, args.min_repos)
         target_repo_paths = repo_intake.target_repo_paths_from_statuses(repo_summary.get("row_statuses", []))
         input_path_errors = validate_input_path("repo_intake", repo_path, target_repo_paths)
@@ -518,28 +537,40 @@ def main(argv: list[str]) -> int:
             input_path_errors.extend(
                 validate_input_path(
                     f"label_intake_dir[{index}]",
-                    Path(raw_dir).expanduser().resolve(),
+                    Path(raw_dir).expanduser(),
                     target_repo_paths,
                 )
             )
-        feedback_path = Path(args.feedback).expanduser().resolve() if args.feedback else None
-        if feedback_path:
-            input_path_errors.extend(validate_input_path("feedback", feedback_path, target_repo_paths))
-        out_path = Path(args.out).expanduser().resolve() if args.out else None
+        raw_feedback_path = Path(args.feedback).expanduser() if args.feedback else None
+        feedback_path = None
+        if raw_feedback_path:
+            input_path_errors.extend(validate_input_path("feedback", raw_feedback_path, target_repo_paths))
+            if not is_forbidden_env_path(raw_feedback_path):
+                feedback_path = raw_feedback_path.resolve()
+        raw_out_path = Path(args.out).expanduser() if args.out else None
+        out_path = None
+        if raw_out_path:
+            out_path = raw_out_path.absolute() if is_forbidden_env_path(raw_out_path) else raw_out_path.resolve()
         output_path_errors = (
             validate_output_path(
-                out_path,
+                raw_out_path,
                 target_repo_paths,
             )
-            if out_path
+            if raw_out_path
             else []
         )
-        command_script_path = Path(args.out_commands_sh).expanduser().resolve() if args.out_commands_sh else None
-        if command_script_path:
+        raw_command_script_path = Path(args.out_commands_sh).expanduser() if args.out_commands_sh else None
+        command_script_path = None
+        if raw_command_script_path:
+            command_script_path = (
+                raw_command_script_path.absolute()
+                if is_forbidden_env_path(raw_command_script_path)
+                else raw_command_script_path.resolve()
+            )
             output_path_errors.extend(
                 validate_output_file_path(
                     "out_commands_sh",
-                    command_script_path,
+                    raw_command_script_path,
                     target_repo_paths,
                 )
             )
@@ -592,7 +623,7 @@ def main(argv: list[str]) -> int:
         }
         feedback_fingerprint = empty_feedback_fingerprint_summary()
         require_countable_feedback_cases = bool(args.label_intake_dir) or args.require_countable_cases
-        if args.feedback and not input_path_errors:
+        if args.feedback and not input_path_errors and not output_path_errors:
             feedback_rows = read_json_or_jsonl(feedback_path, "feedback") if feedback_path else []
             feedback_fingerprint = (
                 feedback_fingerprint_summary(feedback_path, feedback_rows)
@@ -641,7 +672,7 @@ def main(argv: list[str]) -> int:
                 out_path=out_path,
                 args=args,
             )
-            if out_path
+            if out_path and not input_path_errors and not output_path_errors
             else []
         )
         summary = {
