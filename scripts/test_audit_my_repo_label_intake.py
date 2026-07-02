@@ -8,8 +8,15 @@ import sys
 import tempfile
 from pathlib import Path
 
-from audit_my_repo_label_intake import normalize_decisions, verify_label_intake_dir
-from audit_my_repo_label_template import verify_template_dir
+from audit_my_repo_label_intake import (
+    is_forbidden_env_path as intake_is_forbidden_env_path,
+    normalize_decisions,
+    verify_label_intake_dir,
+)
+from audit_my_repo_label_template import (
+    is_forbidden_env_path as template_is_forbidden_env_path,
+    verify_template_dir,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "audit_my_repo_label_intake.py"
@@ -47,6 +54,17 @@ def expect_value_error(rows: list[dict], expected: str) -> None:
         assert expected in str(exc), str(exc)
     else:
         raise AssertionError(f"expected ValueError containing {expected!r}")
+
+
+def test_env_path_guards_reject_parent_components() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        assert intake_is_forbidden_env_path(Path(".env.secrets") / "decisions.jsonl")
+        assert intake_is_forbidden_env_path(tmp / ".env.secrets" / "label_intake")
+        assert not intake_is_forbidden_env_path(tmp / "label_intake")
+        assert template_is_forbidden_env_path(Path(".env.secrets") / "label_template")
+        assert template_is_forbidden_env_path(tmp / ".env.secrets" / "label_template")
+        assert not template_is_forbidden_env_path(tmp / "label_template")
 
 
 def test_decision_normalization() -> None:
@@ -370,6 +388,7 @@ def test_internal_staging_env_like_names_are_not_rejected_by_verify_helpers() ->
 
 
 def main() -> int:
+    test_env_path_guards_reject_parent_components()
     test_decision_normalization()
     test_rejects_output_inside_target_repo_before_writing()
     test_rejects_decisions_inside_target_repo_before_writing()

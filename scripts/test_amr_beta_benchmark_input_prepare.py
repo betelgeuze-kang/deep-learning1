@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_benchmark_input_prepare as benchmark_inputs
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_benchmark_input_prepare.py"
 
@@ -92,6 +94,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert benchmark_inputs.is_forbidden_env_path(Path(".env.secrets") / "benchmark_labels.jsonl")
+        assert benchmark_inputs.is_forbidden_env_path(tmp / ".env.secrets" / "benchmark_inputs")
+        assert not benchmark_inputs.is_forbidden_env_path(tmp / "benchmark_inputs")
         repo_a = tmp / "repo_a"
         repo_b = tmp / "repo_b"
         repo_a.mkdir()
