@@ -580,16 +580,13 @@ def main(argv: list[str]) -> int:
             raw_output_paths["out_md"] = Path(args.out_md).expanduser()
         if args.out_commands_sh:
             raw_output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser()
-        output_paths = {name: path.resolve() for name, path in raw_output_paths.items()}
         input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
-        output_path_errors = [
-            f"{name} must not be .env-like"
-            for name, path in raw_output_paths.items()
-            if is_forbidden_env_path(path)
-        ]
-        output_path_errors.extend(repo_intake.validate_output_paths(output_paths, target_repo_paths))
+        output_path_errors = repo_intake.validate_output_paths(raw_output_paths, target_repo_paths)
         artifact_root_errors = validate_artifact_root(artifact_root, rows)
-        existing_output_errors = output_exists_errors(output_paths, args.overwrite)
+        output_paths = (
+            {name: path.resolve() for name, path in raw_output_paths.items()} if not output_path_errors else {}
+        )
+        existing_output_errors = [] if output_path_errors else output_exists_errors(output_paths, args.overwrite)
         path_errors = [*input_path_errors, *output_path_errors, *existing_output_errors]
         plan_errors = [*artifact_root_errors, *path_errors]
         if plan_errors:

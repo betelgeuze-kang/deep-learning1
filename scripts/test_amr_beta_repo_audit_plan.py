@@ -219,6 +219,28 @@ def main() -> int:
         assert "out_json must not be .env-like" in raw_env_plan_payload["errors"][0]
         assert not raw_env_plan_target.exists()
 
+        raw_env_repo_plan_target = repos[0][0] / "raw_env_repo_audit_plan_target.json"
+        raw_env_repo_plan_symlink = tmp / ".env.repo_audit_plan_repo_target"
+        raw_env_repo_plan_symlink.symlink_to(raw_env_repo_plan_target)
+        proc = run_tool(
+            "--repo-intake",
+            str(intake),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(raw_env_repo_plan_symlink),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_repo_plan_payload = json.loads(proc.stdout)
+        assert proc.stderr.count("out_json must not be .env-like") == 1
+        assert raw_env_repo_plan_payload["errors"].count("out_json must not be .env-like") == 1
+        assert "inside target repo" not in proc.stderr
+        assert raw_env_repo_plan_target.name not in proc.stdout
+        assert raw_env_repo_plan_target.name not in proc.stderr
+        assert not raw_env_repo_plan_target.exists()
+
         forbidden_env_plan = tmp / ".env"
         forbidden_env_plan.write_text("repo_audit_plan=secret-bearing-placeholder\n", encoding="utf-8")
         proc = run_tool("--verify-existing", str(forbidden_env_plan), "--json")
@@ -358,6 +380,32 @@ def main() -> int:
         assert "out_commands_sh must not be inside target repo" in unsafe_commands_payload["errors"][0]
         assert not unsafe_commands_sh.exists()
         assert not (tmp / "unsafe_commands_plan.json").exists()
+
+        raw_env_repo_commands_target = repos[0][0] / "raw_env_repo_audit_commands.sh"
+        raw_env_repo_commands_symlink = tmp / ".env.repo_audit_commands_repo_target"
+        raw_env_repo_commands_symlink.symlink_to(raw_env_repo_commands_target)
+        raw_env_repo_commands_plan = tmp / "raw_env_repo_commands_plan.json"
+        proc = run_tool(
+            "--repo-intake",
+            str(intake),
+            "--artifact-root",
+            str(artifact_root),
+            "--out-json",
+            str(raw_env_repo_commands_plan),
+            "--out-commands-sh",
+            str(raw_env_repo_commands_symlink),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_repo_commands_payload = json.loads(proc.stdout)
+        assert proc.stderr.count("out_commands_sh must not be .env-like") == 1
+        assert raw_env_repo_commands_payload["errors"].count("out_commands_sh must not be .env-like") == 1
+        assert "inside target repo" not in proc.stderr
+        assert raw_env_repo_commands_target.name not in proc.stdout
+        assert raw_env_repo_commands_target.name not in proc.stderr
+        assert not raw_env_repo_commands_target.exists()
+        assert not raw_env_repo_commands_plan.exists()
 
         unsafe_out_json = repos[0][0] / "repo_audit_plan.json"
         unsafe_out_md = repos[0][0] / "repo_audit_plan.md"
