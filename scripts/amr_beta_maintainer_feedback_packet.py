@@ -56,21 +56,31 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
-def is_relative_to(path: Path, parent: Path) -> bool:
+def is_resolved_relative_to(path: Path, parent: Path) -> bool:
     try:
-        path.resolve().relative_to(parent.resolve())
+        path.relative_to(parent)
     except ValueError:
         return False
     return True
 
 
-def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[str]:
+def resolve_unless_raw_forbidden(path: Path) -> Path:
+    raw_path = path.expanduser()
+    return raw_path.absolute() if is_forbidden_env_path(raw_path) else raw_path.resolve()
+
+
+def validate_output_path(
+    out_dir: Path,
+    target_repo_paths: list[str],
+    *,
+    resolved_path: Path | None = None,
+) -> list[str]:
     errors: list[str] = []
     raw_out_dir = out_dir.expanduser()
     if is_forbidden_env_path(raw_out_dir):
         errors.append("out must not be .env-like")
         return errors
-    resolved = raw_out_dir.resolve()
+    resolved = resolved_path or raw_out_dir.resolve()
     if is_forbidden_env_path(resolved):
         errors.append("out must not be .env-like")
         return errors
@@ -79,18 +89,24 @@ def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[st
         if not repo_text:
             continue
         repo_path = Path(repo_text).expanduser().resolve()
-        if resolved == repo_path or is_relative_to(resolved, repo_path):
+        if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
             errors.append(f"out must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
 
-def validate_output_file_path(name: str, path: Path, target_repo_paths: list[str]) -> list[str]:
+def validate_output_file_path(
+    name: str,
+    path: Path,
+    target_repo_paths: list[str],
+    *,
+    resolved_path: Path | None = None,
+) -> list[str]:
     errors: list[str] = []
     raw_path = path.expanduser()
     if is_forbidden_env_path(raw_path):
         errors.append(f"{name} must not be .env-like")
         return errors
-    resolved = raw_path.resolve()
+    resolved = resolved_path or raw_path.resolve()
     if is_forbidden_env_path(resolved):
         errors.append(f"{name} must not be .env-like")
         return errors
@@ -99,7 +115,7 @@ def validate_output_file_path(name: str, path: Path, target_repo_paths: list[str
         if not repo_text:
             continue
         repo_path = Path(repo_text).expanduser().resolve()
-        if resolved == repo_path or is_relative_to(resolved, repo_path):
+        if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
             errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
@@ -114,13 +130,19 @@ def output_file_exists_errors(paths: dict[str, Path], *, overwrite: bool) -> lis
     return errors
 
 
-def validate_input_path(name: str, path: Path, target_repo_paths: list[str]) -> list[str]:
+def validate_input_path(
+    name: str,
+    path: Path,
+    target_repo_paths: list[str],
+    *,
+    resolved_path: Path | None = None,
+) -> list[str]:
     errors: list[str] = []
     raw_path = path.expanduser()
     if is_forbidden_env_path(raw_path):
         errors.append(f"{name} must not be .env-like")
         return errors
-    resolved = raw_path.resolve()
+    resolved = resolved_path or raw_path.resolve()
     if is_forbidden_env_path(resolved):
         errors.append(f"{name} must not be .env-like")
         return errors
@@ -129,7 +151,7 @@ def validate_input_path(name: str, path: Path, target_repo_paths: list[str]) -> 
         if not repo_text:
             continue
         repo_path = Path(repo_text).expanduser().resolve()
-        if resolved == repo_path or is_relative_to(resolved, repo_path):
+        if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
             errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
@@ -421,7 +443,7 @@ def write_outputs(out_dir: Path, request_rows: list[dict], missing_rows: list[di
 def build_operator_commands(
     *,
     repo_path: Path,
-    label_intake_dirs: list[str],
+    label_intake_dirs: list[Path],
     feedback_path: Path | None,
     out_path: Path,
     args: argparse.Namespace,
@@ -432,8 +454,8 @@ def build_operator_commands(
         "--repo-intake",
         repo_path,
     ]
-    for raw_dir in label_intake_dirs:
-        packet_parts.extend(["--label-intake-dir", Path(raw_dir).expanduser().resolve()])
+    for label_intake_dir in label_intake_dirs:
+        packet_parts.extend(["--label-intake-dir", label_intake_dir])
     if feedback_path:
         packet_parts.extend(["--feedback", feedback_path])
     packet_parts.extend(
@@ -481,15 +503,23 @@ def command_script_text(summary: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_command_script(path: Path, summary: dict, overwrite: bool) -> str:
-    if is_forbidden_env_path(path):
+def write_command_script(
+    path: Path,
+    summary: dict,
+    overwrite: bool,
+    *,
+    resolved_path: Path | None = None,
+) -> str:
+    raw_path = path.expanduser()
+    write_path = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(write_path):
         raise ValueError("refusing .env-like operator command script output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"operator command script already exists; use --overwrite: {path}")
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    if write_path.exists() and not overwrite:
+        raise ValueError(f"operator command script already exists; use --overwrite: {write_path}")
     text = command_script_text(summary)
-    path.write_text(text, encoding="utf-8")
-    path.chmod(0o755)
+    write_path.write_text(text, encoding="utf-8")
+    write_path.chmod(0o755)
     return sha256_text(text)
 
 
@@ -534,29 +564,49 @@ def main(argv: list[str]) -> int:
             raise ValueError("refusing .env-like repo intake path")
         repo_rows, repo_errors, repo_summary = load_repo_intake(repo_path, args.min_repos)
         target_repo_paths = repo_intake.target_repo_paths_from_statuses(repo_summary.get("row_statuses", []))
-        input_path_errors = validate_input_path("repo_intake", repo_path, target_repo_paths)
-        for index, raw_dir in enumerate(args.label_intake_dir, start=1):
+        input_path_errors = validate_input_path(
+            "repo_intake",
+            raw_repo_path,
+            target_repo_paths,
+            resolved_path=repo_path,
+        )
+        raw_label_intake_paths = [Path(raw_dir).expanduser() for raw_dir in args.label_intake_dir]
+        label_intake_paths = [resolve_unless_raw_forbidden(path) for path in raw_label_intake_paths]
+        for index, (raw_dir, label_intake_path) in enumerate(
+            zip(raw_label_intake_paths, label_intake_paths, strict=True),
+            start=1,
+        ):
             input_path_errors.extend(
                 validate_input_path(
                     f"label_intake_dir[{index}]",
-                    Path(raw_dir).expanduser(),
+                    raw_dir,
                     target_repo_paths,
+                    resolved_path=label_intake_path,
                 )
             )
         raw_feedback_path = Path(args.feedback).expanduser() if args.feedback else None
         feedback_path = None
         if raw_feedback_path:
-            input_path_errors.extend(validate_input_path("feedback", raw_feedback_path, target_repo_paths))
+            resolved_feedback_path = resolve_unless_raw_forbidden(raw_feedback_path)
+            input_path_errors.extend(
+                validate_input_path(
+                    "feedback",
+                    raw_feedback_path,
+                    target_repo_paths,
+                    resolved_path=resolved_feedback_path,
+                )
+            )
             if not is_forbidden_env_path(raw_feedback_path):
-                feedback_path = raw_feedback_path.resolve()
+                feedback_path = resolved_feedback_path
         raw_out_path = Path(args.out).expanduser() if args.out else None
         out_path = None
         if raw_out_path:
-            out_path = raw_out_path.absolute() if is_forbidden_env_path(raw_out_path) else raw_out_path.resolve()
+            out_path = resolve_unless_raw_forbidden(raw_out_path)
         output_path_errors = (
             validate_output_path(
                 raw_out_path,
                 target_repo_paths,
+                resolved_path=out_path,
             )
             if raw_out_path
             else []
@@ -564,16 +614,13 @@ def main(argv: list[str]) -> int:
         raw_command_script_path = Path(args.out_commands_sh).expanduser() if args.out_commands_sh else None
         command_script_path = None
         if raw_command_script_path:
-            command_script_path = (
-                raw_command_script_path.absolute()
-                if is_forbidden_env_path(raw_command_script_path)
-                else raw_command_script_path.resolve()
-            )
+            command_script_path = resolve_unless_raw_forbidden(raw_command_script_path)
             output_path_errors.extend(
                 validate_output_file_path(
                     "out_commands_sh",
                     raw_command_script_path,
                     target_repo_paths,
+                    resolved_path=command_script_path,
                 )
             )
             output_path_errors.extend(
@@ -584,7 +631,7 @@ def main(argv: list[str]) -> int:
             )
             if not out_path:
                 output_path_errors.append("--out-commands-sh requires --out")
-            elif command_script_path == out_path or is_relative_to(command_script_path, out_path):
+            elif command_script_path == out_path or is_resolved_relative_to(command_script_path, out_path):
                 output_path_errors.append("out_commands_sh must not be inside out")
         known_case_ids = {str(row.get("case_id") or "").strip() for row in repo_rows if str(row.get("case_id") or "").strip()}
 
@@ -602,7 +649,7 @@ def main(argv: list[str]) -> int:
         label_counts: Counter[str] = Counter()
         if args.label_intake_dir and not input_path_errors:
             label_case_ids, countable_case_ids, label_summary, label_counts = load_label_context(
-                args.label_intake_dir,
+                [str(path) for path in label_intake_paths],
                 verify_existing=not args.skip_verify_existing,
             )
             unknown_label_cases = sorted(label_case_ids - known_case_ids)
@@ -669,7 +716,7 @@ def main(argv: list[str]) -> int:
         operator_commands = (
             build_operator_commands(
                 repo_path=repo_path,
-                label_intake_dirs=args.label_intake_dir,
+                label_intake_dirs=label_intake_paths,
                 feedback_path=feedback_path,
                 out_path=out_path,
                 args=args,
@@ -731,7 +778,12 @@ def main(argv: list[str]) -> int:
         if out_path:
             write_outputs(out_path, request_rows, missing_rows, summary, args.overwrite)
         if command_script_path:
-            script_sha = write_command_script(command_script_path, summary, args.overwrite)
+            script_sha = write_command_script(
+                raw_command_script_path,
+                summary,
+                args.overwrite,
+                resolved_path=command_script_path,
+            )
             if script_sha != summary["operator_commands_script_sha256"]:
                 raise ValueError("operator command script sha drift after write")
         if args.json or not args.out:
