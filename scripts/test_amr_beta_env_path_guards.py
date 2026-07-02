@@ -9,6 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 GUARDED_MODULES = [
+    "audit_my_repo",
+    "audit_my_repo_benchmark",
     "audit_my_repo_label_template",
     "audit_my_repo_label_intake",
     "amr_beta_benchmark_input_prepare",
@@ -36,10 +38,23 @@ def module_path(module_name: str) -> Path:
     return ROOT / "scripts" / f"{module_name}.py"
 
 
+def guard_function_source(module_name: str) -> str:
+    lines = module_path(module_name).read_text(encoding="utf-8").splitlines()
+    start = next(
+        index for index, line in enumerate(lines) if line.startswith("def is_forbidden_env_path")
+    )
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        if lines[index].startswith("def ") or lines[index].startswith("class "):
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
 def assert_guard_uses_path_components(module_name: str) -> None:
-    source = module_path(module_name).read_text(encoding="utf-8")
+    source = guard_function_source(module_name)
     assert "def is_forbidden_env_path" in source, module_name
-    assert "name = path.name" not in source, f"{module_name} uses basename-only env guard"
+    assert "path.name" not in source, f"{module_name} uses basename-only env guard"
 
 
 def assert_guard_behavior(module_name: str) -> None:
