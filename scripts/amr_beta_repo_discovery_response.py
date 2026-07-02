@@ -86,9 +86,10 @@ def sha256_json(payload: object) -> str:
 
 def read_json(path: Path, name: str) -> dict:
     raw_path = path.expanduser()
-    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
+    resolved_path = raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved_path):
         raise ValueError(f"refusing .env-like {name} path")
-    payload = json.loads(raw_path.read_text(encoding="utf-8"))
+    payload = json.loads(resolved_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{name} must contain an object")
     return payload
@@ -144,14 +145,17 @@ def optional_nonnegative_int(
     return raw
 
 
-def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
+def output_exists_errors(
+    raw_paths: dict[str, Path],
+    resolved_paths: dict[str, Path],
+    overwrite: bool,
+) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
-    for name, path in paths.items():
-        raw_path = path.expanduser()
+    for name, raw_path in raw_paths.items():
         if is_forbidden_env_path(raw_path):
             errors.append(f"{name} must not be .env-like")
-        resolved = raw_path.resolve()
+        resolved = resolved_paths[name]
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved in seen:
@@ -242,13 +246,14 @@ def read_markdown_rows(path: Path) -> list[dict[str, str]]:
 
 def read_response_rows(path: Path) -> list[dict[str, str]]:
     raw_path = path.expanduser()
-    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
+    resolved_path = raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(resolved_path):
         raise ValueError("refusing to read .env-like response path")
-    text = raw_path.read_text(encoding="utf-8")
+    text = resolved_path.read_text(encoding="utf-8")
     first_nonempty = next((line.strip() for line in text.splitlines() if line.strip()), "")
     if first_nonempty.startswith("|"):
-        return read_markdown_rows(raw_path)
-    return read_csv_rows(raw_path)
+        return read_markdown_rows(resolved_path)
+    return read_csv_rows(resolved_path)
 
 
 def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
@@ -562,6 +567,8 @@ def build_payload(
     min_repos: int,
     errors: list[str],
     blockers: list[str],
+    include_request_hash: bool = True,
+    include_response_hash: bool = True,
 ) -> dict[str, object]:
     command = collector_command(selected_rows, collector_out, collector_format) if selected_rows else []
     response_completion = summarize_response_completion(
@@ -597,9 +604,13 @@ def build_payload(
     return {
         "schema": SCHEMA,
         "repo_discovery_request": str(request_path),
-        "repo_discovery_request_sha256": sha256_file(request_path) if request_path.exists() else "",
+        "repo_discovery_request_sha256": (
+            sha256_file(request_path) if include_request_hash and request_path.exists() else ""
+        ),
         "human_response": str(response_path),
-        "human_response_sha256": sha256_file(response_path) if response_path.exists() else "",
+        "human_response_sha256": (
+            sha256_file(response_path) if include_response_hash and response_path.exists() else ""
+        ),
         "request_response_template_recommended_only": request_response_template_recommended_only,
         "request_response_template_row_count": request_response_template_row_count,
         "response_row_count": len(response_rows),
@@ -738,6 +749,12 @@ def main(argv: list[str]) -> int:
     request_path = raw_request_path.resolve()
     response_path = raw_response_path.resolve()
     collector_out = raw_collector_out.resolve()
+    request_path_allowed = not is_forbidden_env_path(raw_request_path) and not is_forbidden_env_path(
+        request_path
+    )
+    response_path_allowed = not is_forbidden_env_path(raw_response_path) and not is_forbidden_env_path(
+        response_path
+    )
     raw_out_paths = {"out_json": Path(args.out_json).expanduser()}
     if args.out_md:
         raw_out_paths["out_md"] = Path(args.out_md).expanduser()
@@ -755,7 +772,10 @@ def main(argv: list[str]) -> int:
     if request:
         errors.extend(validate_request(request))
         target_repo_paths = request_repo_paths(request)
-        guarded_paths = {"response": raw_response_path, "collector_out": raw_collector_out, **raw_out_paths}
+        for name, raw_path in {"response": raw_response_path, "collector_out": raw_collector_out}.items():
+            if is_forbidden_env_path(raw_path):
+                errors.append(f"{name} must not be .env-like")
+        guarded_paths = {"response": response_path, "collector_out": collector_out, **out_paths}
         errors.extend(repo_intake.validate_output_paths(guarded_paths, target_repo_paths))
     try:
         response_rows = read_response_rows(raw_response_path)
@@ -773,7 +793,7 @@ def main(argv: list[str]) -> int:
             min_repos=min_repos,
         )
         errors.extend(row_errors)
-    errors.extend(output_exists_errors(raw_out_paths, args.overwrite))
+    errors.extend(output_exists_errors(raw_out_paths, out_paths, args.overwrite))
 
     payload = build_payload(
         request_path=request_path,
@@ -786,6 +806,8 @@ def main(argv: list[str]) -> int:
         min_repos=min_repos,
         errors=errors,
         blockers=blockers,
+        include_request_hash=request_path_allowed,
+        include_response_hash=response_path_allowed,
     )
     if not errors:
         try:

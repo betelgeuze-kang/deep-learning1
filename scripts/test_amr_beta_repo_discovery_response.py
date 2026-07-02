@@ -228,6 +228,7 @@ def main() -> int:
         assert proc.returncode == 1
         raw_env_request_payload = json.loads(proc.stdout)
         assert raw_env_request_payload["ready_for_repo_intake_collect_command"] == 0
+        assert raw_env_request_payload["repo_discovery_request_sha256"] == ""
         assert "refusing .env-like repo discovery request path" in proc.stderr
         assert not raw_env_request_out.exists()
 
@@ -253,6 +254,7 @@ def main() -> int:
         assert proc.returncode == 1
         raw_env_response_payload = json.loads(proc.stdout)
         assert raw_env_response_payload["ready_for_repo_intake_collect_command"] == 0
+        assert raw_env_response_payload["human_response_sha256"] == ""
         assert "response must not be .env-like" in proc.stderr
         assert "refusing to read .env-like response path" in proc.stderr
         assert not raw_env_response_out.exists()

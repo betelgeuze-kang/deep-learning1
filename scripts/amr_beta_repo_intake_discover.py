@@ -275,14 +275,17 @@ def discover_repos(roots: list[Path], *, max_depth: int, include_hidden: bool, m
     return sorted(discovered.values(), key=lambda path: str(path))
 
 
-def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
+def output_exists_errors(
+    raw_paths: dict[str, Path],
+    resolved_paths: dict[str, Path],
+    overwrite: bool,
+) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
-    for name, path in paths.items():
-        raw_path = path.expanduser()
+    for name, raw_path in raw_paths.items():
         if is_forbidden_env_path(raw_path):
             errors.append(f"{name} must not be .env-like")
-        resolved = raw_path.resolve()
+        resolved = resolved_paths[name]
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved in seen:
@@ -455,15 +458,15 @@ def main(argv: list[str]) -> int:
         )
         candidates = [inspect_repo(repo, index) for index, repo in enumerate(repo_roots, start=1)]
 
-    output_paths: dict[str, Path] = {}
+    raw_output_paths: dict[str, Path] = {}
     if args.out_json:
-        output_paths["out_json"] = Path(args.out_json).expanduser()
+        raw_output_paths["out_json"] = Path(args.out_json).expanduser()
     if args.out_md:
-        output_paths["out_md"] = Path(args.out_md).expanduser()
-    errors.extend(repo_intake.validate_output_paths(output_paths, [str(path) for path in repo_roots]))
-    errors.extend(output_git_worktree_errors(output_paths))
-    errors.extend(output_exists_errors(output_paths, args.overwrite))
-    resolved_output_paths = {name: path.resolve() for name, path in output_paths.items()}
+        raw_output_paths["out_md"] = Path(args.out_md).expanduser()
+    resolved_output_paths = {name: path.resolve() for name, path in raw_output_paths.items()}
+    errors.extend(repo_intake.validate_output_paths(resolved_output_paths, [str(path) for path in repo_roots]))
+    errors.extend(output_git_worktree_errors(resolved_output_paths))
+    errors.extend(output_exists_errors(raw_output_paths, resolved_output_paths, args.overwrite))
 
     payload = build_payload(args, candidates, errors)
     if not errors:

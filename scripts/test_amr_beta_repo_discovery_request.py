@@ -158,6 +158,7 @@ def main() -> int:
         assert proc.returncode == 1
         raw_env_discovery_payload = json.loads(proc.stdout)
         assert raw_env_discovery_payload["repo_intake_rows_counted"] == 0
+        assert raw_env_discovery_payload["repo_discovery_sha256"] == ""
         assert "refusing .env-like discovery path" in proc.stderr
         assert not raw_env_discovery_request.exists()
 
