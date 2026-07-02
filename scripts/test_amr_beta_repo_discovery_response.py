@@ -114,12 +114,14 @@ def main() -> int:
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "maintainer-01-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 },
                 {
                     "suggested_case_id": "candidate-02-repo-b",
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "maintainer-02-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 },
                 {
                     "suggested_case_id": "candidate-03-repo-dirty",
@@ -425,6 +427,7 @@ def main() -> int:
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "maintainer-03-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 }
             ],
         )
@@ -456,6 +459,7 @@ def main() -> int:
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "EXAMPLE-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 }
             ],
         )
@@ -493,6 +497,7 @@ def main() -> int:
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "maintainer-01-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 }
             ],
         )
@@ -525,6 +530,7 @@ def main() -> int:
                     "include_for_real_benchmark_intake": "true",
                     "owner_or_maintainer_contact": "maintainer-02-contact",
                     "real_benchmark_namespace_confirmed": "true",
+                    "human_real_repo_source_confirmed": "true",
                 }
             ],
         )
