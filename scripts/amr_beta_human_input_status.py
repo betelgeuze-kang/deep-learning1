@@ -29,8 +29,10 @@ SAFE_MAINTAINER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,191}$")
 
 
 def is_forbidden_env_path(path: Path) -> bool:
-    name = path.name
-    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+    for part in path.parts:
+        if part == ".env" or part.startswith(".env.") or part.endswith(".env") or ".env." in part:
+            return True
+    return False
 
 
 def truthy(value: object) -> bool:

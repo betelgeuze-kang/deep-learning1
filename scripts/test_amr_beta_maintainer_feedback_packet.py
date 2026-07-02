@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 import amr_beta_benchmark_input_prepare as benchmark_inputs
+import amr_beta_maintainer_feedback_packet as feedback_packet
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_maintainer_feedback_packet.py"
@@ -84,6 +85,9 @@ def sha256_file(path: Path) -> str:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert feedback_packet.is_forbidden_env_path(Path(".env.secrets") / "feedback.jsonl")
+        assert feedback_packet.is_forbidden_env_path(tmp / ".env.secrets" / "feedback_packet")
+        assert not feedback_packet.is_forbidden_env_path(tmp / "feedback_packet")
         repos = [(f"case-{index:02d}", *create_repo(tmp, index)) for index in range(1, 4)]
         repo_intake = tmp / "repo_intake.md"
         write_repo_intake(repo_intake, repos)

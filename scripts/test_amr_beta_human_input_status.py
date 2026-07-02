@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_human_input_status as human_input_status
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_human_input_status.py"
 
@@ -46,6 +48,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert human_input_status.is_forbidden_env_path(Path(".env.secrets") / "decisions.jsonl")
+        assert human_input_status.is_forbidden_env_path(tmp / ".env.secrets" / "human_input_status.json")
+        assert not human_input_status.is_forbidden_env_path(tmp / "human_input_status.json")
         decisions = tmp / "decisions.jsonl"
         feedback = tmp / "feedback.jsonl"
         repo_intake = tmp / "repo_intake.md"

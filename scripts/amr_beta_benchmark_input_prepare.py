@@ -36,8 +36,10 @@ SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def is_forbidden_env_path(path: Path) -> bool:
-    name = path.name
-    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+    for part in path.parts:
+        if part == ".env" or part.startswith(".env.") or part.endswith(".env") or ".env." in part:
+            return True
+    return False
 
 
 def truthy(value: object) -> bool:
