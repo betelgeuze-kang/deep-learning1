@@ -89,19 +89,19 @@ def main() -> int:
         assert payload["schema"] == "amr_beta_repo_discovery_request.v1"
         assert payload["candidate_repo_count"] == 3
         assert payload["candidate_repos_with_clean_head"] == 2
-        assert payload["candidate_repos_with_path_risk"] == 0
-        assert payload["candidate_repos_with_clean_head_and_path_risk"] == 0
-        assert payload["candidate_repos_with_clean_head_and_no_path_risk"] == 2
+        assert payload["candidate_repos_with_path_risk"] == 3
+        assert payload["candidate_repos_with_clean_head_and_path_risk"] == 2
+        assert payload["candidate_repos_with_clean_head_and_no_path_risk"] == 0
         assert payload["request_row_count"] == 3
         assert payload["response_template_csv"] == str(out_response_csv.resolve())
         assert payload["response_template_recommended_only"] == 0
         assert payload["response_template_row_count"] == 3
         assert payload["writes_response_template_csv"] == 1
         assert payload["recommended_contact_request_rows"] == 2
-        assert payload["recommended_contact_request_rows_with_path_risk"] == 0
-        assert payload["recommended_contact_request_rows_without_path_risk"] == 2
+        assert payload["recommended_contact_request_rows_with_path_risk"] == 2
+        assert payload["recommended_contact_request_rows_without_path_risk"] == 0
         assert payload["clean_candidate_shortfall_to_minimum"] == 8
-        assert payload["clean_risk_free_candidate_shortfall_to_minimum"] == 8
+        assert payload["clean_risk_free_candidate_shortfall_to_minimum"] == 10
         assert payload["repo_intake_rows_counted"] == 0
         assert payload["ready_for_repo_intake"] == 0
         assert payload["writes_repo_intake_sheet"] == 0
@@ -122,7 +122,7 @@ def main() -> int:
         assert response_rows[0]["owner_or_maintainer_contact"] == ""
         assert response_rows[0]["real_benchmark_namespace_confirmed"] == ""
         assert response_rows[0]["human_real_repo_source_confirmed"] == ""
-        assert response_rows[0]["path_risk_flags"] == ""
+        assert response_rows[0]["path_risk_flags"] == "temporary_path"
         assert response_rows[0]["repo_path"] == str(repo_a.resolve())
         assert response_rows[0]["notes"] == "recommended_for_contact_request=1"
         assert response_rows[2]["notes"] == "clean_or_fix_repo_before_intake"
@@ -167,13 +167,13 @@ def main() -> int:
 
         risk_discovery = tmp / "risk_discovery.json"
         risk_payload = json.loads(discovery.read_text(encoding="utf-8"))
-        risk_payload["candidates"][0]["path_risk_flags"] = ["runner_worktree_path"]
-        risk_payload["candidates"][0]["path_risk_flag_count"] = 1
+        risk_payload["candidates"][0]["path_risk_flags"] = ["temporary_path", "runner_worktree_path"]
+        risk_payload["candidates"][0]["path_risk_flag_count"] = 2
         risk_payload["candidates"][0]["human_real_repo_source_confirmation_required"] = 1
-        risk_payload["candidate_repos_with_path_risk"] = 1
-        risk_payload["candidate_repos_with_clean_head_and_path_risk"] = 1
-        risk_payload["candidate_repos_with_clean_head_and_no_path_risk"] = 1
-        risk_payload["clean_risk_free_candidate_shortfall_to_minimum"] = 9
+        risk_payload["candidate_repos_with_path_risk"] = 3
+        risk_payload["candidate_repos_with_clean_head_and_path_risk"] = 2
+        risk_payload["candidate_repos_with_clean_head_and_no_path_risk"] = 0
+        risk_payload["clean_risk_free_candidate_shortfall_to_minimum"] = 10
         risk_discovery.write_text(json.dumps(risk_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         risk_request = tmp / "risk_request.json"
         risk_response_csv = tmp / "risk_response_template.csv"
@@ -194,15 +194,18 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         risk_request_payload = json.loads(proc.stdout)
         assert "human_real_repo_source_confirmed" in risk_request_payload["human_fields_required"]
-        assert risk_request_payload["request_rows"][0]["path_risk_flags"] == ["runner_worktree_path"]
+        assert risk_request_payload["request_rows"][0]["path_risk_flags"] == [
+            "temporary_path",
+            "runner_worktree_path",
+        ]
         assert risk_request_payload["request_rows"][0]["human_real_repo_source_confirmation_required"] == 1
-        assert risk_request_payload["candidate_repos_with_clean_head_and_no_path_risk"] == 1
-        assert risk_request_payload["candidate_repos_with_clean_head_and_path_risk"] == 1
-        assert risk_request_payload["clean_risk_free_candidate_shortfall_to_minimum"] == 9
+        assert risk_request_payload["candidate_repos_with_clean_head_and_no_path_risk"] == 0
+        assert risk_request_payload["candidate_repos_with_clean_head_and_path_risk"] == 2
+        assert risk_request_payload["clean_risk_free_candidate_shortfall_to_minimum"] == 10
         with risk_response_csv.open(newline="", encoding="utf-8") as handle:
             risk_response_rows = list(csv.DictReader(handle))
         assert risk_response_rows[0]["human_real_repo_source_confirmed"] == ""
-        assert risk_response_rows[0]["path_risk_flags"] == "runner_worktree_path"
+        assert risk_response_rows[0]["path_risk_flags"] == "temporary_path,runner_worktree_path"
 
         stale_aggregate_discovery = tmp / "stale_aggregate_discovery.json"
         stale_aggregate_payload = json.loads(discovery.read_text(encoding="utf-8"))

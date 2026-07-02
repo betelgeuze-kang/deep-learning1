@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -84,10 +85,10 @@ def main() -> int:
         assert payload["schema"] == "amr_beta_repo_intake_discover.v1"
         assert payload["candidate_repo_count"] == 5
         assert payload["candidate_repos_with_clean_head"] == 2
-        assert payload["candidate_repos_with_path_risk"] == 0
-        assert payload["candidate_repos_with_clean_head_and_path_risk"] == 0
-        assert payload["candidate_repos_with_clean_head_and_no_path_risk"] == 2
-        assert payload["clean_risk_free_candidate_shortfall_to_minimum"] == 8
+        assert payload["candidate_repos_with_path_risk"] == 5
+        assert payload["candidate_repos_with_clean_head_and_path_risk"] == 2
+        assert payload["candidate_repos_with_clean_head_and_no_path_risk"] == 0
+        assert payload["clean_risk_free_candidate_shortfall_to_minimum"] == 10
         assert payload["repo_intake_rows_counted"] == 0
         assert payload["ready_for_repo_intake"] == 0
         assert payload["candidate_rows_cannot_count_without_human_contact"] == 1
@@ -105,6 +106,8 @@ def main() -> int:
         assert by_repo[str(repo_status_bad.resolve())]["actual_repo_git_head"] == head_status_bad.lower()
         assert by_repo[str(repo_a.resolve())]["counts_for_repo_intake"] == 0
         assert by_repo[str(repo_a.resolve())]["owner_or_maintainer_contact_required"] == 1
+        assert "temporary_path" in by_repo[str(repo_a.resolve())]["path_risk_flags"]
+        assert by_repo[str(repo_a.resolve())]["human_real_repo_source_confirmation_required"] == 1
         assert by_repo[str(repo_dirty.resolve())]["clean_worktree_actual"] == 0
         assert by_repo[str(repo_status_bad.resolve())]["clean_worktree_actual"] is None
         assert by_repo[str(repo_status_bad.resolve())]["repo_status_readable"] == 0
@@ -113,6 +116,26 @@ def main() -> int:
         assert "dirty_or_unknown_worktree" in by_repo[str(repo_status_bad.resolve())]["blockers_before_counting"]
         assert "human_owner_or_maintainer_contact_required" in by_repo[str(repo_a.resolve())]["blockers_before_counting"]
         assert "AMR Beta Repo Discovery Candidates" in out_md.read_text(encoding="utf-8")
+        pytest_flags = DISCOVER_MODULE.path_risk_flags(Path("/tmp/pytest-of-amr/pytest-1/test_case0"))
+        assert "temporary_path" in pytest_flags
+        assert "pytest_temp_path" in pytest_flags
+        pytest_plugin_flags = DISCOVER_MODULE.path_risk_flags(Path("/home/example/pytest-plugin"))
+        assert "pytest_temp_path" not in pytest_plugin_flags
+        custom_tmp = tmp / "workspace-local-tmp"
+        custom_tmp.mkdir()
+        old_tmpdir = os.environ.get("TMPDIR")
+        os.environ["TMPDIR"] = str(custom_tmp)
+        try:
+            custom_tmp_flags = DISCOVER_MODULE.path_risk_flags(
+                custom_tmp / "pytest-of-amr" / "pytest-1" / "test_case0"
+            )
+        finally:
+            if old_tmpdir is None:
+                os.environ.pop("TMPDIR", None)
+            else:
+                os.environ["TMPDIR"] = old_tmpdir
+        assert "temporary_path" in custom_tmp_flags
+        assert "pytest_temp_path" in custom_tmp_flags
 
         runner_parent = tmp / "actions-runner" / "_work" / "demo"
         runner_parent.mkdir(parents=True)
@@ -132,13 +155,14 @@ def main() -> int:
         )
         assert proc.returncode == 0, proc.stderr
         risk_payload = json.loads(proc.stdout)
-        assert risk_payload["candidate_repos_with_path_risk"] == 1
-        assert risk_payload["candidate_repos_with_clean_head_and_path_risk"] == 1
-        assert risk_payload["candidate_repos_with_clean_head_and_no_path_risk"] == 2
+        assert risk_payload["candidate_repos_with_path_risk"] == 6
+        assert risk_payload["candidate_repos_with_clean_head_and_path_risk"] == 3
+        assert risk_payload["candidate_repos_with_clean_head_and_no_path_risk"] == 0
         risk_by_repo = {row["repo_path"]: row for row in risk_payload["candidates"]}
         runner_row = risk_by_repo[str(runner_repo.resolve())]
+        assert "temporary_path" in runner_row["path_risk_flags"]
         assert "runner_worktree_path" in runner_row["path_risk_flags"]
-        assert runner_row["path_risk_flag_count"] == 1
+        assert runner_row["path_risk_flag_count"] == 2
         assert runner_row["human_real_repo_source_confirmation_required"] == 1
         assert "human_real_repo_source_confirmation_required" in runner_row["blockers_before_counting"]
 

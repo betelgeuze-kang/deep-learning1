@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import amr_beta_repo_intake_validate as repo_intake
@@ -119,10 +120,49 @@ def candidate_blockers(row: dict[str, object]) -> list[str]:
     return blockers
 
 
+def configured_temp_roots() -> tuple[Path, ...]:
+    roots: list[Path] = []
+    seen: set[str] = set()
+    candidates = [
+        tempfile.gettempdir(),
+        os.environ.get("TMPDIR"),
+        os.environ.get("TEMP"),
+        os.environ.get("TMP"),
+        "/tmp",
+        "/var/tmp",
+    ]
+    for raw in candidates:
+        if not raw:
+            continue
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            continue
+        key = str(path.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(path)
+    return tuple(roots)
+
+
+def has_pytest_temp_layout(parts: list[str]) -> bool:
+    return any(
+        part.startswith("pytest-of-")
+        or re.fullmatch(r"pytest-\d+", part) is not None
+        or part == "pytest-current"
+        for part in parts
+    )
+
+
 def path_risk_flags(repo_root: Path) -> list[str]:
     flags: list[str] = []
     parts = repo_root.parts
     lowered = [part.lower() for part in parts]
+    is_temp_path = any(is_relative_to(repo_root, temp_root) for temp_root in configured_temp_roots())
+    if is_temp_path:
+        flags.append("temporary_path")
+    if is_temp_path and has_pytest_temp_layout(lowered):
+        flags.append("pytest_temp_path")
     if any(part.startswith(".") for part in parts):
         flags.append("hidden_path")
     if ".codex" in lowered:
