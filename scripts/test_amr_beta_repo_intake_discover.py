@@ -51,6 +51,9 @@ def create_repo(root: Path, name: str) -> tuple[Path, str]:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert DISCOVER_MODULE.is_forbidden_env_path(Path(".env.secrets") / "discovery.json")
+        assert DISCOVER_MODULE.is_forbidden_env_path(tmp / ".env.secrets" / "discovery.json")
+        assert not DISCOVER_MODULE.is_forbidden_env_path(tmp / "discovery.json")
         assert "current_artifact_repo" in DISCOVER_MODULE.path_risk_flags(ROOT / "nested-artifact-repo")
 
         repo_a, head_a = create_repo(tmp, "repo-a")

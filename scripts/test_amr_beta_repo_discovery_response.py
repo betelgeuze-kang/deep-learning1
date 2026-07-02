@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import importlib.util
 import json
 import subprocess
 import sys
@@ -13,6 +14,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DISCOVER = ROOT / "scripts" / "amr_beta_repo_intake_discover.py"
 REQUEST = ROOT / "scripts" / "amr_beta_repo_discovery_request.py"
 TOOL = ROOT / "scripts" / "amr_beta_repo_discovery_response.py"
+TOOL_SPEC = importlib.util.spec_from_file_location("amr_beta_repo_discovery_response", TOOL)
+assert TOOL_SPEC and TOOL_SPEC.loader
+TOOL_MODULE = importlib.util.module_from_spec(TOOL_SPEC)
+TOOL_SPEC.loader.exec_module(TOOL_MODULE)
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -67,6 +72,9 @@ def write_response(path: Path, rows: list[dict[str, str]]) -> None:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert TOOL_MODULE.is_forbidden_env_path(Path(".env.secrets") / "response.csv")
+        assert TOOL_MODULE.is_forbidden_env_path(tmp / ".env.secrets" / "response.csv")
+        assert not TOOL_MODULE.is_forbidden_env_path(tmp / "response.csv")
         repo_a = create_repo(tmp, "repo-a")
         repo_b = create_repo(tmp, "repo-b")
         repo_dirty = create_repo(tmp, "repo-dirty")
