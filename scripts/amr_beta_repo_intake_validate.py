@@ -717,17 +717,29 @@ def main(argv: list[str]) -> int:
             return 0
         if not args.intake:
             raise ValueError("intake is required unless --verify-existing is used")
-        path = Path(args.intake).expanduser().resolve()
+        raw_path = Path(args.intake).expanduser()
+        if is_forbidden_env_path(raw_path):
+            raise ValueError("refusing .env-like intake path")
+        path = raw_path.resolve()
+        if is_forbidden_env_path(path):
+            raise ValueError("refusing .env-like intake path")
         rows = read_rows(path)
         row_errors, summary = validate_rows(rows, min_repos=args.min_repos)
         target_repo_paths = target_repo_paths_from_statuses(summary["row_statuses"])
         output_paths = {}
+        output_path_errors: list[str] = []
         if args.out_json:
-            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+            raw_out_json = Path(args.out_json).expanduser()
+            if is_forbidden_env_path(raw_out_json):
+                output_path_errors.append("out_json must not be .env-like")
+            output_paths["out_json"] = raw_out_json.resolve()
         if args.out_md:
-            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+            raw_out_md = Path(args.out_md).expanduser()
+            if is_forbidden_env_path(raw_out_md):
+                output_path_errors.append("out_md must not be .env-like")
+            output_paths["out_md"] = raw_out_md.resolve()
         input_path_errors = validate_input_path(path, target_repo_paths)
-        output_path_errors = validate_output_paths(output_paths, target_repo_paths)
+        output_path_errors.extend(validate_output_paths(output_paths, target_repo_paths))
         path_errors = [*input_path_errors, *output_path_errors]
         errors = [*row_errors, *path_errors]
         if path_errors:

@@ -151,6 +151,17 @@ def main() -> int:
         assert "out must not be inside target repo" in proc.stderr
         assert not unsafe_out.exists()
 
+        raw_env_out_target = tmp / "raw_env_intake_target.md"
+        raw_env_out_symlink = tmp / ".env.repo_intake_collect_out"
+        raw_env_out_symlink.symlink_to(raw_env_out_target)
+        proc = run(collect_cmd(repos, raw_env_out_symlink, "--overwrite"), cwd=ROOT)
+        assert proc.returncode == 1
+        raw_env_payload = json.loads(proc.stdout)
+        assert raw_env_payload["ready_for_repo_intake_sheet"] == 0
+        assert raw_env_payload["writes_repo_intake_sheet"] == 0
+        assert "out must not be .env-like" in proc.stderr
+        assert not raw_env_out_target.exists()
+
         nested = repos[0][0] / "nested"
         nested.mkdir()
         unsafe_subdir_out = repos[0][0] / "subdir_repo_intake.md"

@@ -553,8 +553,14 @@ def main(argv: list[str]) -> int:
             raise ValueError("--repo-intake is required unless --verify-existing is used")
         if not args.out_json:
             raise ValueError("--out-json is required unless --verify-existing is used")
-        intake_path = Path(args.repo_intake).expanduser().resolve()
-        artifact_root = Path(args.artifact_root).expanduser().resolve()
+        raw_intake_path = Path(args.repo_intake).expanduser()
+        raw_artifact_root = Path(args.artifact_root).expanduser()
+        if is_forbidden_env_path(raw_intake_path):
+            raise ValueError("refusing .env-like repo intake path")
+        if is_forbidden_env_path(raw_artifact_root):
+            raise ValueError("refusing .env-like artifact root path")
+        intake_path = raw_intake_path.resolve()
+        artifact_root = raw_artifact_root.resolve()
         if is_forbidden_env_path(intake_path):
             raise ValueError("refusing .env-like repo intake path")
         if is_forbidden_env_path(artifact_root):
@@ -569,13 +575,19 @@ def main(argv: list[str]) -> int:
             return 1
         rows = normalized_valid_rows(raw_rows)
         target_repo_paths = sorted({row["repo_path_resolved"] for row in rows if row.get("repo_path_resolved")})
-        output_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+        raw_output_paths = {"out_json": Path(args.out_json).expanduser()}
         if args.out_md:
-            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+            raw_output_paths["out_md"] = Path(args.out_md).expanduser()
         if args.out_commands_sh:
-            output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser().resolve()
+            raw_output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser()
+        output_paths = {name: path.resolve() for name, path in raw_output_paths.items()}
         input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
-        output_path_errors = repo_intake.validate_output_paths(output_paths, target_repo_paths)
+        output_path_errors = [
+            f"{name} must not be .env-like"
+            for name, path in raw_output_paths.items()
+            if is_forbidden_env_path(path)
+        ]
+        output_path_errors.extend(repo_intake.validate_output_paths(output_paths, target_repo_paths))
         artifact_root_errors = validate_artifact_root(artifact_root, rows)
         existing_output_errors = output_exists_errors(output_paths, args.overwrite)
         path_errors = [*input_path_errors, *output_path_errors, *existing_output_errors]

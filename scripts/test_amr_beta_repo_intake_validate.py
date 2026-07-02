@@ -162,6 +162,29 @@ def main() -> int:
         assert "input_path_guard_passed: 1" in status_md_text
         assert "output_path_guard_passed: 1" in status_md_text
 
+        forbidden_raw_intake_symlink = tmp / ".env.raw_repo_intake"
+        forbidden_raw_intake_symlink.symlink_to(intake)
+        proc = run_tool(forbidden_raw_intake_symlink, "--json")
+        assert proc.returncode == 1
+        assert "refusing .env-like intake path" in proc.stderr
+
+        raw_env_output_target = tmp / "raw_env_output_status_target.json"
+        raw_env_output_symlink = tmp / ".env.repo_intake_status_out"
+        raw_env_output_symlink.symlink_to(raw_env_output_target)
+        proc = run_tool(
+            intake,
+            "--out-json",
+            str(raw_env_output_symlink),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_output_payload = json.loads(proc.stdout)
+        assert raw_env_output_payload["ready_for_real_benchmark_audit"] == 0
+        assert raw_env_output_payload["output_path_guard_passed"] == 0
+        assert "out_json must not be .env-like" in proc.stderr
+        assert not raw_env_output_target.exists()
+
         proc = run_verify_existing(status_json, "--json")
         assert proc.returncode == 0, proc.stderr
         verify_payload = json.loads(proc.stdout)
