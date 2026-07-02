@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_readiness_backlog as readiness_backlog
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_readiness_backlog.py"
 
@@ -63,6 +65,9 @@ def readiness_payload(*, blocked: bool = True) -> dict:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert readiness_backlog.is_forbidden_env_path(Path(".env.secrets") / "readiness.json")
+        assert readiness_backlog.is_forbidden_env_path(tmp / ".env.secrets" / "backlog.json")
+        assert not readiness_backlog.is_forbidden_env_path(tmp / "backlog.json")
         readiness = tmp / "benchmark_readiness.json"
         out_json = tmp / "backlog.json"
         out_md = tmp / "backlog.md"

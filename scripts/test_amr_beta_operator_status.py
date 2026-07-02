@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_operator_status as operator_status
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_operator_status.py"
 
@@ -957,6 +959,9 @@ def approval_status_payload(preflight: Path, request: Path, record: Path, benchm
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert operator_status.is_forbidden_env_path(Path(".env.secrets") / "operator_status.json")
+        assert operator_status.is_forbidden_env_path(tmp / ".env.secrets" / "operator_status.json")
+        assert not operator_status.is_forbidden_env_path(tmp / "operator_status.json")
         pr_cleanup = tmp / "pr_cleanup_status.json"
         repo_discovery = tmp / "repo_discovery_status.json"
         repo_discovery_response = tmp / "repo_discovery_response.json"

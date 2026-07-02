@@ -9,6 +9,8 @@ import tempfile
 import hashlib
 from pathlib import Path
 
+import amr_beta_runtime_approval_request as approval_request
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_runtime_approval_request.py"
 
@@ -145,6 +147,9 @@ def run_tool(*args: str) -> subprocess.CompletedProcess:
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
+        assert approval_request.is_forbidden_env_path(Path(".env.secrets") / "approval_request.json")
+        assert approval_request.is_forbidden_env_path(tmp / ".env.secrets" / "approval_request.json")
+        assert not approval_request.is_forbidden_env_path(tmp / "approval_request.json")
         preflight = tmp / "preflight.json"
         write_json(preflight, preflight_payload())
         out_json = tmp / "approval_request.json"
