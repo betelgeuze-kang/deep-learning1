@@ -324,11 +324,79 @@ def main() -> int:
         assert summary["output_path_guard_passed"] == 1
         assert (out_dir / "reviewer_candidate_packet.jsonl").is_file()
         assert (out_dir / "reviewer_progress_summary.json").is_file()
+
+        env_template = tmp / ".env.label_packet_template"
+        env_template.symlink_to(template_a)
+        proc = run_tool(
+            "--template-dir",
+            str(env_template),
+            "--decisions",
+            str(decisions),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_template_summary = json.loads(proc.stdout)
+        assert env_template_summary["candidate_guard_passed"] == 0
+        assert env_template_summary["decision_rows"] == 0
+        assert env_template_summary["decisions_sha256s"] == []
+        assert "refusing .env-like label template path" in proc.stderr
+
+        env_decisions = tmp / ".env.label_packet_decisions"
+        env_decisions.symlink_to(decisions)
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(env_decisions),
+            "--out",
+            str(tmp / "packet_from_env_decisions"),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_decisions_summary = json.loads(proc.stdout)
+        assert env_decisions_summary["decision_input_guard_passed"] == 0
+        assert env_decisions_summary["decision_rows"] == 0
+        assert env_decisions_summary["decisions_sha256s"] == []
+        assert "decisions_1 must not be .env-like" in proc.stderr
+        assert not (tmp / "packet_from_env_decisions").exists()
+
+        env_out_target = tmp / "packet_env_out_target"
+        env_out = tmp / ".env.label_packet_out"
+        env_out.symlink_to(env_out_target)
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(decisions),
+            "--out",
+            str(env_out),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_out_summary = json.loads(proc.stdout)
+        assert env_out_summary["output_path_guard_passed"] == 0
+        assert env_out_summary["decision_rows"] == 0
+        assert env_out_summary["decisions_sha256s"] == []
+        assert "out must not be .env-like" in proc.stderr
+        assert not env_out_target.exists()
+
         proc = run_tool("--verify-existing", str(out_dir), "--json")
         assert proc.returncode == 1
         skipped_verify = json.loads(proc.stdout)
         assert skipped_verify["verify_existing_passed"] == 0
         assert "label_template_verify_existing_required must be 1" in proc.stderr
+
+        env_packet_verify = tmp / ".env.label_packet_verify"
+        env_packet_verify.symlink_to(out_dir)
+        proc = run_tool("--verify-existing", str(env_packet_verify), "--json")
+        assert proc.returncode == 1
+        env_packet_verify_payload = json.loads(proc.stdout)
+        assert env_packet_verify_payload["verify_existing_passed"] == 0
+        assert env_packet_verify_payload["packet_summary_sha256"] == ""
+        assert "refusing .env-like packet path" in proc.stderr
 
         verified_template_a, verified_ids_a = make_verified_template(tmp, "verified_case_a")
         verified_template_b, verified_ids_b = make_verified_template(tmp, "verified_case_b")

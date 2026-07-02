@@ -112,22 +112,27 @@ def load_template_audit_context(template_dir: Path) -> tuple[dict, Path]:
 def validate_output_path(out_dir: Path, repo_path: str) -> None:
     if is_forbidden_env_path(out_dir):
         raise ValueError("refusing .env-like output directory")
+    resolved_out_dir = out_dir.expanduser().resolve()
+    if is_forbidden_env_path(resolved_out_dir):
+        raise ValueError("refusing .env-like output directory")
     repo_text = str(repo_path or "").strip()
     if not repo_text:
         raise ValueError("repo_path is required for label-intake output path guard")
     repo = Path(repo_text).expanduser().resolve()
-    if out_dir.resolve() == repo or is_relative_to(out_dir, repo):
+    if resolved_out_dir == repo or is_relative_to(resolved_out_dir, repo):
         raise ValueError("refusing --out inside target repo; use an output path outside the labeled repository")
 
 
 def validate_decisions_input_path(decisions_path: Path, repo_path: str) -> None:
     if is_forbidden_env_path(decisions_path):
         raise ValueError("refusing to read .env-like decisions file")
+    resolved = decisions_path.expanduser().resolve()
+    if is_forbidden_env_path(resolved):
+        raise ValueError("refusing to read .env-like decisions file")
     repo_text = str(repo_path or "").strip()
     if not repo_text:
         raise ValueError("repo_path is required for label-intake decisions path guard")
     repo = Path(repo_text).expanduser().resolve()
-    resolved = decisions_path.expanduser().resolve()
     if resolved == repo or is_relative_to(resolved, repo):
         raise ValueError(
             "refusing --decisions inside target repo; use a decisions file outside the labeled repository"
@@ -593,11 +598,24 @@ def commit_output_dir(backup_dir: Path | None) -> None:
 
 def generate_intake(args: argparse.Namespace) -> None:
     root = root_dir()
-    template_dir = Path(args.template).expanduser().resolve()
-    decisions_path = Path(args.decisions).expanduser().resolve()
-    out_dir = Path(args.out).expanduser().resolve()
+    raw_template_dir = Path(args.template).expanduser()
+    raw_decisions_path = Path(args.decisions).expanduser()
+    raw_out_dir = Path(args.out).expanduser()
+    if is_forbidden_env_path(raw_template_dir):
+        raise ValueError("refusing .env-like template path")
+    if is_forbidden_env_path(raw_decisions_path):
+        raise ValueError("refusing to read .env-like decisions file")
+    if is_forbidden_env_path(raw_out_dir):
+        raise ValueError("refusing .env-like output directory")
+    template_dir = raw_template_dir.resolve()
+    decisions_path = raw_decisions_path.resolve()
+    out_dir = raw_out_dir.resolve()
+    if is_forbidden_env_path(template_dir):
+        raise ValueError("refusing .env-like template path")
     if is_forbidden_env_path(decisions_path):
         raise ValueError("refusing to read .env-like decisions file")
+    if is_forbidden_env_path(out_dir):
+        raise ValueError("refusing .env-like output directory")
     audit_manifest, _audit_output = load_template_audit_context(template_dir)
     repo_path = resolve_repo_path(args.repo_path, audit_manifest)
     validate_output_path(out_dir, repo_path)
