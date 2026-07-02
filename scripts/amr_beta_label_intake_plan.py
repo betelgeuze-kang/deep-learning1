@@ -32,8 +32,10 @@ BLOCKED_FLAGS = {
 
 
 def is_forbidden_env_path(path: Path) -> bool:
-    name = path.name
-    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+    for part in path.parts:
+        if part == ".env" or part.startswith(".env.") or part.endswith(".env") or ".env." in part:
+            return True
+    return False
 
 
 def sha256_file(path: Path) -> str:
@@ -70,11 +72,16 @@ def is_relative_to(path: Path, parent: Path) -> bool:
 
 def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    resolved_by_name = {name: path.expanduser().resolve() for name, path in paths.items()}
     seen_paths: dict[Path, str] = {}
-    for name, resolved in resolved_by_name.items():
+    for name, path in paths.items():
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+            continue
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
+            continue
         if resolved in seen_paths:
             errors.append(f"{name} must not reuse {seen_paths[resolved]} path: {resolved}")
         else:
@@ -130,8 +137,15 @@ def load_templates(
     case_seen: set[str] = set()
     verify_passed_dirs = 0
     verify_failed_dirs = 0
-    for raw_dir in raw_dirs:
-        template_dir = Path(raw_dir).expanduser().resolve()
+    for index, raw_dir in enumerate(raw_dirs, start=1):
+        raw_template_dir = Path(raw_dir).expanduser()
+        if is_forbidden_env_path(raw_template_dir):
+            errors.append(f"template_dir[{index}] must not be .env-like")
+            continue
+        template_dir = raw_template_dir.resolve()
+        if is_forbidden_env_path(template_dir):
+            errors.append(f"template_dir[{index}] must not be .env-like")
+            continue
         if verify_existing:
             verify_errors = label_packet.verify_label_template_existing(template_dir)
             if verify_errors:
@@ -302,20 +316,22 @@ def build_case_rows(
 
 
 def write_json(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
+    raw_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like Markdown output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
     lines = [
         "# AMR Beta Label Intake Plan",
         "",
@@ -361,7 +377,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
                 "",
             ]
         )
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    raw_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def command_script_text(payload: dict) -> str:
@@ -386,14 +402,15 @@ def command_script_text(payload: dict) -> str:
 
 
 def write_command_script(path: Path, payload: dict, overwrite: bool) -> str:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like operator command script output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"operator command script already exists; use --overwrite: {path}")
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_path.exists() and not overwrite:
+        raise ValueError(f"operator command script already exists; use --overwrite: {raw_path}")
     text = command_script_text(payload)
-    path.write_text(text, encoding="utf-8")
-    path.chmod(0o755)
+    raw_path.write_text(text, encoding="utf-8")
+    raw_path.chmod(0o755)
     return sha256_text(text)
 
 
@@ -430,22 +447,48 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
-        repo_intake_path = Path(args.repo_intake).expanduser().resolve()
-        decisions_path = Path(args.decisions).expanduser().resolve()
-        label_packet_summary_path = (
-            Path(args.label_packet_summary).expanduser().resolve()
+        raw_repo_intake_path = Path(args.repo_intake).expanduser()
+        raw_decisions_path = Path(args.decisions).expanduser()
+        raw_label_packet_summary_path = (
+            Path(args.label_packet_summary).expanduser()
             if args.label_packet_summary
             else None
         )
-        out_root = Path(args.out_root).expanduser().resolve()
-        path_checks: list[tuple[Path, str]] = [
+        raw_input_path_errors: list[str] = []
+        for path, label in [
+            (raw_repo_intake_path, "repo intake"),
+            (raw_decisions_path, "decisions"),
+            *(
+                [(raw_label_packet_summary_path, "label packet summary")]
+                if raw_label_packet_summary_path
+                else []
+            ),
+        ]:
+            if is_forbidden_env_path(path):
+                raw_input_path_errors.append(f"refusing .env-like {label} path")
+        if raw_input_path_errors:
+            if args.json:
+                print(json.dumps({"schema": SCHEMA, "errors": raw_input_path_errors}, indent=2, sort_keys=True))
+            for error in raw_input_path_errors:
+                print(error, file=sys.stderr)
+            return 1
+
+        repo_intake_path = raw_repo_intake_path.resolve()
+        decisions_path = raw_decisions_path.resolve()
+        label_packet_summary_path = (
+            raw_label_packet_summary_path.resolve()
+            if raw_label_packet_summary_path
+            else None
+        )
+        for path, label in [
             (repo_intake_path, "repo intake"),
             (decisions_path, "decisions"),
-            (out_root, "output root"),
-        ]
-        if label_packet_summary_path:
-            path_checks.append((label_packet_summary_path, "label packet summary"))
-        for path, label in path_checks:
+            *(
+                [(label_packet_summary_path, "label packet summary")]
+                if label_packet_summary_path
+                else []
+            ),
+        ]:
             if is_forbidden_env_path(path):
                 raise ValueError(f"refusing .env-like {label} path")
         if not decisions_path.is_file():
@@ -455,28 +498,34 @@ def main(argv: list[str]) -> int:
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
         target_repo_paths = sorted({context["repo_path"] for context in repo_by_case.values()})
-        input_paths = {"decisions": decisions_path}
+        input_paths = {"decisions": raw_decisions_path}
         if label_packet_summary_path:
-            input_paths["label_packet_summary"] = label_packet_summary_path
+            input_paths["label_packet_summary"] = raw_label_packet_summary_path
         input_path_errors = validate_input_paths(input_paths, target_repo_paths)
+        raw_out_root = Path(args.out_root).expanduser()
+        raw_out_json = Path(args.out_json).expanduser()
         output_paths = {
-            "out_root": out_root,
-            "out_json": Path(args.out_json).expanduser().resolve(),
+            "out_root": raw_out_root,
+            "out_json": raw_out_json,
         }
         if args.out_md:
-            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+            output_paths["out_md"] = Path(args.out_md).expanduser()
         if args.out_commands_sh:
-            output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser().resolve()
+            output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser()
         output_path_errors = validate_output_paths(
             output_paths,
             target_repo_paths,
         )
-        write_file_paths = {
-            name: path
-            for name, path in output_paths.items()
-            if name in {"out_json", "out_md", "out_commands_sh"}
-        }
-        output_path_errors.extend(output_exists_errors(write_file_paths, overwrite=args.overwrite))
+        resolved_output_paths = (
+            {name: path.resolve() for name, path in output_paths.items()} if not output_path_errors else {}
+        )
+        if not output_path_errors:
+            write_file_paths = {
+                name: path
+                for name, path in resolved_output_paths.items()
+                if name in {"out_json", "out_md", "out_commands_sh"}
+            }
+            output_path_errors.extend(output_exists_errors(write_file_paths, overwrite=args.overwrite))
         template_rows, template_errors, template_by_case, verify_counts, template_fingerprints = load_templates(
             args.template_dir,
             verify_existing=not args.skip_verify_existing,
@@ -555,6 +604,7 @@ def main(argv: list[str]) -> int:
             for error in errors:
                 print(error, file=sys.stderr)
             return 1
+        out_root = resolved_output_paths["out_root"]
 
         per_case = build_case_rows(
             template_by_case=template_by_case,
@@ -641,7 +691,7 @@ def main(argv: list[str]) -> int:
             "errors": [],
         }
         if args.out_commands_sh:
-            command_script_path = Path(args.out_commands_sh).expanduser().resolve()
+            command_script_path = resolved_output_paths["out_commands_sh"]
             payload["writes_operator_command_script"] = 1
             payload["operator_commands_script"] = str(command_script_path)
             payload["operator_commands_script_command_count"] = len(operator_commands)
@@ -650,9 +700,9 @@ def main(argv: list[str]) -> int:
                 payload,
                 args.overwrite,
             )
-        write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
+        write_json(resolved_output_paths["out_json"], payload, args.overwrite)
         if args.out_md:
-            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
+            write_markdown(resolved_output_paths["out_md"], payload, args.overwrite)
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))
         else:

@@ -359,6 +359,223 @@ def main() -> int:
         assert not (repos[2][1] / "label_intake_plan.md").exists()
         assert not (repos[3][1] / "label_intake_commands.sh").exists()
 
+        env_intake = tmp / ".env.label_intake_repo_intake"
+        env_intake.symlink_to(intake)
+        env_intake_plan = tmp / "env_intake_plan.json"
+        env_intake_args = [
+            "--repo-intake",
+            str(env_intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_intake_plan),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_intake_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_intake_args)
+        assert proc.returncode == 1
+        assert "refusing .env-like repo intake path" in proc.stderr
+        assert not env_intake_plan.exists()
+
+        env_decisions = tmp / ".env.label_intake_decisions"
+        env_decisions.symlink_to(decisions)
+        env_decisions_plan = tmp / "env_decisions_plan.json"
+        env_decisions_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(env_decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_decisions_plan),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_decisions_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_decisions_args)
+        assert proc.returncode == 1
+        assert "refusing .env-like decisions path" in proc.stderr
+        assert "case-01-0001" not in proc.stdout
+        assert "case-01-0001" not in proc.stderr
+        assert not env_decisions_plan.exists()
+
+        env_component_dir = tmp / ".env.secrets"
+        env_component_dir.mkdir()
+        env_component_decisions = env_component_dir / "decisions.jsonl"
+        env_component_decisions.symlink_to(decisions)
+        env_component_decisions_plan = tmp / "env_component_decisions_plan.json"
+        env_component_decisions_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(env_component_decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_component_decisions_plan),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_component_decisions_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_component_decisions_args)
+        assert proc.returncode == 1
+        assert "refusing .env-like decisions path" in proc.stderr
+        assert "case-01-0001" not in proc.stdout
+        assert "case-01-0001" not in proc.stderr
+        assert not env_component_decisions_plan.exists()
+
+        env_summary = tmp / ".env.label_packet_summary"
+        env_summary.symlink_to(label_packet_summary)
+        env_summary_plan = tmp / "env_summary_plan.json"
+        env_summary_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(env_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_summary_plan),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_summary_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_summary_args)
+        assert proc.returncode == 1
+        assert "refusing .env-like label packet summary path" in proc.stderr
+        assert not env_summary_plan.exists()
+
+        env_template = tmp / ".env.label_template_dir"
+        env_template.symlink_to(template_dirs[0])
+        env_template_plan = tmp / "env_template_plan.json"
+        env_template_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--template-dir",
+            str(env_template),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_template_plan),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs[1:]:
+            env_template_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_template_args)
+        assert proc.returncode == 1
+        assert "template_dir[1] must not be .env-like" in proc.stderr
+        assert not env_template_plan.exists()
+
+        env_out_target = repos[0][1] / "env_label_intake_plan_target.json"
+        env_out = tmp / ".env.label_intake_plan_out"
+        env_out.symlink_to(env_out_target)
+        env_out_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_out),
+            "--overwrite",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_out_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_out_args)
+        assert proc.returncode == 1
+        env_out_payload = json.loads(proc.stdout)
+        assert env_out_payload["errors"].count("out_json must not be .env-like") == 1
+        assert proc.stderr.count("out_json must not be .env-like") == 1
+        assert "inside target repo" not in proc.stderr
+        assert env_out_target.name not in proc.stdout
+        assert env_out_target.name not in proc.stderr
+        assert not env_out_target.exists()
+
+        env_component_out = env_component_dir / "plan.json"
+        env_component_out_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_component_out),
+            "--overwrite",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_component_out_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_component_out_args)
+        assert proc.returncode == 1
+        env_component_out_payload = json.loads(proc.stdout)
+        assert env_component_out_payload["errors"].count("out_json must not be .env-like") == 1
+        assert proc.stderr.count("out_json must not be .env-like") == 1
+        assert not env_component_out.exists()
+
+        env_commands_target = repos[0][1] / "env_label_intake_commands.sh"
+        env_commands = tmp / ".env.label_intake_commands"
+        env_commands.symlink_to(env_commands_target)
+        env_commands_plan = tmp / "env_commands_plan.json"
+        env_commands_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--label-packet-summary",
+            str(label_packet_summary),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(env_commands_plan),
+            "--out-commands-sh",
+            str(env_commands),
+            "--overwrite",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            env_commands_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*env_commands_args)
+        assert proc.returncode == 1
+        env_commands_payload = json.loads(proc.stdout)
+        assert env_commands_payload["errors"].count("out_commands_sh must not be .env-like") == 1
+        assert proc.stderr.count("out_commands_sh must not be .env-like") == 1
+        assert "inside target repo" not in proc.stderr
+        assert env_commands_target.name not in proc.stdout
+        assert env_commands_target.name not in proc.stderr
+        assert not env_commands_target.exists()
+        assert not env_commands_plan.exists()
+
         missing_decisions = tmp / "missing decisions.jsonl"
         write_jsonl(
             missing_decisions,
