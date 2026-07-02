@@ -440,9 +440,16 @@ def write_label_intake_dir(
     write_sha_manifest(out_dir, ["label_intake_manifest.json", *LABEL_INTAKE_ARTIFACTS])
 
 
-def verify_label_intake_dir(out_dir: Path, *, allow_source_drift: bool = False) -> list[str]:
+def verify_label_intake_dir(
+    out_dir: Path,
+    *,
+    allow_source_drift: bool = False,
+    enforce_env_path_guard: bool = True,
+) -> list[str]:
     errors: list[str] = []
     root = root_dir()
+    if enforce_env_path_guard and is_forbidden_env_path(out_dir):
+        return ["refusing .env-like label intake path"]
     for rel in [*LABEL_INTAKE_ARTIFACTS, "label_intake_manifest.json", "label_intake_sha256sums.txt"]:
         if not (out_dir / rel).is_file():
             errors.append(f"missing label intake artifact: {rel}")
@@ -618,7 +625,11 @@ def generate_intake(args: argparse.Namespace) -> None:
             rows = read_jsonl(staging / "benchmark_labels.jsonl")
             rows[0]["human_labeled"] = False
             write_jsonl(staging / "benchmark_labels.jsonl", rows)
-        errors = verify_label_intake_dir(staging, allow_source_drift=args.allow_source_drift)
+        errors = verify_label_intake_dir(
+            staging,
+            allow_source_drift=args.allow_source_drift,
+            enforce_env_path_guard=False,
+        )
         if errors:
             raise RuntimeError("; ".join(errors))
         if out_dir.exists():
@@ -653,7 +664,10 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         if args.verify_existing:
-            errors = verify_label_intake_dir(Path(args.verify_existing).expanduser().resolve(), allow_source_drift=args.allow_source_drift)
+            raw_verify_path = Path(args.verify_existing).expanduser()
+            if is_forbidden_env_path(raw_verify_path):
+                raise ValueError("refusing .env-like label intake path")
+            errors = verify_label_intake_dir(raw_verify_path.resolve(), allow_source_drift=args.allow_source_drift)
             if errors:
                 for error in errors:
                     print(error, file=sys.stderr)
