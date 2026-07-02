@@ -206,6 +206,112 @@ def main() -> int:
         assert "selected_current_repo_preflight_passed_rows" in out_md.read_text(encoding="utf-8")
         assert not (tmp / "repo_intake.md").exists()
 
+        raw_env_request_symlink = tmp / ".env.discovery_response_request"
+        raw_env_request_symlink.symlink_to(request_json)
+        raw_env_request_out = tmp / "raw_env_request_response_status.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(raw_env_request_symlink),
+                "--response",
+                str(response),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(raw_env_request_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_request_payload = json.loads(proc.stdout)
+        assert raw_env_request_payload["ready_for_repo_intake_collect_command"] == 0
+        assert "refusing .env-like repo discovery request path" in proc.stderr
+        assert not raw_env_request_out.exists()
+
+        raw_env_response_symlink = tmp / ".env.discovery_response_input"
+        raw_env_response_symlink.symlink_to(response)
+        raw_env_response_out = tmp / "raw_env_response_status.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(request_json),
+                "--response",
+                str(raw_env_response_symlink),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(raw_env_response_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_response_payload = json.loads(proc.stdout)
+        assert raw_env_response_payload["ready_for_repo_intake_collect_command"] == 0
+        assert "response must not be .env-like" in proc.stderr
+        assert "refusing to read .env-like response path" in proc.stderr
+        assert not raw_env_response_out.exists()
+
+        raw_env_collector_target = tmp / "raw_env_collector_target.md"
+        raw_env_collector_symlink = tmp / ".env.discovery_response_collector"
+        raw_env_collector_symlink.symlink_to(raw_env_collector_target)
+        raw_env_collector_out = tmp / "raw_env_collector_response_status.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(request_json),
+                "--response",
+                str(response),
+                "--collector-out",
+                str(raw_env_collector_symlink),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(raw_env_collector_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_collector_payload = json.loads(proc.stdout)
+        assert raw_env_collector_payload["ready_for_repo_intake_collect_command"] == 0
+        assert "collector_out must not be .env-like" in proc.stderr
+        assert not raw_env_collector_out.exists()
+        assert not raw_env_collector_target.exists()
+
+        raw_env_out_target = tmp / "raw_env_discovery_response_target.json"
+        raw_env_out_symlink = tmp / ".env.discovery_response_out"
+        raw_env_out_symlink.symlink_to(raw_env_out_target)
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--request-json",
+                str(request_json),
+                "--response",
+                str(response),
+                "--min-repos",
+                "1",
+                "--out-json",
+                str(raw_env_out_symlink),
+                "--overwrite",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_out_payload = json.loads(proc.stdout)
+        assert raw_env_out_payload["ready_for_repo_intake_collect_command"] == 0
+        assert "out_json must not be .env-like" in proc.stderr
+        assert not raw_env_out_target.exists()
+
         risk_request_json = tmp / "risk_request.json"
         risk_request_payload = json.loads(request_json.read_text(encoding="utf-8"))
         risk_request_payload["request_rows"][0]["path_risk_flags"] = ["runner_worktree_path"]

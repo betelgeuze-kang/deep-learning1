@@ -140,6 +140,49 @@ def main() -> int:
         assert "temporary_path" in custom_tmp_flags
         assert "pytest_temp_path" in custom_tmp_flags
 
+        raw_env_root_symlink = tmp / ".env.discovery_root"
+        raw_env_root_symlink.symlink_to(tmp, target_is_directory=True)
+        raw_env_root_out = tmp / "raw_env_root_discovery.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(raw_env_root_symlink),
+                "--out-json",
+                str(raw_env_root_out),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_root_payload = json.loads(proc.stdout)
+        assert raw_env_root_payload["candidate_repo_count"] == 0
+        assert "--root must not be .env-like" in proc.stderr
+        assert not raw_env_root_out.exists()
+
+        raw_env_out_target = tmp / "raw_env_discovery_target.json"
+        raw_env_out_symlink = tmp / ".env.discovery_out"
+        raw_env_out_symlink.symlink_to(raw_env_out_target)
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--root",
+                str(tmp),
+                "--out-json",
+                str(raw_env_out_symlink),
+                "--overwrite",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_out_payload = json.loads(proc.stdout)
+        assert raw_env_out_payload["ready_for_repo_intake"] == 0
+        assert "out_json must not be .env-like" in proc.stderr
+        assert not raw_env_out_target.exists()
+
         runner_parent = tmp / "actions-runner" / "_work" / "demo"
         runner_parent.mkdir(parents=True)
         runner_repo, _head_runner = create_repo(runner_parent, "demo")

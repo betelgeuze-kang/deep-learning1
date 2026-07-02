@@ -279,7 +279,10 @@ def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
     for name, path in paths.items():
-        resolved = path.resolve()
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved in seen:
@@ -431,13 +434,15 @@ def main(argv: list[str]) -> int:
         errors.append("--max-depth must be non-negative")
     if args.max_candidates <= 0:
         errors.append("--max-candidates must be positive")
-    roots = [Path(root) for root in args.root]
-    for root in roots:
-        resolved = root.expanduser().resolve()
-        if is_forbidden_env_path(resolved):
+    raw_roots = [Path(root).expanduser() for root in args.root]
+    roots: list[Path] = []
+    for root in raw_roots:
+        resolved = root.resolve()
+        if is_forbidden_env_path(root) or is_forbidden_env_path(resolved):
             errors.append(f"--root must not be .env-like: {resolved}")
         elif not resolved.exists() or not resolved.is_dir():
             errors.append(f"--root must be an existing directory: {resolved}")
+        roots.append(resolved)
 
     repo_roots: list[Path] = []
     candidates: list[dict[str, object]] = []
@@ -452,20 +457,21 @@ def main(argv: list[str]) -> int:
 
     output_paths: dict[str, Path] = {}
     if args.out_json:
-        output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+        output_paths["out_json"] = Path(args.out_json).expanduser()
     if args.out_md:
-        output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_paths["out_md"] = Path(args.out_md).expanduser()
     errors.extend(repo_intake.validate_output_paths(output_paths, [str(path) for path in repo_roots]))
     errors.extend(output_git_worktree_errors(output_paths))
     errors.extend(output_exists_errors(output_paths, args.overwrite))
+    resolved_output_paths = {name: path.resolve() for name, path in output_paths.items()}
 
     payload = build_payload(args, candidates, errors)
     if not errors:
         try:
             if args.out_json:
-                write_json(output_paths["out_json"], payload, args.overwrite)
+                write_json(resolved_output_paths["out_json"], payload, args.overwrite)
             if args.out_md:
-                write_markdown(output_paths["out_md"], payload, args.overwrite)
+                write_markdown(resolved_output_paths["out_md"], payload, args.overwrite)
         except Exception as exc:
             errors.append(str(exc))
             payload["errors"] = errors

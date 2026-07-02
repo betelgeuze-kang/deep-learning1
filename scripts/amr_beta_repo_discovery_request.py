@@ -61,9 +61,10 @@ def sha256_file(path: Path) -> str:
 
 
 def read_json(path: Path) -> dict:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like discovery path")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(raw_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("repo discovery must contain an object")
     return payload
@@ -81,7 +82,10 @@ def int_flag(payload: dict, key: str, default: int = 0) -> int:
 def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
     errors: list[str] = []
     for name, path in paths.items():
-        resolved = path.resolve()
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved.exists() and not overwrite:
@@ -438,26 +442,29 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    discovery_path = Path(args.repo_discovery).expanduser().resolve()
-    out_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+    raw_discovery_path = Path(args.repo_discovery).expanduser()
+    discovery_path = raw_discovery_path.resolve()
+    raw_out_paths = {"out_json": Path(args.out_json).expanduser()}
     errors: list[str] = []
     if args.out_md:
-        out_paths["out_md"] = Path(args.out_md).expanduser().resolve()
-    response_template_path = Path(args.out_response_csv).expanduser().resolve() if args.out_response_csv else None
-    if response_template_path:
-        out_paths["out_response_csv"] = response_template_path
+        raw_out_paths["out_md"] = Path(args.out_md).expanduser()
+    raw_response_template_path = Path(args.out_response_csv).expanduser() if args.out_response_csv else None
+    response_template_path = raw_response_template_path.resolve() if raw_response_template_path else None
+    if raw_response_template_path:
+        raw_out_paths["out_response_csv"] = raw_response_template_path
     if args.response_template_recommended_only and not response_template_path:
         errors.append("--response-template-recommended-only requires --out-response-csv")
 
     discovery: dict[str, object] = {}
     try:
-        discovery = read_json(discovery_path)
+        discovery = read_json(raw_discovery_path)
     except Exception as exc:
         errors.append(str(exc))
     if discovery:
         errors.extend(validate_discovery(discovery))
-        errors.extend(repo_intake.validate_output_paths(out_paths, candidate_repo_paths(discovery)))
-    errors.extend(output_exists_errors(out_paths, args.overwrite))
+        errors.extend(repo_intake.validate_output_paths(raw_out_paths, candidate_repo_paths(discovery)))
+    errors.extend(output_exists_errors(raw_out_paths, args.overwrite))
+    out_paths = {name: path.resolve() for name, path in raw_out_paths.items()}
 
     payload = build_payload(
         discovery_path,

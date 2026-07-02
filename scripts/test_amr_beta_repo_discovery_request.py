@@ -140,6 +140,73 @@ def main() -> int:
         assert "owner_or_maintainer_contact" in markdown
         assert "amr_beta_repo_intake_collect.py" in markdown
 
+        raw_env_discovery_symlink = tmp / ".env.discovery_request_input"
+        raw_env_discovery_symlink.symlink_to(discovery)
+        raw_env_discovery_request = tmp / "raw_env_discovery_request.json"
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(raw_env_discovery_symlink),
+                "--out-json",
+                str(raw_env_discovery_request),
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_discovery_payload = json.loads(proc.stdout)
+        assert raw_env_discovery_payload["repo_intake_rows_counted"] == 0
+        assert "refusing .env-like discovery path" in proc.stderr
+        assert not raw_env_discovery_request.exists()
+
+        raw_env_request_target = tmp / "raw_env_request_target.json"
+        raw_env_request_symlink = tmp / ".env.discovery_request_out"
+        raw_env_request_symlink.symlink_to(raw_env_request_target)
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(raw_env_request_symlink),
+                "--overwrite",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_request_payload = json.loads(proc.stdout)
+        assert raw_env_request_payload["repo_intake_rows_counted"] == 0
+        assert "out_json must not be .env-like" in proc.stderr
+        assert not raw_env_request_target.exists()
+
+        raw_env_response_template_target = tmp / "raw_env_response_template_target.csv"
+        raw_env_response_template_symlink = tmp / ".env.discovery_response_template"
+        raw_env_response_template_symlink.symlink_to(raw_env_response_template_target)
+        proc = run(
+            [
+                sys.executable,
+                str(TOOL),
+                "--repo-discovery",
+                str(discovery),
+                "--out-json",
+                str(tmp / "raw_env_response_template_request.json"),
+                "--out-response-csv",
+                str(raw_env_response_template_symlink),
+                "--overwrite",
+                "--json",
+            ],
+            cwd=ROOT,
+        )
+        assert proc.returncode == 1
+        raw_env_template_payload = json.loads(proc.stdout)
+        assert raw_env_template_payload["writes_response_template_csv"] == 0
+        assert "out_response_csv must not be .env-like" in proc.stderr
+        assert not raw_env_response_template_target.exists()
+
         recommended_response_csv = tmp / "response_template_recommended.csv"
         recommended_json = tmp / "request_recommended.json"
         proc = run(

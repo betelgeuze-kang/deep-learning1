@@ -85,9 +85,10 @@ def sha256_json(payload: object) -> str:
 
 
 def read_json(path: Path, name: str) -> dict:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError(f"refusing .env-like {name} path")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(raw_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{name} must contain an object")
     return payload
@@ -147,7 +148,10 @@ def output_exists_errors(paths: dict[str, Path], overwrite: bool) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
     for name, path in paths.items():
-        resolved = path.resolve()
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
         if resolved in seen:
@@ -237,13 +241,14 @@ def read_markdown_rows(path: Path) -> list[dict[str, str]]:
 
 
 def read_response_rows(path: Path) -> list[dict[str, str]]:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing to read .env-like response path")
-    text = path.read_text(encoding="utf-8")
+    text = raw_path.read_text(encoding="utf-8")
     first_nonempty = next((line.strip() for line in text.splitlines() if line.strip()), "")
     if first_nonempty.startswith("|"):
-        return read_markdown_rows(path)
-    return read_csv_rows(path)
+        return read_markdown_rows(raw_path)
+    return read_csv_rows(raw_path)
 
 
 def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
@@ -727,12 +732,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
-    request_path = Path(args.request_json).expanduser().resolve()
-    response_path = Path(args.response).expanduser().resolve()
-    collector_out = Path(args.collector_out).expanduser().resolve()
-    out_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
+    raw_request_path = Path(args.request_json).expanduser()
+    raw_response_path = Path(args.response).expanduser()
+    raw_collector_out = Path(args.collector_out).expanduser()
+    request_path = raw_request_path.resolve()
+    response_path = raw_response_path.resolve()
+    collector_out = raw_collector_out.resolve()
+    raw_out_paths = {"out_json": Path(args.out_json).expanduser()}
     if args.out_md:
-        out_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        raw_out_paths["out_md"] = Path(args.out_md).expanduser()
+    out_paths = {name: path.resolve() for name, path in raw_out_paths.items()}
 
     request: dict[str, object] = {}
     response_rows: list[dict[str, str]] = []
@@ -740,16 +749,16 @@ def main(argv: list[str]) -> int:
     errors: list[str] = []
     blockers: list[str] = []
     try:
-        request = read_json(request_path, "repo discovery request")
+        request = read_json(raw_request_path, "repo discovery request")
     except Exception as exc:
         errors.append(str(exc))
     if request:
         errors.extend(validate_request(request))
         target_repo_paths = request_repo_paths(request)
-        guarded_paths = {"response": response_path, "collector_out": collector_out, **out_paths}
+        guarded_paths = {"response": raw_response_path, "collector_out": raw_collector_out, **raw_out_paths}
         errors.extend(repo_intake.validate_output_paths(guarded_paths, target_repo_paths))
     try:
-        response_rows = read_response_rows(response_path)
+        response_rows = read_response_rows(raw_response_path)
     except Exception as exc:
         errors.append(str(exc))
 
@@ -764,7 +773,7 @@ def main(argv: list[str]) -> int:
             min_repos=min_repos,
         )
         errors.extend(row_errors)
-    errors.extend(output_exists_errors(out_paths, args.overwrite))
+    errors.extend(output_exists_errors(raw_out_paths, args.overwrite))
 
     payload = build_payload(
         request_path=request_path,
