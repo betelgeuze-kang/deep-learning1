@@ -72,19 +72,25 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
-def is_relative_to(path: Path, parent: Path) -> bool:
+def is_resolved_relative_to(path: Path, parent: Path) -> bool:
     try:
-        path.resolve().relative_to(parent.resolve())
+        path.relative_to(parent)
         return True
     except ValueError:
         return False
 
 
-def validate_artifact_root(artifact_root: Path, rows: list[dict[str, str]]) -> list[str]:
+def validate_artifact_root(
+    artifact_root: Path,
+    rows: list[dict[str, str]],
+    *,
+    resolved_artifact_root: Path | None = None,
+) -> list[str]:
     errors: list[str] = []
+    resolved = resolved_artifact_root or artifact_root.expanduser().resolve()
     for row in rows:
         repo_path = Path(row["repo_path_resolved"]).resolve()
-        if artifact_root.resolve() == repo_path or is_relative_to(artifact_root, repo_path):
+        if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
             errors.append(
                 f"artifact_root must not be inside target repo for case_id {row['case_id']}: {artifact_root}"
             )
@@ -378,8 +384,9 @@ def apply_saved_command_script_metadata(
         return errors
     script_path = raw_script_path.resolve()
     script_path_errors = repo_intake.validate_output_paths(
-        {"operator_commands_script": script_path},
+        {"operator_commands_script": raw_script_path},
         target_repo_paths,
+        resolved_paths={"operator_commands_script": script_path},
     )
     errors.extend(f"plan: {error}" for error in script_path_errors)
     payload["writes_operator_command_script"] = 1
@@ -431,12 +438,21 @@ def recompute_plan_payload(plan_path: Path, saved_plan: dict) -> tuple[dict, lis
             return {}, [*errors, *row_errors]
         rows = normalized_valid_rows(raw_rows)
         target_repo_paths = sorted({row["repo_path_resolved"] for row in rows if row.get("repo_path_resolved")})
-        input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
-        output_path_errors = repo_intake.validate_output_paths(
-            {"verify_existing_plan": plan_path.resolve()},
+        input_path_errors = repo_intake.validate_input_path(
+            raw_intake_path,
             target_repo_paths,
+            resolved_path=intake_path,
         )
-        artifact_root_errors = validate_artifact_root(artifact_root, rows)
+        output_path_errors = repo_intake.validate_output_paths(
+            {"verify_existing_plan": plan_path},
+            target_repo_paths,
+            resolved_paths={"verify_existing_plan": plan_path},
+        )
+        artifact_root_errors = validate_artifact_root(
+            raw_artifact_root_path,
+            rows,
+            resolved_artifact_root=artifact_root,
+        )
         path_errors = [*input_path_errors, *output_path_errors, *artifact_root_errors]
         payload = build_payload(
             intake_path=intake_path,
@@ -582,11 +598,21 @@ def main(argv: list[str]) -> int:
             raw_output_paths["out_md"] = Path(args.out_md).expanduser()
         if args.out_commands_sh:
             raw_output_paths["out_commands_sh"] = Path(args.out_commands_sh).expanduser()
-        input_path_errors = repo_intake.validate_input_path(intake_path, target_repo_paths)
-        output_path_errors = repo_intake.validate_output_paths(raw_output_paths, target_repo_paths)
-        artifact_root_errors = validate_artifact_root(artifact_root, rows)
-        output_paths = (
-            {name: path.resolve() for name, path in raw_output_paths.items()} if not output_path_errors else {}
+        input_path_errors = repo_intake.validate_input_path(
+            raw_intake_path,
+            target_repo_paths,
+            resolved_path=intake_path,
+        )
+        output_paths = repo_intake.resolve_path_map(raw_output_paths)
+        output_path_errors = repo_intake.validate_output_paths(
+            raw_output_paths,
+            target_repo_paths,
+            resolved_paths=output_paths,
+        )
+        artifact_root_errors = validate_artifact_root(
+            raw_artifact_root,
+            rows,
+            resolved_artifact_root=artifact_root,
         )
         existing_output_errors = [] if output_path_errors else output_exists_errors(output_paths, args.overwrite)
         path_errors = [*input_path_errors, *output_path_errors, *existing_output_errors]
