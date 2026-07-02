@@ -107,9 +107,14 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
     errors: list[str] = []
     seen: dict[Path, str] = {}
     for name, path in paths.items():
-        resolved = path.resolve()
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+            continue
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
+            continue
         if resolved in seen:
             errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
         seen[resolved] = name
@@ -122,9 +127,14 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
 
 def validate_input_path(intake_path: Path, target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    resolved = intake_path.resolve()
+    raw_path = intake_path.expanduser()
+    if is_forbidden_env_path(raw_path):
+        errors.append("input_intake must not be .env-like")
+        return errors
+    resolved = raw_path.resolve()
     if is_forbidden_env_path(resolved):
         errors.append("input_intake must not be .env-like")
+        return errors
     for raw_repo in target_repo_paths:
         repo_path = Path(str(raw_repo)).expanduser().resolve()
         if resolved == repo_path or is_relative_to(resolved, repo_path):
@@ -506,20 +516,22 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
 
 
 def write_json(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like JSON output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
+    raw_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+    raw_path = path.expanduser()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(raw_path.resolve()):
         raise ValueError("refusing .env-like Markdown output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {raw_path}")
     lines = [
         "# AMR Beta Repo Intake Status",
         "",
@@ -559,7 +571,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
                 errors=errors,
             )
         )
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    raw_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def recompute_status_payload(status_path: Path, saved_status: dict) -> tuple[dict, list[str]]:
@@ -727,19 +739,12 @@ def main(argv: list[str]) -> int:
         row_errors, summary = validate_rows(rows, min_repos=args.min_repos)
         target_repo_paths = target_repo_paths_from_statuses(summary["row_statuses"])
         output_paths = {}
-        output_path_errors: list[str] = []
         if args.out_json:
-            raw_out_json = Path(args.out_json).expanduser()
-            if is_forbidden_env_path(raw_out_json):
-                output_path_errors.append("out_json must not be .env-like")
-            output_paths["out_json"] = raw_out_json.resolve()
+            output_paths["out_json"] = Path(args.out_json).expanduser()
         if args.out_md:
-            raw_out_md = Path(args.out_md).expanduser()
-            if is_forbidden_env_path(raw_out_md):
-                output_path_errors.append("out_md must not be .env-like")
-            output_paths["out_md"] = raw_out_md.resolve()
+            output_paths["out_md"] = Path(args.out_md).expanduser()
         input_path_errors = validate_input_path(path, target_repo_paths)
-        output_path_errors.extend(validate_output_paths(output_paths, target_repo_paths))
+        output_path_errors = validate_output_paths(output_paths, target_repo_paths)
         path_errors = [*input_path_errors, *output_path_errors]
         errors = [*row_errors, *path_errors]
         if path_errors:
@@ -752,10 +757,13 @@ def main(argv: list[str]) -> int:
             "output_path_guard_passed": int(not output_path_errors),
             "errors": errors,
         }
+        resolved_output_paths = (
+            {name: raw_path.resolve() for name, raw_path in output_paths.items()} if not path_errors else {}
+        )
         if args.out_json and not path_errors:
-            write_json(output_paths["out_json"], payload, args.overwrite)
+            write_json(resolved_output_paths["out_json"], payload, args.overwrite)
         if args.out_md and not path_errors:
-            write_markdown(output_paths["out_md"], payload, args.overwrite)
+            write_markdown(resolved_output_paths["out_md"], payload, args.overwrite)
     except Exception as exc:
         print(f"repo_intake_validate: error: {exc}", file=sys.stderr)
         return 1

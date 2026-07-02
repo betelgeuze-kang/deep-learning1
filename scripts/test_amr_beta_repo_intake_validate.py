@@ -185,6 +185,26 @@ def main() -> int:
         assert "out_json must not be .env-like" in proc.stderr
         assert not raw_env_output_target.exists()
 
+        raw_env_repo_output_target = repos[0][0] / "raw_env_repo_intake_status_target.json"
+        raw_env_repo_output_symlink = tmp / ".env.repo_intake_status_repo_target"
+        raw_env_repo_output_symlink.symlink_to(raw_env_repo_output_target)
+        proc = run_tool(
+            intake,
+            "--out-json",
+            str(raw_env_repo_output_symlink),
+            "--overwrite",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_repo_output_payload = json.loads(proc.stdout)
+        assert raw_env_repo_output_payload["ready_for_real_benchmark_audit"] == 0
+        assert raw_env_repo_output_payload["output_path_guard_passed"] == 0
+        assert proc.stderr.count("out_json must not be .env-like") == 1
+        assert "inside target repo" not in proc.stderr
+        assert raw_env_repo_output_target.name not in proc.stdout
+        assert raw_env_repo_output_target.name not in proc.stderr
+        assert not raw_env_repo_output_target.exists()
+
         proc = run_verify_existing(status_json, "--json")
         assert proc.returncode == 0, proc.stderr
         verify_payload = json.loads(proc.stdout)
