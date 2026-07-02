@@ -84,6 +84,13 @@ def main() -> int:
         assert TOOL_MODULE.is_forbidden_env_path(tmp / ".env.secrets" / "repo_audit_plan.json")
         assert not TOOL_MODULE.is_forbidden_env_path(tmp / "repo_audit_plan.json")
         repos = [create_repo(tmp, index) for index in range(1, 11)]
+        resolved_artifact_errors = TOOL_MODULE.validate_artifact_root(
+            tmp / "safe-artifact-link",
+            [{"case_id": "case-01", "repo_path_resolved": str(repos[0][0].resolve())}],
+            resolved_artifact_root=repos[0][0] / "audit_artifacts",
+        )
+        assert len(resolved_artifact_errors) == 1
+        assert "artifact_root must not be inside target repo" in resolved_artifact_errors[0]
         intake = tmp / "repo intake.md"
         write_intake(intake, repos)
         artifact_root = tmp / "audit artifacts"
