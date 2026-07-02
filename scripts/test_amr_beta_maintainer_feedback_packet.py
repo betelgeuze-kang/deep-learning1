@@ -360,6 +360,80 @@ def main() -> int:
                 "feedback_digest_fingerprints": benchmark_inputs.feedback_fingerprints(feedback_rows),
             }
         )
+
+        env_feedback = tmp / ".env.maintainer_feedback"
+        env_feedback.symlink_to(feedback)
+        env_feedback_out = tmp / "env_feedback_packet"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--feedback",
+            str(env_feedback),
+            "--out",
+            str(env_feedback_out),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_feedback_payload = json.loads(proc.stdout)
+        assert env_feedback_payload["input_path_guard_passed"] == 0
+        assert env_feedback_payload["feedback_sha256"] == ""
+        assert env_feedback_payload["feedback_bundle_sha256"] == ""
+        assert env_feedback_payload["operator_commands"] == []
+        assert "feedback must not be .env-like" in proc.stderr
+        assert feedback_text not in proc.stdout
+        assert feedback_text not in proc.stderr
+        assert not env_feedback_out.exists()
+
+        env_out_target = tmp / "env_feedback_out_target"
+        env_out = tmp / ".env.maintainer_feedback_packet_out"
+        env_out.symlink_to(env_out_target)
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--feedback",
+            str(feedback),
+            "--out",
+            str(env_out),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_out_payload = json.loads(proc.stdout)
+        assert env_out_payload["output_path_guard_passed"] == 0
+        assert env_out_payload["feedback_sha256"] == ""
+        assert env_out_payload["feedback_bundle_sha256"] == ""
+        assert env_out_payload["operator_commands"] == []
+        assert "out must not be .env-like" in proc.stderr
+        assert feedback_text not in proc.stdout
+        assert feedback_text not in proc.stderr
+        assert not env_out_target.exists()
+
+        env_label_intake = tmp / ".env.maintainer_label_intake"
+        env_label_intake.symlink_to(label_intake)
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(env_label_intake),
+            "--feedback",
+            str(feedback),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        env_label_payload = json.loads(proc.stdout)
+        assert env_label_payload["input_path_guard_passed"] == 0
+        assert env_label_payload["feedback_sha256"] == ""
+        assert env_label_payload["feedback_bundle_sha256"] == ""
+        assert env_label_payload["operator_commands"] == []
+        assert "label_intake_dir[1] must not be .env-like" in proc.stderr
+        assert feedback_text not in proc.stdout
+        assert feedback_text not in proc.stderr
+
         feedback_out = tmp / "feedback_packet_with_feedback"
         proc = run_tool(
             "--repo-intake",
