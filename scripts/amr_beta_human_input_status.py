@@ -53,12 +53,16 @@ def normalize_repo_intake_header(value: str) -> str:
     }.get(text, text)
 
 
-def is_relative_to(path: Path, parent: Path) -> bool:
+def is_resolved_relative_to(path: Path, parent: Path) -> bool:
     try:
-        path.resolve().relative_to(parent.resolve())
+        path.relative_to(parent)
     except ValueError:
         return False
     return True
+
+
+def resolve_path_map(paths: dict[str, Path]) -> dict[str, Path]:
+    return {name: path.expanduser().resolve() for name, path in paths.items()}
 
 
 def git_root_for_path(path: Path) -> str:
@@ -109,7 +113,13 @@ def repo_intake_rows(path: Path) -> list[dict[str, str]]:
 def load_repo_intake_context(path_text: str) -> tuple[set[str], set[str]]:
     if not path_text:
         return set(), set()
-    rows = repo_intake_rows(Path(path_text).expanduser().resolve())
+    raw_path = Path(path_text).expanduser()
+    if is_forbidden_env_path(raw_path):
+        raise ValueError("refusing .env-like repo intake path")
+    path = raw_path.resolve()
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like repo intake path")
+    rows = repo_intake_rows(path)
     case_ids: set[str] = set()
     repo_paths: set[str] = set()
     for row in rows:
@@ -148,19 +158,29 @@ def empty_feedback_summary() -> dict[str, int]:
     }
 
 
-def validate_output_paths(paths: dict[str, Path], target_repo_paths: set[str]) -> list[str]:
+def validate_output_paths(
+    paths: dict[str, Path],
+    target_repo_paths: set[str],
+    *,
+    resolved_paths: dict[str, Path] | None = None,
+) -> list[str]:
     errors: list[str] = []
     seen: dict[Path, str] = {}
     for name, path in paths.items():
-        resolved = path.resolve()
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+            continue
+        resolved = resolved_paths[name] if resolved_paths and name in resolved_paths else raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
+            continue
         if resolved in seen:
             errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
         seen[resolved] = name
         for raw_repo in sorted(target_repo_paths):
             repo_path = Path(raw_repo).expanduser().resolve()
-            if resolved == repo_path or is_relative_to(resolved, repo_path):
+            if resolved == repo_path or is_resolved_relative_to(resolved, repo_path):
                 errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
     return errors
 
@@ -225,7 +245,10 @@ def load_template_context(template_dirs: list[str]) -> tuple[set[str], set[str],
     synthetic_candidate_ids: set[str] = set()
     case_ids: set[str] = set()
     for raw in template_dirs:
-        path = Path(raw).expanduser().resolve()
+        raw_path = Path(raw).expanduser()
+        if is_forbidden_env_path(raw_path):
+            raise ValueError("refusing .env-like template path")
+        path = raw_path.resolve()
         if is_forbidden_env_path(path):
             raise ValueError("refusing .env-like template path")
         payload_path = path / "label_template.json"
@@ -378,7 +401,10 @@ def load_label_intake_context(
     verify_failed_dirs = 0
     verify_errors: list[str] = []
     for raw in label_intake_dirs:
-        path = Path(raw).expanduser().resolve()
+        raw_path = Path(raw).expanduser()
+        if is_forbidden_env_path(raw_path):
+            raise ValueError("refusing .env-like label intake path")
+        path = raw_path.resolve()
         if is_forbidden_env_path(path):
             raise ValueError("refusing .env-like label intake path")
         if verify_existing:
@@ -526,21 +552,25 @@ def progress_percent(value: int, minimum: int) -> float:
     return round(min(value, minimum) * 100.0 / minimum, 2)
 
 
-def write_json(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+def write_json(path: Path, payload: dict, overwrite: bool, *, resolved_path: Path | None = None) -> None:
+    raw_path = path.expanduser()
+    write_path = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(write_path):
         raise ValueError("refusing .env-like JSON output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    if write_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {write_path}")
+    write_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
-    if is_forbidden_env_path(path):
+def write_markdown(path: Path, payload: dict, overwrite: bool, *, resolved_path: Path | None = None) -> None:
+    raw_path = path.expanduser()
+    write_path = resolved_path or raw_path.resolve()
+    if is_forbidden_env_path(raw_path) or is_forbidden_env_path(write_path):
         raise ValueError("refusing .env-like Markdown output path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise ValueError(f"output already exists; use --overwrite: {path}")
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    if write_path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {write_path}")
     lines = [
         "# AMR Beta Human Input Status",
         "",
@@ -576,7 +606,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         lines.extend(f"- {error}" for error in payload["errors"])
     else:
         lines.append("- none")
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    write_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -619,21 +649,27 @@ def main(argv: list[str]) -> int:
             verify_existing=not args.skip_verify_existing,
         )
         repo_intake_case_ids, target_repo_paths = load_repo_intake_context(args.repo_intake)
-        decision_path = Path(args.decisions).expanduser().resolve()
-        feedback_path = Path(args.feedback).expanduser().resolve()
+        input_paths = {
+            "decisions": Path(args.decisions).expanduser(),
+            "feedback": Path(args.feedback).expanduser(),
+        }
+        resolved_input_paths = resolve_path_map(input_paths)
         input_path_errors = validate_output_paths(
-            {
-                "decisions": decision_path,
-                "feedback": feedback_path,
-            },
+            input_paths,
             target_repo_paths,
+            resolved_paths=resolved_input_paths,
         )
         output_paths = {}
         if args.out_json:
-            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+            output_paths["out_json"] = Path(args.out_json).expanduser()
         if args.out_md:
-            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
-        output_path_errors = validate_output_paths(output_paths, target_repo_paths)
+            output_paths["out_md"] = Path(args.out_md).expanduser()
+        resolved_output_paths = resolve_path_map(output_paths)
+        output_path_errors = validate_output_paths(
+            output_paths,
+            target_repo_paths,
+            resolved_paths=resolved_output_paths,
+        )
         known_case_ids = template_case_ids | repo_intake_case_ids | label_intake_case_ids
         if input_path_errors:
             decision_rows = []
@@ -643,6 +679,8 @@ def main(argv: list[str]) -> int:
             decision_summary = empty_decision_summary()
             feedback_summary = empty_feedback_summary()
         else:
+            decision_path = resolved_input_paths["decisions"]
+            feedback_path = resolved_input_paths["feedback"]
             decision_rows = read_json_or_jsonl(decision_path, "decisions")
             feedback_rows = read_json_or_jsonl(feedback_path, "feedback")
             decision_errors, decision_summary = validate_decisions(
@@ -710,9 +748,19 @@ def main(argv: list[str]) -> int:
     payload = {**summary, "errors": errors}
     try:
         if args.out_json and not output_path_errors:
-            write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
+            write_json(
+                output_paths["out_json"],
+                payload,
+                args.overwrite,
+                resolved_path=resolved_output_paths["out_json"],
+            )
         if args.out_md and not output_path_errors:
-            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
+            write_markdown(
+                output_paths["out_md"],
+                payload,
+                args.overwrite,
+                resolved_path=resolved_output_paths["out_md"],
+            )
     except Exception as exc:
         print(f"human_input_status: error: {exc}", file=sys.stderr)
         return 1

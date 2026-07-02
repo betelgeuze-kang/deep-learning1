@@ -160,6 +160,57 @@ def main() -> int:
         assert "valid_feedback_digest_rows: 2" in status_md.read_text(encoding="utf-8")
         assert "output_path_guard_passed: 1" in status_md.read_text(encoding="utf-8")
 
+        env_decisions = tmp / ".env.human_input_decisions"
+        env_feedback = tmp / ".env.human_input_feedback"
+        env_decisions.symlink_to(decisions)
+        env_feedback.symlink_to(feedback)
+        proc = run_tool(
+            "--decisions",
+            str(env_decisions),
+            "--feedback",
+            str(env_feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_input_payload = json.loads(proc.stdout)
+        assert raw_env_input_payload["input_path_guard_passed"] == 0
+        assert raw_env_input_payload["total_decision_rows"] == 0
+        assert raw_env_input_payload["total_feedback_rows"] == 0
+        assert "decisions must not be .env-like" in proc.stderr
+        assert "feedback must not be .env-like" in proc.stderr
+        assert "Reviewed finding quality" not in proc.stdout
+        assert "Reviewed finding quality" not in proc.stderr
+
+        raw_env_status_target = tmp / "raw_env_human_input_status_target.json"
+        raw_env_status = tmp / ".env.human_input_status_out"
+        raw_env_status.symlink_to(raw_env_status_target)
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--out-json",
+            str(raw_env_status),
+            "--json",
+        )
+        assert proc.returncode == 1
+        raw_env_output_payload = json.loads(proc.stdout)
+        assert raw_env_output_payload["output_path_guard_passed"] == 0
+        assert "out_json must not be .env-like" in proc.stderr
+        assert not raw_env_status_target.exists()
+
         template = tmp / "label_template"
         make_template(
             template,
