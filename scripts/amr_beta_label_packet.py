@@ -117,11 +117,16 @@ def load_template_target_repo(path: Path) -> tuple[str, list[str]]:
 
 def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
     errors: list[str] = []
-    resolved_by_name = {name: path.expanduser().resolve() for name, path in paths.items()}
     seen_paths: dict[Path, str] = {}
-    for name, resolved in resolved_by_name.items():
+    for name, path in paths.items():
+        raw_path = path.expanduser()
+        if is_forbidden_env_path(raw_path):
+            errors.append(f"{name} must not be .env-like")
+            continue
+        resolved = raw_path.resolve()
         if is_forbidden_env_path(resolved):
             errors.append(f"{name} must not be .env-like")
+            continue
         if resolved in seen_paths:
             errors.append(f"{name} must not reuse {seen_paths[resolved]} path: {resolved}")
         else:
@@ -1077,10 +1082,16 @@ def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.verify_existing:
-            summary, verify_errors = verify_existing_packet_path(Path(args.verify_existing).expanduser().resolve())
+            raw_verify_path = Path(args.verify_existing).expanduser()
+            if is_forbidden_env_path(raw_verify_path):
+                verify_path = raw_verify_path.absolute()
+                summary, verify_errors = {}, ["label_packet: refusing .env-like packet path"]
+            else:
+                verify_path = raw_verify_path.resolve()
+                summary, verify_errors = verify_existing_packet_path(verify_path)
             payload = {
                 "schema": "amr_beta_label_packet_verify_existing.v1",
-                "verify_existing": str(Path(args.verify_existing).expanduser().resolve()),
+                "verify_existing": str(verify_path),
                 "verify_existing_passed": int(not verify_errors),
                 "creates_benchmark_evidence": 0,
                 "runs_real_benchmark": 0,
@@ -1111,8 +1122,20 @@ def main(argv: list[str]) -> int:
         verify_failed_dirs = 0
         target_repo_paths: list[str] = []
         template_fingerprints: list[dict[str, str]] = []
+        template_path_errors: list[str] = []
         for raw_template_dir in args.template_dir:
-            template_dir = Path(raw_template_dir).expanduser().resolve()
+            raw_template_path = Path(raw_template_dir).expanduser()
+            if is_forbidden_env_path(raw_template_path):
+                error = f"{raw_template_path}: refusing .env-like label template path"
+                errors.append(error)
+                template_path_errors.append(error)
+                continue
+            template_dir = raw_template_path.resolve()
+            if is_forbidden_env_path(template_dir):
+                error = f"{template_dir}: refusing .env-like label template path"
+                errors.append(error)
+                template_path_errors.append(error)
+                continue
             if not args.skip_verify_existing:
                 verify_errors = verify_label_template_existing(template_dir)
                 if verify_errors:
@@ -1146,6 +1169,14 @@ def main(argv: list[str]) -> int:
             errors.append(f"duplicate template candidate_label_id values: {', '.join(duplicate_candidate_ids[:10])}")
         known_candidate_ids = set(candidate_ids)
 
+        output_requested = bool(args.out or args.per_case_out_root)
+        output_paths: dict[str, Path] = {}
+        if args.out:
+            output_paths["out"] = Path(args.out)
+        if args.per_case_out_root:
+            output_paths["per_case_out_root"] = Path(args.per_case_out_root)
+        output_path_errors = validate_output_paths(output_paths, sorted(set(target_repo_paths)))
+
         decision_input_paths = {
             f"decisions_{index}": Path(raw_decisions)
             for index, raw_decisions in enumerate(args.decisions, start=1)
@@ -1156,7 +1187,7 @@ def main(argv: list[str]) -> int:
         )
         decision_rows: list[dict] = []
         decision_fingerprints: list[dict[str, str]] = []
-        if not decision_input_errors:
+        if not template_path_errors and not decision_input_errors and not output_path_errors:
             for raw_decisions in args.decisions:
                 decision_path = Path(raw_decisions).expanduser().resolve()
                 decision_fingerprints.append(
@@ -1172,6 +1203,7 @@ def main(argv: list[str]) -> int:
         )
         errors.extend(decision_input_errors)
         errors.extend(decision_errors)
+        errors.extend(output_path_errors)
         missing_ids = sorted(known_candidate_ids - valid_decision_ids)
         if args.require_all_candidates and missing_ids:
             errors.append(f"missing candidate_label_id decisions: {', '.join(missing_ids[:20])}")
@@ -1198,14 +1230,6 @@ def main(argv: list[str]) -> int:
         all_cases_ready_for_label_intake = int(
             bool(progress_rows) and cases_ready_for_label_intake == len(progress_rows)
         )
-        output_requested = bool(args.out or args.per_case_out_root)
-        output_paths: dict[str, Path] = {}
-        if args.out:
-            output_paths["out"] = Path(args.out)
-        if args.per_case_out_root:
-            output_paths["per_case_out_root"] = Path(args.per_case_out_root)
-        output_path_errors = validate_output_paths(output_paths, sorted(set(target_repo_paths)))
-        errors.extend(output_path_errors)
         output_files = sorted(MANAGED_OUTPUTS) if args.out else []
         if args.per_case_out_root:
             output_files = [

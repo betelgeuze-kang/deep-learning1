@@ -248,6 +248,89 @@ def test_rejects_decisions_inside_target_repo_before_writing() -> None:
         assert not any("label_intake_staging" in child.name for child in tmp.iterdir())
 
 
+def test_generation_rejects_raw_env_like_symlinks_before_reading_or_writing() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        target_repo = tmp / "target repo"
+        target_repo.mkdir()
+        audit_output = tmp / "audit_output"
+        audit_output.mkdir()
+        write_json(
+            audit_output / "audit_manifest.json",
+            {
+                "cache_key": "a" * 64,
+                "target_repo": str(target_repo),
+            },
+        )
+        template_dir = tmp / "label_template"
+        template_dir.mkdir()
+        write_json(
+            template_dir / "label_template_manifest.json",
+            {
+                "input_audit_output": str(audit_output),
+            },
+        )
+        decisions = tmp / "decisions.jsonl"
+        decisions_text = (
+            json.dumps(
+                {
+                    "candidate_label_id": "case-001-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        decisions.write_text(decisions_text, encoding="utf-8")
+
+        env_template = tmp / ".env.label_template_input"
+        env_template.symlink_to(template_dir)
+        proc = run_tool(
+            "--template",
+            str(env_template),
+            "--decisions",
+            str(decisions),
+            "--out",
+            str(tmp / "label_intake_from_env_template"),
+        )
+        assert proc.returncode == 2
+        assert "refusing .env-like template path" in proc.stderr
+        assert "case-001-0001" not in proc.stderr
+        assert not any("label_intake_staging" in child.name for child in tmp.iterdir())
+
+        env_decisions = tmp / ".env.label_decisions"
+        env_decisions.symlink_to(decisions)
+        proc = run_tool(
+            "--template",
+            str(template_dir),
+            "--decisions",
+            str(env_decisions),
+            "--out",
+            str(tmp / "label_intake_from_env_decisions"),
+        )
+        assert proc.returncode == 2
+        assert "refusing to read .env-like decisions file" in proc.stderr
+        assert "case-001-0001" not in proc.stderr
+        assert not any("label_intake_staging" in child.name for child in tmp.iterdir())
+
+        env_out_target = tmp / "label_intake_target"
+        env_out = tmp / ".env.label_intake_out"
+        env_out.symlink_to(env_out_target)
+        proc = run_tool(
+            "--template",
+            str(template_dir),
+            "--decisions",
+            str(decisions),
+            "--out",
+            str(env_out),
+        )
+        assert proc.returncode == 2
+        assert "refusing .env-like output directory" in proc.stderr
+        assert not env_out_target.exists()
+        assert not any("label_intake_staging" in child.name for child in tmp.iterdir())
+
+
 def test_verify_existing_rejects_env_like_symlinks_before_reading() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
@@ -290,6 +373,7 @@ def main() -> int:
     test_decision_normalization()
     test_rejects_output_inside_target_repo_before_writing()
     test_rejects_decisions_inside_target_repo_before_writing()
+    test_generation_rejects_raw_env_like_symlinks_before_reading_or_writing()
     test_verify_existing_rejects_env_like_symlinks_before_reading()
     test_internal_staging_env_like_names_are_not_rejected_by_verify_helpers()
     print("audit_my_repo_label_intake decision normalization smoke OK")
