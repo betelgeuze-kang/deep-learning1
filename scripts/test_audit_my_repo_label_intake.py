@@ -8,15 +8,27 @@ import sys
 import tempfile
 from pathlib import Path
 
-from audit_my_repo_label_intake import normalize_decisions
+from audit_my_repo_label_intake import normalize_decisions, verify_label_intake_dir
+from audit_my_repo_label_template import verify_template_dir
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "audit_my_repo_label_intake.py"
+TEMPLATE_TOOL = ROOT / "scripts" / "audit_my_repo_label_template.py"
 
 
 def run_tool(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(TOOL), *args],
+        cwd=str(ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
+def run_template_tool(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(TEMPLATE_TOOL), *args],
         cwd=str(ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -236,10 +248,50 @@ def test_rejects_decisions_inside_target_repo_before_writing() -> None:
         assert not any("label_intake_staging" in child.name for child in tmp.iterdir())
 
 
+def test_verify_existing_rejects_env_like_symlinks_before_reading() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        template_target = tmp / "label_template_target"
+        template_target.mkdir()
+        template_link = tmp / ".env.label_template"
+        template_link.symlink_to(template_target)
+        proc = run_template_tool("--verify-existing", str(template_link))
+        assert proc.returncode == 2
+        assert "refusing .env-like label template path" in proc.stderr
+
+        intake_target = tmp / "label_intake_target"
+        intake_target.mkdir()
+        intake_link = tmp / ".env.label_intake"
+        intake_link.symlink_to(intake_target)
+        proc = run_tool("--verify-existing", str(intake_link))
+        assert proc.returncode == 2
+        assert "refusing .env-like label intake path" in proc.stderr
+
+
+def test_internal_staging_env_like_names_are_not_rejected_by_verify_helpers() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        template_staging = tmp / ".env.label_template_staging.abc"
+        template_staging.mkdir()
+        errors = verify_template_dir(template_staging, enforce_env_path_guard=False)
+        assert "refusing .env-like label template path" not in errors
+        assert any("missing label template artifact" in error for error in errors)
+        assert verify_template_dir(template_staging) == ["refusing .env-like label template path"]
+
+        intake_staging = tmp / ".env.label_intake_staging.abc"
+        intake_staging.mkdir()
+        errors = verify_label_intake_dir(intake_staging, enforce_env_path_guard=False)
+        assert "refusing .env-like label intake path" not in errors
+        assert any("missing label intake artifact" in error for error in errors)
+        assert verify_label_intake_dir(intake_staging) == ["refusing .env-like label intake path"]
+
+
 def main() -> int:
     test_decision_normalization()
     test_rejects_output_inside_target_repo_before_writing()
     test_rejects_decisions_inside_target_repo_before_writing()
+    test_verify_existing_rejects_env_like_symlinks_before_reading()
+    test_internal_staging_env_like_names_are_not_rejected_by_verify_helpers()
     print("audit_my_repo_label_intake decision normalization smoke OK")
     return 0
 

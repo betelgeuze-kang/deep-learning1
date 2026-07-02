@@ -93,6 +93,11 @@ def root_dir() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def is_forbidden_env_path(path: Path) -> bool:
+    name = path.name
+    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+
+
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -358,9 +363,16 @@ def csv_rows_match_json(csv_rows: list[dict[str, str]], json_rows: list[dict]) -
     return csv_rows == normalized_json_rows
 
 
-def verify_template_dir(out_dir: Path, *, allow_source_drift: bool = False) -> list[str]:
+def verify_template_dir(
+    out_dir: Path,
+    *,
+    allow_source_drift: bool = False,
+    enforce_env_path_guard: bool = True,
+) -> list[str]:
     errors: list[str] = []
     root = root_dir()
+    if enforce_env_path_guard and is_forbidden_env_path(out_dir):
+        return ["refusing .env-like label template path"]
     for rel in [*LABEL_TEMPLATE_ARTIFACTS, "label_template_manifest.json", "label_template_sha256sums.txt"]:
         if not (out_dir / rel).is_file():
             errors.append(f"missing label template artifact: {rel}")
@@ -547,7 +559,11 @@ def generate_template(args: argparse.Namespace) -> None:
             payload = read_json(staging / "label_template.json")
             payload["release_ready"] = 1
             write_json(staging / "label_template.json", payload)
-        errors = verify_template_dir(staging, allow_source_drift=args.allow_source_drift)
+        errors = verify_template_dir(
+            staging,
+            allow_source_drift=args.allow_source_drift,
+            enforce_env_path_guard=False,
+        )
         if errors:
             raise RuntimeError("; ".join(errors))
         if out_dir.exists():
@@ -580,7 +596,10 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         if args.verify_existing:
-            errors = verify_template_dir(Path(args.verify_existing).expanduser().resolve(), allow_source_drift=args.allow_source_drift)
+            raw_verify_path = Path(args.verify_existing).expanduser()
+            if is_forbidden_env_path(raw_verify_path):
+                raise ValueError("refusing .env-like label template path")
+            errors = verify_template_dir(raw_verify_path.resolve(), allow_source_drift=args.allow_source_drift)
             if errors:
                 for error in errors:
                     print(error, file=sys.stderr)
